@@ -240,7 +240,7 @@
 						<div class="form-group row">
 
 							<div class="col col-xs-4">
-							    <label for="ex1">&Delta;t =  &nbsp;
+							    <label for="deltaT">&Delta;t =  &nbsp;
 							    	<button class="btn btn-success" type="button" onclick="simulateHybridSystem();">
 		    							<i class="fa fa-play" aria-hidden="true"></i>
 		    						</button>
@@ -248,7 +248,7 @@
 		    						<i class="fa fa-forward" aria-hidden="true"></i>
 		    						</button>
 		    					</label>
-							    <input class="form-control" id="ex1" type="text" value="0.01" onchange="deltaTChanged(Number(this.value));">
+							    <input class="form-control" id="deltaT" type="text" value="0.01" onchange="deltaTChanged(Number(this.value));">
 
 							    <label for="frameRate">Frame rate =  <span id="frameRateDisplay"></span></label>
 							    <input type="range" class="form-control" id="framRate" min="1" max="15" value="1" onchange="frameRateChanged(Number(this.value));">
@@ -256,12 +256,12 @@
 							  
 
 							<div class="col col-xs-4">
-							    <label for="ex2">T = &nbsp;&nbsp;&nbsp;
+							    <label for="periodT">T = &nbsp;&nbsp;&nbsp;
 							    	<button class="btn btn-success" type="button" onclick="solveForIPAEstimators();">
 		    							Run IPA
 		    						</button>
 							    </label>
-							    <input class="form-control" id="ex2" type="text" value="150" onchange="periodTChanged(Number(this.value));">
+							    <input class="form-control" id="periodT" type="text" value="150" onchange="periodTChanged(Number(this.value));">
 
 							    <label for="stepSizeMultiplier">Multiplier = <span id="stepSizeMultiplierDisplay"></span></label>				    
 							    <input type="range" class="form-control" id="stepSizeMultiplier" min="-2" max="2" value="0" step="1" onchange="stepSizeChanged();">
@@ -269,15 +269,15 @@
 							
 							<!-- Run the hybrid system for time T and estimate IPA gradients and re-run again till N iterations while updating the thresolds -->
 							<div class="col col-xs-4">
-							    <label for="ex3">K = &nbsp;&nbsp;
+							    <label for="numberOfUpdateSteps">K = &nbsp;&nbsp;
 							    	<button class="btn btn-success" type="button" onclick="optimizeThresholds();">
 			    						Run GD<!-- <i class="fa fa-forward" aria-hidden="true"></i> -->
 			    					</button>
 							    </label>
-							    <input class="form-control" id="ex3" type="text" value="100" onchange="numberOfUpdateStepsChanged(Number(this.value));">
+							    <input class="form-control" id="numberOfUpdateSteps" type="text" value="100" onchange="numberOfUpdateStepsChanged(Number(this.value));">
 
 							    <label for="stepSize">Step Size =  <span id="stepSizeDisplay"></span></label>
-							    <input type="range" class="form-control" id="stepSize" min="0.1" max="15" value="1" step="0.1" onchange="stepSizeChanged();">
+							    <input type="range" class="form-control" id="stepSize" min="0" max="1" value="0.5" step="0.01" onchange="stepSizeChanged();">
 							</div>
   							
 	    				

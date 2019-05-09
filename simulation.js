@@ -321,17 +321,17 @@ function updateInterface(){
         }
 
         document.getElementById("frameRateDisplay").innerHTML = simulationFrameRate.toString();
-        document.getElementById("stepSizeDisplay").innerHTML = stepSize.toFixed(1);
-        //document.getElementById("stepSizeMultiplierDisplay").innerHTML = "10<sup>"+Number(document.getElementById("stepSizeMultiplier").value)+"</sup>";stepSizeMultiplier.toFixed(1);
+        document.getElementById("stepSizeDisplay").innerHTML = stepSize.toFixed(3);
+        document.getElementById("stepSizeMultiplierDisplay").innerHTML = "10<sup>"+Number(document.getElementById("stepSizeMultiplier").value)+"</sup>";
 
     }
 
 }
 
 function readInitialInterface(){
-    // deltaT = Number(document.getElementById("deltaT").value);
-    // periodT = Number(document.getElementById("periodT").value);
-    // stepSize = Number(document.getElementById("stepSize").value)*Math.pow(10,Number(document.getElementById("stepSizeMultiplier").value));
+    deltaT = Number(document.getElementById("deltaT").value);
+    periodT = Number(document.getElementById("periodT").value);
+    stepSize = Number(document.getElementById("stepSize").value)*Math.pow(10,Number(document.getElementById("stepSizeMultiplier").value));
 
 }
 

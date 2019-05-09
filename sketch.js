@@ -46,6 +46,7 @@ function setup() {
 
     consolePrint("Interface Loaded.");
 
+    readInitialInterface();
     frameRate(1/deltaT);
     
 
@@ -66,7 +67,7 @@ function draw() {
 
     updateInterface();
 
-    print("her");
+
 
     if(simulationMode==1){// Hybrid system simulation mode
 
