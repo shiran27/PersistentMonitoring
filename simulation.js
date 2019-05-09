@@ -22,9 +22,9 @@ var agentDraggingMode = false;
 var agentDragging;
 
 
-var deltaT = 0.01;
-var periodT = 150;
-var stepSize = 0.5;
+var deltaT;
+var periodT;
+var stepSize;
 var simulationTime = 0;
 var discreteTimeSteps = 0;
 
@@ -322,10 +322,16 @@ function updateInterface(){
 
         document.getElementById("frameRateDisplay").innerHTML = simulationFrameRate.toString();
         document.getElementById("stepSizeDisplay").innerHTML = stepSize.toFixed(1);
+        document.getElementById("stepSizeMultiplierDisplay").innerHTML = "10<sup>"+Number(document.getElementById("stepSizeMultiplier").value)+"</sup>";stepSizeMultiplier.toFixed(1);
 
     }
 
+}
 
+function readInitialInterface(){
+    deltaT = Number(document.getElementById("deltaT").value);
+    periodT = Number(document.getElementById("periodT").value);
+    stepSize = Number(document.getElementById("stepSize").value)*Math.pow(10,Number(document.getElementById("stepSizeMultiplier").value));
 
 }
 
@@ -518,13 +524,20 @@ function periodTChanged(val){
     }
 }
 
-function stepSizeChanged(val){
-    if(!isNaN(val) && val > 0){
-        stepSize = val;
-        consolePrint("Step size of the gradient descent scheme changed to: "+val+".");
-    }
+function stepSizeChanged(){
+    
+    
+    var stepSizeRaw = Number(document.getElementById("stepSize").value);
+    var stepSizeMultiplier = Number(document.getElementById("stepSizeMultiplier").value);
+
+    stepSize = stepSizeRaw * Math.pow(10,stepSizeMultiplier);
+
+    consolePrint("Step size of the gradient descent scheme changed to: "+stepSize+".");
+    
     document.getElementById("stepSizeDisplay").innerHTML = stepSize.toString();
+    document.getElementById("stepSizeMultiplierDisplay").innerHTML = "10<sup>"+stepSizeMultiplier+"</sup>";
 }
+
 
 
 

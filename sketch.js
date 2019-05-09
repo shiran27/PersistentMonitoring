@@ -7,6 +7,7 @@ var canvas;
 var width;
 var height;
 
+var justInitialized = 0;
 
 function setup() {
   	
@@ -44,6 +45,7 @@ function setup() {
     document.getElementById("spaceForThresholdSensitivities").style.display = "none";
 
     problemConfigurationChanged();
+
     consolePrint("Interface Loaded.");
 
     frameRate(1/deltaT);
@@ -133,7 +135,12 @@ function draw() {
 
 
     
-
+    // if(justInitialized<10){
+    //     justInitialized++;
+    // }else if(justInitialized==10){
+    //     readInitialInterface(); 
+    //     justInitialized=100;
+    // }
     
 
 }
