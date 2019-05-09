@@ -16,7 +16,7 @@ function Point2(x,y) {
 
 	this.copyP2 = function(a){
 		this.x = a.x;
-		this.y = a.y;
+		this.y = a.y; 
 	}
 
 	this.shiftP2 = function(delta_x, delta_y){
