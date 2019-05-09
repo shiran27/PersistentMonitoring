@@ -329,9 +329,9 @@ function updateInterface(){
 }
 
 function readInitialInterface(){
-    deltaT = Number(document.getElementById("deltaT").value);
-    periodT = Number(document.getElementById("periodT").value);
-    stepSize = Number(document.getElementById("stepSize").value)*Math.pow(10,Number(document.getElementById("stepSizeMultiplier").value));
+    // deltaT = Number(document.getElementById("deltaT").value);
+    // periodT = Number(document.getElementById("periodT").value);
+    // stepSize = Number(document.getElementById("stepSize").value)*Math.pow(10,Number(document.getElementById("stepSizeMultiplier").value));
 
 }
 
