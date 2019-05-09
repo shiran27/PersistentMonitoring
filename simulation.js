@@ -369,7 +369,7 @@ function updateRTThresholdValuesRandom(){
                 }
                 agents[a].threshold[i][j] = threshold;
                 document.getElementById("customRTThreshold_"+(i+1)+"_"+(j+1)+"_"+(a+1)).innerHTML = threshold.toString();
-
+   
             }
             
         }
