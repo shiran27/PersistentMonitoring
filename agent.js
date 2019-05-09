@@ -67,13 +67,13 @@ function Agent(x, y, r) {
             // event printing
             if(nextTarget!=i){// residing target uncertainty increasing from 0
                 if(this.getImmediateNeighbors().length==0){// Event4 will be triggered next
-                    print("E 4: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");
+                    print("Ev "+eventCount+" E 4: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");
                     sensitivityUpdateAtEvent();// event occured
                     this.IPAComputationEventE4(i);
                 }
             }else if(nextTarget==i){// residing target uncertainty reaching 0
                 if(this.residingTargetUncertainty>0 && targets[i].uncertainty==0){// Event 3 Triggered when uncertainty was updated
-                    print("E 3: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");
+                    print("Ev "+eventCount+" E 3: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");
                     sensitivityUpdateAtEvent();
                     this.IPAComputationEventE3(i);
                 }
@@ -95,24 +95,24 @@ function Agent(x, y, r) {
 
                 // event printing (GIven: targets[i].uncertainty < this.threshold[i][i] && j!=i )
                 if(this.residingTargetUncertainty > this.threshold[i][i]){
-                    print("D 1: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");    
+                    print("Ev "+eventCount+" D 1: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");    
                     sensitivityUpdateAtEvent();
                     this.departureMode = 1; // use to identify arrival 1 event
                     this.IPAComputationEventD1(i);
                 }else if(this.residingTargetUncertainty>0){
-                    print("D 2: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");  
+                    print("Ev "+eventCount+" D 2: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");  
                     sensitivityUpdateAtEvent();
                     this.departureMode = 2; // use to identify arrival 2 event
                     this.IPAComputationEventD2(i,j);
                 }else{// if(this.residingTargetUncertainty==0){
                     
                     if(targets[i].uncertaintyRate > this.getImmediateNeighborsSensingRate()){
-                        print("D 3_1: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");      
+                        print("Ev "+eventCount+" D 3_1: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");      
                         sensitivityUpdateAtEvent();
                         this.departureMode = 3.1; // use to identify arrival 2 event
                         this.IPAComputationEventD3_1(i,j);
                     }else{
-                        print("D 3_2: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");      
+                        print("Ev "+eventCount+" D 3_2: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");      
                         sensitivityUpdateAtEvent();
                         this.departureMode = 3.2; // use to identify arrival 2 event
                         this.IPAComputationEventD3_2(i);
@@ -153,19 +153,19 @@ function Agent(x, y, r) {
                 // event printing
                 
                 if(this.departureMode == 1){
-                    print("A 1: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(this.residingTarget[0]+1)+";");      
+                    print("Ev "+eventCount+" A 1: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(this.residingTarget[0]+1)+";");      
                     sensitivityUpdateAtEvent();
                     this.IPAComputationEventA1(i,j);
                 }else if(this.departureMode == 2){
-                    print("A 2: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(this.residingTarget[0]+1)+";");      
+                    print("Ev "+eventCount+" A 2: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(this.residingTarget[0]+1)+";");      
                     sensitivityUpdateAtEvent();
                     this.IPAComputationEventA2(i,j);
                 }else if(this.departureMode == 3.1){
-                    print("A 3_1: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(this.residingTarget[0]+1)+";");      
+                    print("Ev "+eventCount+" A 3_1: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(this.residingTarget[0]+1)+";");      
                     sensitivityUpdateAtEvent();
                     this.IPAComputationEventA2(i,j);
                 }else if(this.departureMode == 3.2){
-                    print("A 3_2: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(this.residingTarget[0]+1)+";");      
+                    print("Ev "+eventCount+" A 3_2: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(this.residingTarget[0]+1)+";");      
                     sensitivityUpdateAtEvent();
                     this.IPAComputationEventA2(i,j);
                 }

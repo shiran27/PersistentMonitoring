@@ -28,11 +28,12 @@ var stepSize;
 var simulationTime = 0;
 var discreteTimeSteps = 0;
 
+var firstEventTime = 0;
 var eventTime = 0; 
 var eventCount = 0; 
 var simulationFrameRate = 1;
 
-var numberOfUpdateSteps = 100; // gradient update steps
+var numberOfUpdateSteps; // gradient update steps
 var numberOfUpdateStepsCount = 0; // gradient update steps
 
 
@@ -41,6 +42,9 @@ var updateStepCountArray = [];
 var costPlotMode = true;
 
 var eventTimeSensitivity = []; // for IPA
+
+var defaultUncertaintyRates = []; // perturbation for boosting purposes
+var defaultSensingRates = [];
 
 
 function startModifyingProbConfig(){
@@ -119,13 +123,13 @@ function finishModifyingProbConfig(){
     document.getElementById('customRTThreshold').innerHTML = "";
     document.getElementById('thresholdSensitivities').innerHTML = "";
     var HTMLTag2 = "<div class='col'></div>";    
-
+    var HTMLTag1 = "";
     for(var a = 0; a<agents.length; a++){
 
         var indexString = (a+1).toString();
         var HTMLTag = "<h5>Agent "+ indexString +":";
-        HTMLTag += "<input type='range' min='0' max='15' step='0.2' value='"+agents[a].sensingRate.toFixed(1)+"' class='slider' id='sensingRate"+ indexString +"' onchange='sensingRateChangedRT("+indexString+",this.value)'> <span id='sensingRateDisplay"+ indexString +"'></span></h5>";
-        document.getElementById('customRTSensingRates').innerHTML += HTMLTag; 
+        HTMLTag += "<input type='range' min='0' max='15' step='0.1' value='"+agents[a].sensingRate.toFixed(1)+"' class='slider' id='sensingRate"+ indexString +"' onchange='sensingRateChangedRT("+indexString+",this.value)'> <span id='sensingRateDisplay"+ indexString +"'></span></h5>";
+        HTMLTag1 += HTMLTag;
 
         //thresholds per each agent
         HTMLTag2 += "<table class='col table table-bordered matrix' id='customRTThreshold"+(a+1)+"'>";
@@ -152,6 +156,8 @@ function finishModifyingProbConfig(){
         HTMLTag2 += "</table><div class='col'></div>";
     
     }
+    document.getElementById('customRTSensingRates').innerHTML += HTMLTag1+"<button class='btn btn-success' type='button' onclick='resetPerturbation();'>Reset Perturbation</button>";
+    
     document.getElementById('customRTThreshold').innerHTML += HTMLTag2; 
 
 
@@ -201,7 +207,33 @@ function consolePrint(consoleText){
 }
 
 
+function resetPerturbation(){// restore the sening/ uncertainty rates
 
+
+    for(var i = 0; i<targets.length; i++){
+        var val = Number(document.getElementById("uncertaintyRate"+(i+1)).value);
+        if(defaultUncertaintyRates[i]!=val){
+            uncertaintyRateChangedRT(i+1,defaultUncertaintyRates[i]);
+            document.getElementById("uncertaintyRate"+(i+1)).value = defaultUncertaintyRates[i];    
+            print("Target "+(i+1)+" Urate set to "+defaultUncertaintyRates[i]);
+        }
+        
+        
+        
+        
+    }
+    for(var a = 0; a<agents.length; a++){
+        var val = Number(document.getElementById("sensingRate"+(a+1)).value);
+        if(defaultSensingRates[a]!=val){
+            sensingRateChangedRT(a+1,defaultSensingRates[a]);
+            document.getElementById("sensingRate"+(a+1)).value = defaultSensingRates[a];    
+            print("Agent "+(a+1)+" Srate set to "+defaultSensingRates[a]);
+        }
+        //document.getElementById("sensingRate"+(a+1)).value = defaultSensingRates[a];
+        //
+    }
+
+}
 
 
 
@@ -332,7 +364,7 @@ function readInitialInterface(){
     deltaT = Number(document.getElementById("deltaT").value);
     periodT = Number(document.getElementById("periodT").value);
     stepSize = Number(document.getElementById("stepSize").value)*Math.pow(10,Number(document.getElementById("stepSizeMultiplier").value));
-
+    numberOfUpdateSteps = Number(document.getElementById("numberOfUpdateSteps").value);
 }
 
 function displayThresholdSensitivities(){ 
@@ -360,7 +392,8 @@ function updateRTThresholdValuesRandom(){
 
         for(var i = 0; i<targets.length; i++){//rows
             
-            for(var j = 0; j<targets.length; j++){//columns
+            for(var j = 0; j<targets.length; j++){//columns 
+
                 var threshold;
                 if( i!=j && !isNeighbors(i,j)){
                     threshold = 10000;    
@@ -637,7 +670,6 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
     for(var i = 0; i<agents.length; i++){// rest agent positions
         agents[i].residingTarget = [agents[i].initialResidingTarget];
         agents[i].position = targets[agents[i].residingTarget[0]].position;
-        
     }
     // end reset uncertainties
 
@@ -730,11 +762,12 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
 
 
     // sensitivity of thresholds
-    sensitivityUpdateAtEvent(); // consider ending the simulation as an event
+    ////sensitivityUpdateAtEvent(); // consider ending the simulation as an event
     for(var z = 0; z<agents.length; z++){
         for(var p = 0; p < targets.length; p++){
             for(var q = 0; q < targets.length; q++){
-                agents[z].sensitivityOfThreshold[p][q] = agents[z].sensitivityOfThreshold[p][q]/simulationTime;
+                //agents[z].sensitivityOfThreshold[p][q] = agents[z].sensitivityOfThreshold[p][q]/simulationTime;
+                agents[z].sensitivityOfThreshold[p][q] = agents[z].sensitivityOfThreshold[p][q]/(eventTime-firstEventTime);
             }
         }
     }
@@ -744,16 +777,16 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
 
 
     // resetAgentsAndTargets();
-    for(var i = 0; i<agents.length; i++){// rest agent positions
-        if(agents[i].residingTarget.length==1){
-            agents[i].position = targets[agents[i].residingTarget[0]].position;    
-        }else if(agents[i].residingTarget.length==2){
-            agents[i].position = targets[agents[i].residingTarget[1]].position;
-            agents[i].residingTarget = [agents[i].residingTarget[1]];
-        }else{
+    // for(var i = 0; i<agents.length; i++){// rest agent positions
+    //     if(agents[i].residingTarget.length==1){
+    //         agents[i].position = targets[agents[i].residingTarget[0]].position;    
+    //     }else if(agents[i].residingTarget.length==2){
+    //         agents[i].position = targets[agents[i].residingTarget[1]].position;
+    //         agents[i].residingTarget = [agents[i].residingTarget[1]];
+    //     }else{
 
-        }
-    }
+    //     }
+    // }
     // end rest agents and targets
 
    
@@ -767,9 +800,15 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
 
 
 function sensitivityUpdateAtEvent(){
+
     var eventTimePeriod = simulationTime - eventTime;
     eventTime = simulationTime;    
     eventCount = eventCount + 1;
+
+    if(eventCount==1){
+        firstEventTime = eventTime;
+        print("First event of the simulation occured at: "+eventTime);
+    }
 
     for(var i = 0; i<targets.length; i++){
 
@@ -843,6 +882,19 @@ function optimizeThresholds(){// use solveForIPAEstimators() iteratively to updt
     costArrayForPlot = [];
     updateStepCountArray = [];
     numberOfUpdateStepsCount = 0;
+
+    // to reset from perturbations
+    defaultUncertaintyRates = []; // to test boosting
+    defaultSensingRates = []; // to test boosting
+    for(var i = 0; i<targets.length; i++){
+        defaultUncertaintyRates.push(targets[i].uncertaintyRate);
+    }
+    for(var i = 0; i<agents.length; i++){
+        defaultSensingRates.push(agents[i].sensingRate);
+    }
+    // to reset from perturbations
+   
+
 
 }
 
