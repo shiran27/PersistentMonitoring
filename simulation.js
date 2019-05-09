@@ -628,6 +628,22 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
     eventTime = 0;
     eventCount = 0;
 
+
+    // reset target uncertainties and agent positions
+    for(var i = 0; i<targets.length; i++){// rest targets
+        targets[i].uncertainty = targets[i].initialUncertainty;
+        targets[i].meanUncertainty = targets[i].initialUncertainty;
+    }
+    for(var i = 0; i<agents.length; i++){// rest agent positions
+        agents[i].residingTarget = [agents[i].initialResidingTarget];
+        agents[i].position = targets[agents[i].residingTarget[0]].position;
+        
+    }
+    // end reset uncertainties
+
+
+
+
     // variable initialization
     //periodT = 150; // temporary
 
@@ -680,12 +696,7 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
     // end variable initialization
 
 
-    // reset uncertainties
-    for(var i = 0; i<targets.length; i++){// rest targets
-        targets[i].uncertainty = targets[i].initialUncertainty;
-        targets[i].meanUncertainty = targets[i].initialUncertainty;
-    }
-    // end reset uncertainties
+    
 
 
 
