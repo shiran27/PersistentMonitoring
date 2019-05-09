@@ -322,7 +322,7 @@ function updateInterface(){
 
         document.getElementById("frameRateDisplay").innerHTML = simulationFrameRate.toString();
         document.getElementById("stepSizeDisplay").innerHTML = stepSize.toFixed(1);
-        document.getElementById("stepSizeMultiplierDisplay").innerHTML = "10<sup>"+Number(document.getElementById("stepSizeMultiplier").value)+"</sup>";stepSizeMultiplier.toFixed(1);
+        //document.getElementById("stepSizeMultiplierDisplay").innerHTML = "10<sup>"+Number(document.getElementById("stepSizeMultiplier").value)+"</sup>";stepSizeMultiplier.toFixed(1);
 
     }
 

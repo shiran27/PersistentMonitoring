@@ -7,8 +7,6 @@ var canvas;
 var width;
 var height;
 
-var justInitialized = 0;
-
 function setup() {
   	
   	pixelDensity(1);
@@ -67,7 +65,7 @@ function draw() {
 
     updateInterface();
 
-
+    print("her");
 
     if(simulationMode==1){// Hybrid system simulation mode
 
