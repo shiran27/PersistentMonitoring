@@ -1,0 +1,69 @@
+/* style.css */
+body {
+	padding: 0;
+	margin: 0;
+	color: #333;
+	background-color: #fff;
+}
+
+
+#canvasHolder{
+    
+	/*width: 500px; 
+	height: 500px;*/
+	
+	width: 600px; 
+	height: 600px;
+	min-width: 600px;
+	min-height: 600px;
+	max-width: 600px;
+	max-height: 600px;
+	align-self: center;
+	margin-bottom: 20px;
+    /*border: 10px solid transparent;
+    padding: 15px;
+	border: 2px solid gray; 
+	margin: auto;*/
+
+}
+
+#blankColumn{
+    width: 10px; 
+}
+
+#consoleText{
+    color: blue;
+}
+
+h4.scrollClass {
+    background-color:#ddd;
+    /*width: 110px;*/
+    height: 100px;
+    overflow: scroll;
+}
+
+.matrix {
+    position: relative;
+}
+.matrix:before, .matrix:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    border: 1px solid #000;
+    width: 10px;
+    height: 100%;
+}
+.matrix:before {
+    left: -1px;
+    border-right: 0px;
+}
+.matrix:after {
+    right: -1px;
+    border-left: 0px;
+}
+.matrix td {
+    padding: 5px;    
+    text-align: center;
+}
+
+
