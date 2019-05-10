@@ -689,6 +689,7 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
         }
     }
 
+
     for(var z = 0; z<agents.length; z++){
         agents[z].sensitivityOfThreshold = [];
         for(var p = 0; p < targets.length; p++){
@@ -706,11 +707,7 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
             for(var p = 0; p < targets.length; p++){
                 targets[i].sensitivityOfUncertainty[z][p] = [];
                 for(var q = 0; q < targets.length; q++){
-                    if(p==i && q==i){
-                        targets[i].sensitivityOfUncertainty[z][p][q] = 0;
-                    }else{
-                        targets[i].sensitivityOfUncertainty[z][p][q] = 0;
-                    }
+                    targets[i].sensitivityOfUncertainty[z][p][q] = 0;
                 }
             }
         }   
@@ -770,7 +767,12 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
         for(var p = 0; p < targets.length; p++){
             for(var q = 0; q < targets.length; q++){
                 //agents[z].sensitivityOfThreshold[p][q] = agents[z].sensitivityOfThreshold[p][q]/simulationTime;
-                agents[z].sensitivityOfThreshold[p][q] = agents[z].sensitivityOfThreshold[p][q]/(eventTime-firstEventTime);
+                if((eventTime-firstEventTime)>0){
+                    agents[z].sensitivityOfThreshold[p][q] = agents[z].sensitivityOfThreshold[p][q]/(eventTime-firstEventTime);
+                }else{
+                    agents[z].sensitivityOfThreshold[p][q] = agents[z].sensitivityOfThreshold[p][q]/simulationTime;
+                }
+                ////print("p="+p+", q="+q+"; z="+z+".sen^z_pq:"+agents[z].sensitivityOfThreshold[p][q]);
             }
         }
     }
@@ -819,7 +821,10 @@ function sensitivityUpdateAtEvent(){
         for(var z = 0; z<agents.length; z++){
             for(var p = 0; p < targets.length; p++){
                 for(var q = 0; q < targets.length; q++){
+
                     agents[z].sensitivityOfThreshold[p][q] = agents[z].sensitivityOfThreshold[p][q] + targets[i].sensitivityOfUncertainty[z][p][q]*eventTimePeriod;
+                    ////print("p="+p+", q="+q+"; z="+z+".sentheta^z_pq:"+agents[z].sensitivityOfThreshold[p][q]);
+                
                 }
             }
         }

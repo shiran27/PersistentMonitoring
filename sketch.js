@@ -10,7 +10,7 @@ var height;
 function setup() {
   	
 
-    Math.seedrandom('50'); // initial seed for random number generator
+    Math.seedrandom('7'); // initial seed for random number generator
 
 
   	pixelDensity(1);
