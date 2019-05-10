@@ -9,6 +9,10 @@ var height;
 
 function setup() {
   	
+
+    Math.seedrandom('50'); // initial seed for random number generator
+
+
   	pixelDensity(1);
     const canvasHolder = select('#canvasHolder');
     width  = canvasHolder.width;

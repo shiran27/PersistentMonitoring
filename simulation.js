@@ -662,6 +662,7 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
     eventCount = 0;
 
 
+    
     // reset target uncertainties and agent positions
     for(var i = 0; i<targets.length; i++){// rest targets
         targets[i].uncertainty = targets[i].initialUncertainty;
@@ -675,9 +676,7 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
 
 
 
-
     // variable initialization
-    //periodT = 150; // temporary
 
     for(var i = 0; i<targets.length; i++){
         targets[i].residingAgents = [];
@@ -707,7 +706,11 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
             for(var p = 0; p < targets.length; p++){
                 targets[i].sensitivityOfUncertainty[z][p] = [];
                 for(var q = 0; q < targets.length; q++){
-                    targets[i].sensitivityOfUncertainty[z][p][q] = 0;
+                    if(p==i && q==i){
+                        targets[i].sensitivityOfUncertainty[z][p][q] = 0;
+                    }else{
+                        targets[i].sensitivityOfUncertainty[z][p][q] = 0;
+                    }
                 }
             }
         }   
@@ -776,6 +779,7 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
 
 
 
+
     // resetAgentsAndTargets();
     // for(var i = 0; i<agents.length; i++){// rest agent positions
     //     if(agents[i].residingTarget.length==1){
@@ -803,8 +807,8 @@ function sensitivityUpdateAtEvent(){
 
     var eventTimePeriod = simulationTime - eventTime;
     eventTime = simulationTime;    
-    eventCount = eventCount + 1;
-
+    eventCount = eventCount + 1; 
+ 
     if(eventCount==1){
         firstEventTime = eventTime;
         print("First event of the simulation occured at: "+eventTime);
@@ -819,7 +823,6 @@ function sensitivityUpdateAtEvent(){
                 }
             }
         }
-
     }
 }
 
