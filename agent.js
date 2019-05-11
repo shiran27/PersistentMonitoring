@@ -66,17 +66,17 @@ function Agent(x, y, r) {
 
 
             // event printing
-            if(nextTarget!=i){// residing target uncertainty increasing from 0
-                if(this.getImmediateNeighbors().length==0){// Event4 will be triggered next
-                    print("Ev "+eventCount+" E 4: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");
-                    sensitivityUpdateAtEvent();// event occured
-                    this.IPAComputationEventE4(i);
-                }
-            }else if(nextTarget==i){// residing target uncertainty reaching 0
+            if(nextTarget==i){// residing target uncertainty reaching 0
                 if(this.residingTargetUncertainty>0 && targets[i].uncertainty==0){// Event 3 Triggered when uncertainty was updated
                     print("Ev "+eventCount+" E 3: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");
                     sensitivityUpdateAtEvent();
                     this.IPAComputationEventE3(i);
+                }
+            }else if(nextTarget!=i){// residing target uncertainty increasing from 0
+                if(this.getImmediateNeighbors().length==0 && targets[i].uncertainty==0){// Event4 will be triggered next
+                    print("Ev "+eventCount+" E 4: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(i+1)+";");
+                    sensitivityUpdateAtEvent();// event occured
+                    this.IPAComputationEventE4(i);
                 }
             }
             // end event printing
@@ -331,7 +331,7 @@ function Agent(x, y, r) {
                     }else{
                         eventTimeSensitivity[z][p][q] = -1*(targets[j].sensitivityOfUncertainty[z][p][q])/(targets[j].uncertaintyRate - targets[j].getNetAgentSensingRate());
                     }
-                    targets[i].sensitivityOfUncertainty[z][p][q] = -1*(targets[i].uncertaintyRate - this.getImmediateNeighborsSensingRate)*eventTimeSensitivity[z][p][q];
+                    targets[i].sensitivityOfUncertainty[z][p][q] = -1*(targets[i].uncertaintyRate - this.getImmediateNeighborsSensingRate())*eventTimeSensitivity[z][p][q];
                 }
             }
         }          
@@ -424,7 +424,7 @@ function Agent(x, y, r) {
         var i = this.residingTarget[0];
         var result = [];
         for(var j =0 ;j<agents.length; j++){
-            if(targets[i].residingAgents[j] == true){
+            if(targets[i].residingAgents[j] == true && j!=this.id){
                 result.push(j);
             }
         }
@@ -491,14 +491,21 @@ function Agent(x, y, r) {
                     maxUncertaintyTargetIndex = j;
                 }
             }
-            return maxUncertaintyTargetIndex;
+           //return maxUncertaintyTargetIndex;
             // end maximum uncertainty tie breaker?
 
-            if(Math.random()>0.5){
-                return minDistanceTargetIndex;
-            }else{
+            if(targetPrioritizationPolicy==3){
+                if(Math.random()>0.5){
+                    return minDistanceTargetIndex;
+                }else{
+                    return maxUncertaintyTargetIndex;
+                }    
+            }else if(targetPrioritizationPolicy==2){
                 return maxUncertaintyTargetIndex;
+            }else{
+                return minDistanceTargetIndex;
             }
+            
 
         }
 
