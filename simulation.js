@@ -1022,8 +1022,34 @@ function problemConfigurationChanged(){
     //paths = [];
     finishModifyingProbConfig();
 
-
-    if(r==2){//2A arrangement
+    if(r==4){
+        startModifyingProbConfig();
+        addATargetAt(50,50);
+        addATargetAt(50,250);
+        addATargetAt(50,450);
+        addATargetAt(250,450);
+        addATargetAt(450,450);
+        addATargetAt(450,250);
+        addATargetAt(450,50);
+        addATargetAt(250,50);
+        addATargetAt(250,250);
+        disconnectAllPaths();
+        connectPathsBetween([0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8]);
+        addAnAgentAtTarget(0);
+        addAnAgentAtTarget(4);
+        addAnAgentAtTarget(8);
+        finishModifyingProbConfig();
+    }else if(r==3){ // 4 targets 1 agent
+        startModifyingProbConfig();
+        addATargetAt(50,450);
+        addATargetAt(250,450);
+        addATargetAt(250,250);
+        addATargetAt(50,250);
+        paths[1].isPermenent = false;
+        paths[4].isPermenent = false;
+        addAnAgentAtTarget(0);
+        finishModifyingProbConfig();
+    }else if(r==2){//2A arrangement
         /*addATargetAt(50,50);
         addATargetAt(50,200);
         addATargetAt(550,50);

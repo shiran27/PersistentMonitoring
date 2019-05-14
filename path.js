@@ -54,3 +54,19 @@ function Path(target1,target2){
 
 
 }
+
+function disconnectAllPaths(){
+	for(var i = 0; i<paths.length; i++){
+		paths[i].isPermenent = false;
+	}
+}
+
+function connectPathsBetween(targetIDList){
+	for(var i = 0; i<targetIDList.length; i=i+2){
+		for(var p = 0; p<paths.length; p++){
+			if( paths[p].targets[0]==targetIDList[i] && paths[p].targets[1]==targetIDList[i+1] ){
+				paths[p].isPermenent = true;
+			}
+		}
+	}
+}
