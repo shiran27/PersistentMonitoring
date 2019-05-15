@@ -10,9 +10,16 @@ function plotData(){
 			{
 				title: 'Evolution of Objective Function Value', 
 				////autosize: true,
-			    //width: 1000,
+			    //width: 100,
 			    //height: 400,
-			    ////automargin: true,
+			    automargin: true,
+			    // margin: {
+			    // 	l:10,
+			    // 	r:10,
+			    // 	t:10,
+			    // 	b:10,
+			    // 	pad:10,
+			    // },
 			    xaxis: {
 					title: 'Number of Iterations', 
 					showline: true,

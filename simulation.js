@@ -48,6 +48,10 @@ var defaultSensingRates = [];
 var targetPrioritizationPolicy; // targetPrioritizationPolicyChanged()
 
 
+var printMode = true;
+
+var boostingMode = 1; 
+
 function startModifyingProbConfig(){
 
     problemConfigurationEditMode = true;
@@ -670,7 +674,7 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
 
     consolePrint("Initiated running the hybrid system for time perion T and getting IPA estimators.");
 
-    simulationMode = 3;
+    ////simulationMode = 3;
     simulationTime = 0;
     discreteTimeSteps = 0;
     eventTime = 0;
@@ -816,7 +820,7 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
 
 
     consolePrint("Cost : "+meanUncertainty.toFixed(3));
-    simulationMode = 0;
+    ////simulationMode = 0;
 }
 
 
@@ -828,7 +832,7 @@ function sensitivityUpdateAtEvent(){
  
     if(eventCount==1){
         firstEventTime = eventTime;
-        print("First event of the simulation occured at: "+eventTime);
+        if(printMode){print("First event of the simulation occured at: "+eventTime);}
     }
 
     for(var i = 0; i<targets.length; i++){
@@ -956,6 +960,9 @@ function resetSimulation(){
         
     }
 
+    document.getElementById("simulationTime").innerHTML = simulationTime.toFixed(2).toString();
+    document.getElementById("simulationCost").innerHTML = 0;
+
     consolePrint("Simulation stopped and reseted to the initial state.");
     
 
@@ -1021,8 +1028,85 @@ function problemConfigurationChanged(){
     print(paths);
     //paths = [];
     finishModifyingProbConfig();
+    if(r == 8){
+        
+        startModifyingProbConfig();
+        addATargetAt(135,486);
+        addATargetAt(115,375);
+        addATargetAt(310,485);
+        addATargetAt(297,282);
+        addATargetAt(106,176);
+        addATargetAt(190,105);
+        addATargetAt(405,104);
+        addATargetAt(494,164);
+        addATargetAt(485,354);
+        addATargetAt(476,484);
+        disconnectAllPaths();
+        connectPathsBetween([0,1,0,2,1,2,1,3,1,4,2,3,2,9,2,8]);
+        connectPathsBetween([3,4,3,5,3,6,3,7,3,8,4,5,5,6,6,7,7,8,8,9]);
+        addAnAgentAtTarget(0);
+        addAnAgentAtTarget(4);
+        addAnAgentAtTarget(8);
+        finishModifyingProbConfig();
 
-    if(r==4){
+    }else if(r==7){
+
+        startModifyingProbConfig();
+        addATargetAt(55,405);
+        addATargetAt(58,107);
+        addATargetAt(153,268);
+        addATargetAt(191,435);
+        addATargetAt(189,532);
+        addATargetAt(277,234);
+        addATargetAt(403,315);
+        addATargetAt(372,485);
+        addATargetAt(486,224);
+        addATargetAt(521,442);
+        disconnectAllPaths();
+        connectPathsBetween([0,1,1,2,2,3,3,4,2,5,3,5,5,6,5,8,5,7,6,7,6,8,8,9]);
+        addAnAgentAtTarget(0);
+        addAnAgentAtTarget(4);
+        addAnAgentAtTarget(8);
+        finishModifyingProbConfig();
+
+    }else if(r==6){// Maze with 10 agents - Iterative greedy 200 descretized points (adjusted-CoverageV34)
+        startModifyingProbConfig();
+        addATargetAt(63,488);
+        addATargetAt(67,288);
+        addATargetAt(120,100);
+        addATargetAt(234,105);
+        addATargetAt(267,317);
+        addATargetAt(297,491);
+        addATargetAt(433,505);
+        addATargetAt(534,402);
+        addATargetAt(465,263);
+        addATargetAt(446,58);
+        disconnectAllPaths();
+        connectPathsBetween([0,1,1,2,2,3,3,9,3,4,4,5,4,8,5,6,6,7,7,8,7,8,8,9]);
+        addAnAgentAtTarget(0);
+        addAnAgentAtTarget(4);
+        addAnAgentAtTarget(8);
+        finishModifyingProbConfig();
+
+    }else if(r==5){// Maze with 10 agents - Iterative greedy 200 descretized points (adjusted-CoverageV34)
+        startModifyingProbConfig();
+        addATargetAt(53,185);
+        addATargetAt(98,504);
+        addATargetAt(318,530);
+        addATargetAt(529,485);
+        addATargetAt(552,282);
+        addATargetAt(495,67);
+        addATargetAt(188,105);
+        addATargetAt(202,380);
+        addATargetAt(400,405);
+        addATargetAt(353,193);
+        disconnectAllPaths();
+        connectPathsBetween([0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9]);
+        addAnAgentAtTarget(0);
+        addAnAgentAtTarget(4);
+        addAnAgentAtTarget(8);
+        finishModifyingProbConfig();
+    }else if(r==4){
         startModifyingProbConfig();
         addATargetAt(50,50);
         addATargetAt(50,250);

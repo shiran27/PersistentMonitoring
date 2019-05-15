@@ -129,6 +129,10 @@
 					    	<option selected value="2">2-Agent(5T)</option>
 					    	<option value="3">1-Agent(4T)</option>
 					    	<option value="4">3-Agent(9T)</option>
+					    	<option value="5">3-Agent(Maze)</option>
+					    	<option value="6">3-Agent(General)</option>
+					    	<option value="7">3-Agent(Room)</option>
+					    	<option value="8">3-Agent(Blank)</option>
 					  	</select> 
 
 	    			</div>
@@ -243,7 +247,7 @@
 						<div class="form-group row">
 
 							<div class="col col-xs-4">
-							    <label for="deltaT">&Delta;t =  &nbsp;
+							    <label for="deltaT">&Delta;t=
 							    	<button class="btn btn-success" type="button" onclick="simulateHybridSystem();">
 		    							<i class="fa fa-play" aria-hidden="true"></i>
 		    						</button>
@@ -259,7 +263,7 @@
 							  
 
 							<div class="col col-xs-4">
-							    <label for="periodT">T = &nbsp;&nbsp;&nbsp;
+							    <label for="periodT">T = 
 							    	<button class="btn btn-success" type="button" onclick="solveForIPAEstimators();">
 		    							Run IPA
 		    						</button>
@@ -272,12 +276,12 @@
 							
 							<!-- Run the hybrid system for time T and estimate IPA gradients and re-run again till N iterations while updating the thresolds -->
 							<div class="col col-xs-4">
-							    <label for="numberOfUpdateSteps">K = &nbsp;&nbsp;
+							    <label for="numberOfUpdateSteps">K = 
 							    	<button class="btn btn-success" type="button" onclick="optimizeThresholds();">
 			    						Run GD<!-- <i class="fa fa-forward" aria-hidden="true"></i> -->
 			    					</button>
 							    </label>
-							    <input class="form-control" id="numberOfUpdateSteps" type="text" value="300" onchange="numberOfUpdateStepsChanged(Number(this.value));">
+							    <input class="form-control" id="numberOfUpdateSteps" type="text" value="1000" onchange="numberOfUpdateStepsChanged(Number(this.value));">
 
 							    <label for="stepSize">Step Size =  <span id="stepSizeDisplay"></span></label>
 							    <input type="range" class="form-control" id="stepSize" min="0" max="1" value="0.5" step="0.01" onchange="stepSizeChanged();">

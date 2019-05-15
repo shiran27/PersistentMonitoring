@@ -27,6 +27,10 @@ body {
 
 }
 
+#myplot{
+    margin-right: 0px;
+}
+
 #blankColumn{
     width: 10px; 
 }

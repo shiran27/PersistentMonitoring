@@ -98,6 +98,24 @@ function Target(x, y, r) {
 
     }
 
+    this.updateCT2 = function(){
+        // update uncertainty values R_i(t) of target i
+        var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
+        var oldUncertainty = this.uncertainty;
+        if(this.uncertainty==0 && netUncertaintyGrowthRate<0){
+            this.uncertainty = 0;
+        }else{
+            this.uncertainty = this.uncertainty + netUncertaintyGrowthRate*deltaT;
+            if(this.uncertainty<0){
+                this.uncertainty = 0;
+            }
+        }
+        
+        this.meanUncertainty = this.meanUncertainty + this.uncertainty;
+
+
+    }
+
 
 
     this.updateFastCT = function(){
