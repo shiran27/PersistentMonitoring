@@ -48,6 +48,7 @@
 	<script src="plot.js"></script>
 
 
+
     <link rel="stylesheet" href="style.css">
 	<link rel="stylesheet" type="text/css" href="libraries/bootstrap.min.css">
 
@@ -167,6 +168,13 @@
 		            		<input type="range" min="0" max="5" value="1" class="slider" id="uncertaintyRate" onchange="uncertaintyRateChanged(this.value)">
 		            	</h5>
 
+		            	<h5>Max. Path Length: <span id="maximumPathLengthDisplay"></span>
+		            		<input type="range" min="0" max="1000" value="1000" step="10" class="slider" id="maximumPathLength" onchange="maximumPathLengthChanged();">
+		            		<button class="btn btn-success" type="button" onclick="maximumPathLengthChanged();">Apply</button>
+		            	</h5>
+
+
+
 	    			</div>
 
 	    		</div>
@@ -268,7 +276,7 @@
 		    							Run IPA
 		    						</button>
 							    </label>
-							    <input class="form-control" id="periodT" type="text" value="150" onchange="periodTChanged(Number(this.value));">
+							    <input class="form-control" id="periodT" type="text" value="500" onchange="periodTChanged(Number(this.value));">
 
 							    <label for="stepSizeMultiplier">Multiplier = <span id="stepSizeMultiplierDisplay"></span></label>				    
 							    <input type="range" class="form-control" id="stepSizeMultiplier" min="-2" max="2" value="0" step="1" onchange="stepSizeChanged();">
@@ -312,8 +320,28 @@
 
 
 		<div class="row">
+			<div class="col col-lg-3" id="BoostingMenu">
+				<h5>Generate Intial Trajectory:
+					<button class="btn btn-success" type="button" onclick="getInitialLoop();">TSP 1A
+					</button> 
+					<button class="btn btn-danger" type="button" onclick="resetInitialLoop();">Reset
+					</button> 
+				</h5>
+			</div>		
+
+		</div>
+
+
+		<div class="row">
 			<hr>
 		</div>
+
+		
+
+		
+
+
+
 
 
 		<div class="row">

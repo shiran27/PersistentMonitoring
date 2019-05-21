@@ -340,10 +340,12 @@ function updateInterface(){
 
     document.getElementById("numberOfTargetsDisplay").innerHTML = targets.length;
     document.getElementById("numberOfAgentsDisplay").innerHTML = agents.length;
+    
 
     if(problemConfigurationEditMode){
         document.getElementById("uncertaintyRateDisplay").innerHTML = document.getElementById("uncertaintyRate").value;
         document.getElementById("sensingRateDisplay").innerHTML = document.getElementById("sensingRate").value;
+        document.getElementById("maximumPathLengthDisplay").innerHTML = document.getElementById("maximumPathLength").value;
     }else{
 
         for(var i = 0; i<targets.length; i++){
@@ -503,6 +505,23 @@ function uncertaintyRateChanged(val){
         }
     }
 }
+
+
+function maximumPathLengthChanged(){
+    val = Number(document.getElementById("maximumPathLength").value);
+    print(val);
+    for(var i = 0; i<paths.length; i++){
+        var T_i = paths[i].targets[0];
+        var T_j = paths[i].targets[1];
+        if(distP2(targets[T_i].position,targets[T_j].position)>val){
+            paths[i].isPermenent = false;
+        }else if(distP2(targets[T_i].position,targets[T_j].position)<val){
+            paths[i].isPermenent = true;
+        }
+    }
+}
+
+
 
 function targetPrioritizationPolicyChanged(){
     var cb1 = document.getElementById("minimumDistancePolicyCheckBox").checked;
@@ -1016,20 +1035,9 @@ function problemConfigurationChanged(){
     
     var r = document.getElementById("arrivalDistributionDropdown").value;
     
-    startModifyingProbConfig();
-    for(var i = agents.length; i > 0; i--){
-        removeAnAgent();
-    }
-    for(var i = targets.length; i > 0; i--){
-        removeATarget();
-        print(targets.length)
-    }
-    print(targets);
-    print(paths);
-    //paths = [];
-    finishModifyingProbConfig();
+    
     if(r == 8){
-        
+        removeAll();
         startModifyingProbConfig();
         addATargetAt(135,486);
         addATargetAt(115,375);
@@ -1050,7 +1058,7 @@ function problemConfigurationChanged(){
         finishModifyingProbConfig();
 
     }else if(r==7){
-
+        removeAll();
         startModifyingProbConfig();
         addATargetAt(55,405);
         addATargetAt(58,107);
@@ -1070,6 +1078,7 @@ function problemConfigurationChanged(){
         finishModifyingProbConfig();
 
     }else if(r==6){// Maze with 10 agents - Iterative greedy 200 descretized points (adjusted-CoverageV34)
+        removeAll();
         startModifyingProbConfig();
         addATargetAt(63,488);
         addATargetAt(67,288);
@@ -1089,6 +1098,7 @@ function problemConfigurationChanged(){
         finishModifyingProbConfig();
 
     }else if(r==5){// Maze with 10 agents - Iterative greedy 200 descretized points (adjusted-CoverageV34)
+        removeAll();
         startModifyingProbConfig();
         addATargetAt(53,185);
         addATargetAt(98,504);
@@ -1107,6 +1117,7 @@ function problemConfigurationChanged(){
         addAnAgentAtTarget(8);
         finishModifyingProbConfig();
     }else if(r==4){
+        removeAll();
         startModifyingProbConfig();
         addATargetAt(50,50);
         addATargetAt(50,250);
@@ -1124,6 +1135,7 @@ function problemConfigurationChanged(){
         addAnAgentAtTarget(8);
         finishModifyingProbConfig();
     }else if(r==3){ // 4 targets 1 agent
+        removeAll();
         startModifyingProbConfig();
         addATargetAt(50,450);
         addATargetAt(250,450);
@@ -1134,11 +1146,7 @@ function problemConfigurationChanged(){
         addAnAgentAtTarget(0);
         finishModifyingProbConfig();
     }else if(r==2){//2A arrangement
-        /*addATargetAt(50,50);
-        addATargetAt(50,200);
-        addATargetAt(550,50);
-        addATargetAt(300,400);
-        addATargetAt(150,200);*/
+        removeAll();
         startModifyingProbConfig();
         addATargetAt(50,450);
         addATargetAt(50,300);
@@ -1151,11 +1159,58 @@ function problemConfigurationChanged(){
         addAnAgentAtTarget(2);
         finishModifyingProbConfig();
     }else if(r==1){
+        removeAll();
         startModifyingProbConfig();
         addATargetAt(50,450);
         addATargetAt(50,300);
         addATargetAt(250,450);
         addAnAgentAtTarget(0);
         finishModifyingProbConfig();
+    }else if(r==0){
+        removeAll();
+        startModifyingProbConfig();
+        document.getElementById("spaceForRealTimeUncertaintyRateEdit").style.display = "none";
+        document.getElementById("spaceForRealTimeSensingRateEdit").style.display = "none";
+        document.getElementById("spaceForRealTimeUncertaintyEdit").style.display = "none";
+        document.getElementById("spaceForRealTimeThresholdEdit").style.display = "none";
+        document.getElementById("spaceForThresholdSensitivities").style.display = "none";
+        
+        document.getElementById("runSimulationWizard").style.display = "none";
+
     }
+}
+
+
+function removeAll(){
+    startModifyingProbConfig();
+    for(var i = agents.length; i > 0; i--){
+        removeAnAgent();
+    }
+    for(var i = targets.length; i > 0; i--){
+        removeATarget();
+        print(targets.length)
+    }
+    finishModifyingProbConfig();
+}
+
+
+
+
+// boosting
+
+// threshold based on TSP
+function generateInitialThresholds(route){
+    // biase the threshods
+
+}
+
+// mild perturbation
+function randomizeCurrentThresholdLevels(){
+    
+}
+
+
+// fit cycles optimize and randomize again
+function identifyCycleAndOptimize(){
+    
 }
