@@ -52,6 +52,10 @@ var printMode = true;
 
 var boostingMode = 1; 
 
+var cyclicRoutes = [];
+var randomNoiseLevelForThresholds;
+
+
 function startModifyingProbConfig(){
 
     problemConfigurationEditMode = true;
@@ -362,7 +366,7 @@ function updateInterface(){
         document.getElementById("frameRateDisplay").innerHTML = simulationFrameRate.toString();
         document.getElementById("stepSizeDisplay").innerHTML = stepSize.toFixed(3);
         document.getElementById("stepSizeMultiplierDisplay").innerHTML = "10<sup>"+Number(document.getElementById("stepSizeMultiplier").value)+"</sup>";
-
+        document.getElementById("noiseLevelDisplay").innerHTML = randomNoiseLevelForThresholds.toString();
     }
 
 }
@@ -372,6 +376,7 @@ function readInitialInterface(){
     periodT = Number(document.getElementById("periodT").value);
     stepSize = Number(document.getElementById("stepSize").value)*Math.pow(10,Number(document.getElementById("stepSizeMultiplier").value));
     numberOfUpdateSteps = Number(document.getElementById("numberOfUpdateSteps").value);
+    randomNoiseLevelForThresholds = Number(document.getElementById("noiseLevel").value);
     targetPrioritizationPolicyChanged();
 }
 
@@ -392,6 +397,7 @@ function displayThresholdSensitivities(){
 
     consolePrint("Obtained threshold sensitivities were loaded to the display.")
 }
+
 
 
 function updateRTThresholdValuesRandom(){ 
@@ -463,6 +469,17 @@ function updateRTUncertaintyValues(){// read the matrix and update
     consolePrint("Target uncertainty values were updated.");
 }
 
+function setToZeroRTUncertaintyValues(){
+    for(var i = 0; i<targets.length; i++){
+        targets[i].uncertainty = 0;
+        document.getElementById("customRTUncertainty"+(i+1)).innerHTML = targets[i].uncertainty.toString();
+        if(simulationMode==0){
+            targets[i].initialUncertainty = targets[i].uncertainty;
+        }
+    }
+}
+
+
 
 function sensingRateChangedRT(index,val){
     consolePrint("Agent "+index+"'s sensing rate changed to "+val+".")
@@ -473,6 +490,12 @@ function sensingRateChangedRT(index,val){
 function uncertaintyRateChangedRT(index,val){
     consolePrint("Target "+index+"'s uncertainty rate changed to "+val+".")
     targets[index-1].uncertaintyRate = val;
+}
+
+function randomNoiseLevelChanged(val){
+    consolePrint("Random noise level, which is to be added once perturbed, changed to "+val+".");
+    randomNoiseLevelForThresholds = Number(document.getElementById("noiseLevel").value);
+
 }
 
 
@@ -1134,6 +1157,23 @@ function problemConfigurationChanged(){
         addAnAgentAtTarget(4);
         addAnAgentAtTarget(8);
         finishModifyingProbConfig();
+    }else if(r==3.5){
+        removeAll();
+        startModifyingProbConfig();
+        addATargetAt(40,370);
+        addATargetAt(130,480);
+        addATargetAt(240,540);
+        addATargetAt(360,580);
+        addATargetAt(500,370);
+        addATargetAt(470,210);
+        addATargetAt(340,100);
+        addATargetAt(160,80);
+        addATargetAt(60,140);
+        disconnectAllPaths();
+        document.getElementById('maximumPathLength').value = 460;
+        maximumPathLengthChanged();
+        addAnAgentAtTarget(0);
+        finishModifyingProbConfig();
     }else if(r==3){ // 4 targets 1 agent
         removeAll();
         startModifyingProbConfig();
@@ -1143,6 +1183,18 @@ function problemConfigurationChanged(){
         addATargetAt(50,250);
         paths[1].isPermenent = false;
         paths[4].isPermenent = false;
+        addAnAgentAtTarget(0);
+        finishModifyingProbConfig();
+    }else if(r==2.5){//1A arrangement
+        removeAll();
+        startModifyingProbConfig();
+        addATargetAt(50,450);
+        addATargetAt(50,300);
+        addATargetAt(550,450);
+        addATargetAt(300,100);
+        addATargetAt(150,300);
+        paths[2].isPermenent = false;
+        paths[3].isPermenent = false;
         addAnAgentAtTarget(0);
         finishModifyingProbConfig();
     }else if(r==2){//2A arrangement
@@ -1196,21 +1248,3 @@ function removeAll(){
 
 
 
-// boosting
-
-// threshold based on TSP
-function generateInitialThresholds(route){
-    // biase the threshods
-
-}
-
-// mild perturbation
-function randomizeCurrentThresholdLevels(){
-    
-}
-
-
-// fit cycles optimize and randomize again
-function identifyCycleAndOptimize(){
-    
-}

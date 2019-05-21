@@ -24,6 +24,9 @@ function Agent(x, y, r) {
 
     this.previousTarget; // boosting
 
+
+    
+
     this.show = function(){
 
         fill(this.graphicColor);
@@ -179,23 +182,23 @@ function Agent(x, y, r) {
 
                 // boosting
                 // boosting - test
-                this.previousTarget = i;
-                if(boostingMode==1 && numberOfUpdateStepsCount>300){
-                    var immediateNeighbors = this.getImmediateNeighbors();
-                    if(immediateNeighbors.length>0){
-                        var k = agents[immediateNeighbors[0]].previousTarget;
-                        if(distP2(targets[k].position,targets[j].position)<distP2(targets[i].position,targets[j].position)){
-                            this.threshold[i][j] = this.threshold[i][j]+100;
-                            this.threshold[j][i] = targets[i].uncertainty;
-                            print("booost! Agent: "+(this.id+1)+", Path T_"+(i+1)+" to T_"+(j+1));
-                        }else{
-                            agents[immediateNeighbors[0]].threshold[k][j] = agents[immediateNeighbors[0]].threshold[k][j]+100;
-                            agents[immediateNeighbors[0]].threshold[j][k] = targets[k].uncertainty;;
-                            print("booost! Agent: "+(immediateNeighbors[0]+1)+", Path T_"+(k+1)+" to T_"+(j+1));
-                        }
-                        boostingMode = 0;
-                    }
-                }
+                // this.previousTarget = i;
+                // if(boostingMode==1 && numberOfUpdateStepsCount>300){
+                //     var immediateNeighbors = this.getImmediateNeighbors();
+                //     if(immediateNeighbors.length>0){
+                //         var k = agents[immediateNeighbors[0]].previousTarget;
+                //         if(distP2(targets[k].position,targets[j].position)<distP2(targets[i].position,targets[j].position)){
+                //             this.threshold[i][j] = this.threshold[i][j]+100;
+                //             this.threshold[j][i] = targets[i].uncertainty;
+                //             print("booost! Agent: "+(this.id+1)+", Path T_"+(i+1)+" to T_"+(j+1));
+                //         }else{
+                //             agents[immediateNeighbors[0]].threshold[k][j] = agents[immediateNeighbors[0]].threshold[k][j]+100;
+                //             agents[immediateNeighbors[0]].threshold[j][k] = targets[k].uncertainty;;
+                //             print("booost! Agent: "+(immediateNeighbors[0]+1)+", Path T_"+(k+1)+" to T_"+(j+1));
+                //         }
+                //         boostingMode = 0;
+                //     }
+                // }
                 // end boosting
 
             }

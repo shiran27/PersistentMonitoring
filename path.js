@@ -117,7 +117,7 @@ function getInitialLoop(){
 			
 		}
 	}
-
+	consolePrint("Steady state mean uncertainty (J) ="+route[2].toFixed(3)+", achieved via greedy loop search.");
 
 	//2 - OPT
 	print("2-OPT Begin")
@@ -131,9 +131,9 @@ function getInitialLoop(){
 
 	// 3 - Opt
 	print("3-OPT Begin")
-	for(var i = 0; i<route[0].length-4; i++){
-		for(var j = i+2; j<route[0].length-2; j++){
-			for(var k = j+2; k<route[0].length; k++){
+	for(var i = 0; i<route[0].length-2; i++){
+		for(var j = i+1; j<route[0].length-1; j++){
+			for(var k = j+1; k<route[0].length; k++){
 				route = swap3OPT(route,i,j,k,agentID);
 			}	
 		}
@@ -147,7 +147,9 @@ function getInitialLoop(){
 		paths[route[0][p]].inTheCycle = true;
 	}
 	print("Result Loop: "+route[1]+", cost: "+route[2].toFixed(2));
-	return route; 
+
+	cyclicRoutes[agentID] = route;
+	//return route; 
 
 }
 
@@ -156,8 +158,6 @@ function resetInitialLoop(){
 		paths[p].inTheCycle	= false;
 	}
 }
-
-
 
 
 
@@ -357,7 +357,7 @@ function swap2OPT(route,i,k,agentID){
 		print("Cost: "+route[2]);
 		print("Swapped Cost: "+cost);
 
-		print("Cost improved from 2-OPT!!!");	
+		consolePrint("Steady state mean uncertainty reduced by "+(route[2]-cost).toFixed(3)+" (to "+cost.toFixed(3)+") via 2-OPT method.");	
 		route = [pathList,targetList,cost]
 	} 
 	return route;
@@ -543,10 +543,95 @@ function swap3OPT(route,i,j,k,agentID){
 	} 
 
 	if(minCost!=route[2]){
+		consolePrint("Steady state mean uncertainty reduced by "+(route[2]-minCost).toFixed(3)+" (to "+minCost.toFixed(3)+") via 3-OPT method.");
 		print("Cost improved from 3-OPT!!!");	
 	}
+
 	return	minRouteSwap;
 		
+}
+
+
+
+// boosting
+
+// threshold based on TSP
+function generateThresholdsFromRoute(){
+    // biase the threshods
+    var agentID = 0;
+    if(cyclicRoutes.length==0){
+    	consolePrint("Generate initial trajectory first (Use 'Search' button)!!!");
+    	return;
+    }
+    var route = cyclicRoutes[agentID];
+    
+    var pathList = route[0];
+    var targetList = route[1];
+
+   	var z = agentID;
+    for(var p = 0; p < targets.length; p++){
+        for(var q = 0; q < targets.length; q++){
+            
+            if(p==q){// policy
+            	agents[z].threshold[p][q] = 0;
+            }else{
+            	var path_pq = getPathID(p,q);
+            	if(!pathList.includes(path_pq) && paths[path_pq].isPermenent){
+            		agents[z].threshold[p][q] = 100;	
+            	}else{
+            		var T_pIndex = pathList.indexOf(path_pq);
+            		var T_qIndex;
+            		if(T_pIndex==pathList.length-1){
+            			var T_qIndex = 0;
+            		}else{
+            			var T_qIndex = T_pIndex+1;
+            		}
+
+            		if(targetList[T_pIndex]==p && targetList[T_qIndex]==q){
+            			agents[z].threshold[p][q] = 0;		
+            		}else if(!paths[path_pq].isPermenent){
+            			agents[z].threshold[p][q] = 10000;	
+            		}else{
+            			agents[z].threshold[p][q] = 100;		
+            		}
+            	}
+            } 
+        }
+    }
+    
+
+    displayThresholds();
+}
+
+// mild perturbation
+function addRandomNoiseToThresholds(){
+    
+
+   	for(var z = 0; z<agents.length; z++){
+	    for(var p = 0; p < targets.length; p++){
+	        for(var q = 0; q < targets.length; q++){
+	            var path_pq = getPathID(p,q);
+	            if(p==q){// policy
+	            	agents[z].threshold[p][q] = agents[z].threshold[p][q] + randomNoiseLevelForThresholds*Math.random();
+	            }else if(!paths[path_pq].isPermenent){
+	            	agents[z].threshold[p][q] =  10000;
+	            }else{
+	            	agents[z].threshold[p][q] = agents[z].threshold[p][q] - 3*randomNoiseLevelForThresholds*Math.random();
+	            	if(agents[z].threshold[p][q]<0){
+	            		agents[z].threshold[p][q] = randomNoiseLevelForThresholds*Math.random();
+	            	}
+	            } 
+	        }
+	    }
+    }
+
+    displayThresholds();
+}
+
+
+// fit cycles optimize and randomize again
+function identifyCycleAndOptimize(){
+    
 }
 
 

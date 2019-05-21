@@ -87,7 +87,7 @@ function draw() {
             
             for(var i = 0; i < agents.length; i++){
                 agents[i].updateCT2(); // IPA debug purposes
-                agents[i].updateCT(); // update positions of the agents
+                ////agents[i].updateCT(); // update positions of the agents
                 
             }
 
