@@ -22,6 +22,14 @@ function Path(target1,target2){
 			var target2  = targets[this.targets[1]];
 			this.position = new Point2(0.5*(target1.position.x+target2.position.x),0.5*(target1.position.y+target2.position.y));
 			
+
+			fill(0);
+			noStroke();
+        	rectMode(CENTER);
+        	textAlign(CENTER,CENTER);
+        	text("P_"+(this.id+1),this.position.x+15,this.position.y);
+
+
 			noStroke()
 			fill(255,0,0);
 			circle(this.position.x,this.position.y,this.graphicSizeParameter);
@@ -32,12 +40,7 @@ function Path(target1,target2){
 				stroke(0);
 			}
 
-			// fill(0,0,255);
-			// stroke(0);
-   //      	rectMode(CENTER);
-   //      	textAlign(CENTER,CENTER);
-   //      	text("P_"+(this.id),this.position.x+45,this.position.y-this.graphicSizeParameter,this.graphicSizeParameter,this.graphicSizeParameter);
-
+			
 
 		}else if(this.inTheCycle){
 			stroke(200,0,0);
@@ -110,7 +113,7 @@ function getInitialLoop(){
 		if(newRoute.length>0){
 			route = [...newRoute];
 		}else{
-			consolePrint("Increase PeriodT !!!");
+			////consolePrint("Increase PeriodT !!!");
 			
 		}
 	}
@@ -411,10 +414,10 @@ function swap3OPT(route,i,j,k,agentID){
 		targetList[p] = route[1][p];
 	}
 
-	//print("Targets: "+route[1]);
+	print("Targets: "+route[1]);
 	print("Paths: "+route[0]);
-	//print("swapped1 Targets: "+targetList);
-	print("swapped3 Paths: "+pathList);
+	print("swapped1 Targets: "+targetList);
+	print("swapped1 Paths: "+pathList);
 	var cost = getMeanUncertainty(agentID,pathList,targetList);
 	if(cost<minCost){
 		minCost	= cost;
@@ -468,9 +471,9 @@ function swap3OPT(route,i,j,k,agentID){
 		targetList[p] = route[1][p];
 	}
 
-	//print("Targets: "+route[1]);
+	print("Targets: "+route[1]);
 	print("Paths: "+route[0]);
-	//print("swapped2 Targets: "+targetList);
+	print("swapped2 Targets: "+targetList);
 	print("swapped2 Paths: "+pathList);
 	// 1-2-3-0-4-
 	var cost = getMeanUncertainty(agentID,pathList,targetList);
@@ -497,14 +500,15 @@ function swap3OPT(route,i,j,k,agentID){
 	targetList[i] = route[1][i];
 	
 	
-	count = 0;
-	for(var p = i+1; p<i+(k-j)+1; p++){
-		pathList[p] = route[0][k-count-1];
-		targetList[p] = route[1][k-count];
+	count = 1;
+	for(var p = i+1; p<i+(k-j); p++){
+		pathList[p] = route[0][k-count];
+		targetList[p] = route[1][k-count+1];
 		count++;
 	}
-	pathList[p+1] = getPathID(route[1][j+1],route[1][i+1]);
-	targetList[p+1] = route[1][j+1];
+	pathList[p] = getPathID(route[1][j+1],route[1][i+1]);
+	print("special: "+pathList[p]+", p="+p)
+	targetList[p] = route[1][j+1];
 	count ++;
 
 	for(var p = i+1; p<j; p++){
@@ -525,9 +529,9 @@ function swap3OPT(route,i,j,k,agentID){
 		targetList[p] = route[1][p];
 	}
 
-	//print("Targets: "+route[1]);
+	print("Targets: "+route[1]);
+	print("swapped3 Targets: "+targetList);
 	print("Paths: "+route[0]);
-	//print("swapped3 Targets: "+targetList);
 	print("swapped3 Paths: "+pathList);
 		//1-3-2-0-4
 	var cost = getMeanUncertainty(agentID,pathList,targetList);
