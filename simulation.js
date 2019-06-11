@@ -137,7 +137,7 @@ function finishModifyingProbConfig(){
 
         var indexString = (a+1).toString();
         var HTMLTag = "<h5>Agent "+ indexString +":";
-        HTMLTag += "<input type='range' min='0' max='15' step='0.1' value='"+agents[a].sensingRate.toFixed(1)+"' class='slider' id='sensingRate"+ indexString +"' onchange='sensingRateChangedRT("+indexString+",this.value)'> <span id='sensingRateDisplay"+ indexString +"'></span></h5>";
+        HTMLTag += "<input type='range' min='0' max='20' step='0.1' value='"+agents[a].sensingRate.toFixed(1)+"' class='slider' id='sensingRate"+ indexString +"' onchange='sensingRateChangedRT("+indexString+",this.value)'> <span id='sensingRateDisplay"+ indexString +"'></span></h5>";
         HTMLTag1 += HTMLTag;
 
         //thresholds per each agent

@@ -201,9 +201,14 @@ function removeATarget(){
 
     //print(paths);
     var pathIDsToDelete = targets[targets.length-1].paths;
-    pathIDsToDelete.sort(function(a, b){return b - a}); //descending sort
-    for(var i = 0; i < pathIDsToDelete.length; i++){
-        paths.splice(pathIDsToDelete[i],1);
+    var pathIDsToDeleteSorted = pathIDsToDelete.sort(function(a, b){return b - a}); //descending sort
+    for(var i = 0; i < pathIDsToDeleteSorted.length; i++){
+
+        var indexOfPathToDelete = targets[paths[pathIDsToDeleteSorted[i]].targets[0]].paths.indexOf(pathIDsToDeleteSorted[i]);
+        ////print("Rem: "+indexOfPathToDelete)
+        targets[paths[pathIDsToDeleteSorted[i]].targets[0]].paths.splice(indexOfPathToDelete,1); // we always remove the last target
+        paths.splice(pathIDsToDeleteSorted[i],1);
+        // path id pathIDsToDeleteSorted[i] should be also removed from target of that path in the other end
     }
     targets.pop();
 
