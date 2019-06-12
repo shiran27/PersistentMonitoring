@@ -52,7 +52,11 @@ var printMode = true;
 
 var boostingMode = 1; 
 
-var cyclicRoutes = [];
+////var cyclicRoutes = [];
+var cycles = [];
+var RGCComputingMode = 0;
+var cycleRefiningParameters = []; // to store i,j,k in 2-opt and 3-opt
+
 var randomNoiseLevelForThresholds;
 
 
@@ -1230,6 +1234,8 @@ function problemConfigurationChanged(){
         document.getElementById("runSimulationWizard").style.display = "none";
 
     }
+
+
 }
 
 
@@ -1240,9 +1246,19 @@ function removeAll(){
     }
     for(var i = targets.length; i > 0; i--){
         removeATarget();
-        print(targets.length)
     }
+    for(var i = cycles.length; i > 0; i--){
+        removeACycle();
+    }
+
     finishModifyingProbConfig();
+}
+
+function sleepFor(miliseconds) {
+   var currentTime = new Date().getTime();
+
+   while (currentTime + miliseconds >= new Date().getTime()) {
+   }
 }
 
 

@@ -98,23 +98,7 @@ function Target(x, y, r) {
 
     }
 
-    this.updateCT2 = function(){
-        // update uncertainty values R_i(t) of target i
-        var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
-        var oldUncertainty = this.uncertainty;
-        if(this.uncertainty==0 && netUncertaintyGrowthRate<0){
-            this.uncertainty = 0;
-        }else{
-            this.uncertainty = this.uncertainty + netUncertaintyGrowthRate*deltaT;
-            if(this.uncertainty<0){
-                this.uncertainty = 0;
-            }
-        }
-        
-        this.meanUncertainty = this.meanUncertainty + this.uncertainty;
-
-
-    }
+    
 
 
 
@@ -151,6 +135,25 @@ function Target(x, y, r) {
         this.meanUncertainty = (1/(discreteTimeSteps+1))*(discreteTimeSteps*this.meanUncertainty + (oldUncertainty+this.uncertainty)/2);
 
     }
+
+
+    this.updateCT2 = function(){
+        // update uncertainty values R_i(t) of target i
+        var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
+        var oldUncertainty = this.uncertainty;
+        if(this.uncertainty==0 && netUncertaintyGrowthRate<0){
+            this.uncertainty = 0;
+        }else{
+            this.uncertainty = this.uncertainty + netUncertaintyGrowthRate*deltaT;
+            if(this.uncertainty<0){
+                this.uncertainty = 0;
+            }
+        }
+        
+        this.meanUncertainty = this.meanUncertainty + this.uncertainty;
+    }
+
+
 
     this.getNetAgentSensingRate = function(){//B_i*N_i value
         var sumValue = 0;

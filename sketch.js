@@ -79,16 +79,15 @@ function draw() {
             
             var cost = 0;
             for(var i = 0; i < targets.length; i++){
-                targets[i].updateCT2(); // IPA debug purposes
-                ////targets[i].updateCT(); // update uncertainty levels
+                ////targets[i].updateCT2(); // IPA debug purposes
+                targets[i].updateCT(); // update uncertainty levels
                 cost = cost + targets[i].meanUncertainty;
             }
 
             
             for(var i = 0; i < agents.length; i++){
                 agents[i].updateCT2(); // IPA debug purposes
-                ////agents[i].updateCT(); // update positions of the agents
-                
+                ////agents[i].updateCT(); // update positions of the agents  
             }
 
             simulationTime = simulationTime + deltaT;
@@ -121,6 +120,13 @@ function draw() {
     }
 
 
+    if(RGCComputingMode>=1){
+        // extend each cycle!
+        iterationOfComputingGreedyCycles();
+        
+    }
+
+
 
 
 
@@ -129,6 +135,12 @@ function draw() {
     	paths[i].show();
     }
 
+    for(var i = 0; i < cycles.length; i++){
+        if(RGCComputingMode!=2 && RGCComputingMode!=3){
+            cycles[i].show();    
+        }
+        
+    }
 
     for(var i = 0; i < targets.length; i++){
     	targets[i].show();
@@ -137,6 +149,9 @@ function draw() {
     for(var i = 0; i < agents.length; i++){
     	agents[i].show();
     }
+
+
+    
 
 
 

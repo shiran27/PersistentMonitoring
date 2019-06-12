@@ -325,9 +325,9 @@
 		<div class="row" id="BoostingMenu">
 			<div class="col col-lg-3">
 				<h5>Generate Intial Trajectory:</h5>
-					<button class="btn btn-success" type="button" onclick="getInitialLoop();">Search
+					<button class="btn btn-success" type="button" onclick="initiateComputingRefinedGreedyCycles();">Search
 					</button> 
-					<button class="btn btn-danger" type="button" onclick="resetInitialLoop();">Reset
+					<button class="btn btn-danger" type="button" onclick="resetCycles();">Reset
 					</button>
 
 				
@@ -335,7 +335,7 @@
 
 			<div class="col col-lg-3" id="BoostingMenu">
 				<h5>Initialize thresholds:</h5>
-					<button class="btn btn-success" type="button" onclick="generateThresholdsFromRoute();">Apply
+					<button class="btn btn-success" type="button" onclick="generateThresholdsFromRoutes();">Apply
 					</button> 
 					<button class="btn btn-danger" type="button" onclick="addRandomNoiseToThresholds();">Perturb
 					</button>
