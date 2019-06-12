@@ -96,15 +96,13 @@ function Cycle(agentID,targetSet){
 		this.targetList = paths[bestPath].targets;
 		this.meanUncertainty = minMeanUncertainty;
 		this.meanUncertaintyGain = maxGain;
-		/*return [pathsInTour,targetsInTour,costOfTour];*/
 	}
 
 
 
 	this.addTheBestAvailableTarget = function(){
 
-		//arguments agentID,targetSet,pathsInTour,targetsInTour,costOfTour
-
+		
 		// target list which are not in the path
 		var candidateTargets = [];
 		for(var i = 0; i<this.allowedTargetList.length; i++){
@@ -118,7 +116,7 @@ function Cycle(agentID,targetSet){
 
 		var maxGain = -1;
 		var minMeanUncertainty = -1;
-		////var bestTour = [];
+		
 		var bestTour = -1;
 		var dummyTour = this.clone();
 		
@@ -153,8 +151,6 @@ function Cycle(agentID,targetSet){
 				//////print("gain:"+gain+", max: "+maxGain);
 				if(gain>maxGain){
 					maxGain	= gain;
-					
-					//bestTour = [newPathsInTour,newTargetsInTour,meanUncertaintyOfTheTour];
 					bestTour = dummyTour.clone();
 		
 				}	
@@ -184,7 +180,6 @@ function Cycle(agentID,targetSet){
 		// to compute the mean uncertainty gain of the cycle (i.e. meanuncertainty diffrence{notcovered-coverd})
 		var meanUncertaintyIfNotCovered = 0;
 
-		// agentID,pathsInTour,targetsInTour
 		var B_A = [];
 		var A = [];
 		var dist = 0;
@@ -221,15 +216,13 @@ function Cycle(agentID,targetSet){
 
 		this.meanUncertainty = meanUncertainty;
 		this.meanUncertaintyGain = meanUncertaintyGain;
-		//return meanUncertainty;
+		
 	}
 
 
 
 	this.swap2OPT = function(i,k){
 		
-		////var pathList = [];
-		////var targetList = [];
 		var dummyTour = new Cycle(this.deployedAgent,this.allowedTargetList);
 		
 		for(var p = 0; p<i; p++){
@@ -260,10 +253,11 @@ function Cycle(agentID,targetSet){
 		//print("Targets: "+this.dummyTour.targetList);
 		//print("swapped Targets: "+dummyTour.targetList);
 		dummyTour.computeMeanUncertainty();
-		//var cost = getMeanUncertainty(agentID,dummyTour.pathList,dummyTour.targetList);
+		
 		var cost = dummyTour.meanUncertainty;
 		
 		if(cost<this.meanUncertainty){
+			
 			print("Paths: "+this.pathList);
 			print("swapped Paths: "+dummyTour.pathList);
 			
@@ -272,7 +266,7 @@ function Cycle(agentID,targetSet){
 
 			consolePrint("Steady state mean uncertainty reduced by "+(this.meanUncertainty-cost).toFixed(3)+" (to "+cost.toFixed(3)+") via 2-OPT method.");	
 			this.cloneFrom(dummyTour);
-			////route = [dummyTour.pathList,dummyTour.targetList,cost]
+			
 		} 
 
 		dummyTour.highlight();
@@ -284,16 +278,12 @@ function Cycle(agentID,targetSet){
 
 	this.swap3OPT = function(i,j,k,l){
 
-		// args : route,i,j,k,agentID
-
 		// Type 1 - nominal - cost = this.meanUncertainty
 		if(l==0){
-			////minRouteSwap = [...route]; 
+			
 			minCost = this.meanUncertainty;
 
 			// Type 1
-			////var pathList = [];
-			////var targetList = [];
 			var dummyTour = new Cycle(this.deployedAgent,this.allowedTargetList);
 
 			for(var p = 0; p<i; p++){
@@ -339,7 +329,7 @@ function Cycle(agentID,targetSet){
 			print("swapped1 Paths: "+dummyTour.pathList);
 
 			dummyTour.computeMeanUncertainty();
-			////var cost = getMeanUncertainty(this.deployedAgent,dummyTour.pathList,dummyTour.targetList);
+			
 			var cost = dummyTour.meanUncertainty;
 			if(cost<minCost){
 				minCost	= cost;
@@ -350,20 +340,15 @@ function Cycle(agentID,targetSet){
 				print("Cost improved from 3-OPT!!!");
 
 				this.cloneFrom(dummyTour);
-				////minRouteSwap = [dummyTour.pathList,dummyTour.targetList,cost]
+				
 			} 
-			//for:1,0,4,2,3 -- under i,j,k= 0,2,4
-			//1-4-0-3-2 --- 1
-
+			
 			dummyTour.highlight();
 		
-
 		}else if(l==1){
 
 			// Type 2
 			
-			////var pathList = [];
-			////var targetList = [];
 			var dummyTour = new Cycle(this.deployedAgent,this.allowedTargetList);
 
 			for(var p = 0; p<i; p++){
@@ -409,7 +394,7 @@ function Cycle(agentID,targetSet){
 			// 1-2-3-0-4-
 
 			dummyTour.computeMeanUncertainty();
-			////var cost = getMeanUncertainty(this.deployedAgent,dummyTour.pathList,dummyTour.targetList);
+			
 			var cost = dummyTour.meanUncertainty; 
 			if(cost<minCost){
 				minCost	= cost;
@@ -420,7 +405,7 @@ function Cycle(agentID,targetSet){
 				print("Cost improved from 3-OPT!!!");
 
 				this.cloneFrom(dummyTour);
-				////minRouteSwap = [dummyTour.pathList,dummyTour.targetList,cost]
+				
 			} 
 			dummyTour.highlight();
 
@@ -429,8 +414,6 @@ function Cycle(agentID,targetSet){
 
 			// Type 3
 			
-			////var pathList = [];
-			////var targetList = [];
 			var dummyTour = new Cycle(this.deployedAgent,this.allowedTargetList);
 
 			for(var p = 0; p<i; p++){
@@ -477,7 +460,7 @@ function Cycle(agentID,targetSet){
 				//1-3-2-0-4
 			
 			dummyTour.computeMeanUncertainty();
-			////var cost = getMeanUncertainty(this.deployedAgent,dummyTour.pathList,dummyTour.targetList);
+			
 			var cost = dummyTour.meanUncertainty;
 			if(cost<minCost){
 				minCost	= cost;
@@ -488,22 +471,11 @@ function Cycle(agentID,targetSet){
 				print("Cost improved from 3-OPT!!!");	
 
 				this.cloneFrom(dummyTour);
-				////minRouteSwap = [dummyTour.pathList,dummyTour.targetList,cost]
 				
 			} 
 			dummyTour.highlight();
 
 		}
-
-
-
-
-		// if(minCost!=this.meanUncertainty){
-		// 	consolePrint("Steady state mean uncertainty reduced by "+(this.meanUncertainty-minCost).toFixed(3)+" (to "+minCost.toFixed(3)+") via 3-OPT method.");
-		// 	print("Cost improved from 3-OPT!!!");	
-		// }
-
-		// return	minRouteSwap;
 			
 	}
 
@@ -516,8 +488,7 @@ function Cycle(agentID,targetSet){
 	    	consolePrint("Generate initial trajectory first (Use 'Search' button)!!!");
 	    	return;
 	    }
-
-	    	    
+   
 	    var pathList = this.pathList;
 	    var targetList = this.targetList;
 
@@ -554,8 +525,6 @@ function Cycle(agentID,targetSet){
 
 	    displayThresholds();
 	}
-
-
 
 
 }
@@ -657,369 +626,6 @@ function generateThresholdsFromRoutes(){
 
 
 
-
-// greedy construction of optimal cycle to travel.- for one agent
-
-function computeRefinedGreedyCycles(){
-	
-	var agentID	= 0;
-	var targetSet = math.range(0,targets.length)._data;
-
-	cycles.push(new Cycle(agentID,targetSet)); //creating a cycle for the agent (with agent id) on the target set
-	cycles[0].computeBestInitialCycle();
-
-
-
-	var newRoute = [...route];
-	while(newRoute.length>0){
-		print("Current route length:"+route[0].length);
-		var newRoute = getBestTargetToAdd(agentID,targetSet,route[0],route[1],route[2]);
-		if(newRoute.length>0){
-			route = [...newRoute];
-		}else{
-			////consolePrint("Increase PeriodT !!!");
-			
-		}
-	}
-	consolePrint("Steady state mean uncertainty (J) ="+route[2].toFixed(3)+", achieved via greedy loop search.");
-
-
-
-	//2 - OPT
-	print("2-OPT Begin")
-	for(var i = 0; i<route[0].length-2; i++){
-		for(var k = i+2; k<route[0].length; k++){
-			route = swap2OPT(route,i,k,agentID);	
-		}
-	}
-
-	// 3 - Opt
-	print("3-OPT Begin")
-	for(var i = 0; i<route[0].length-2; i++){
-		for(var j = i+1; j<route[0].length-1; j++){
-			for(var k = j+1; k<route[0].length; k++){
-				route = swap3OPT(route,i,j,k,agentID);
-			}	
-		}
-	}
-
-
-
-	//print(route);
-	resetInitialLoop();
-	for(var p = 0; p<route[0].length; p++){
-		paths[route[0][p]].inTheCycle = true;
-	}
-	print("Result Loop: "+route[1]+", cost: "+route[2].toFixed(2));
-
-	cyclicRoutes[agentID] = route;
-	//return route; 
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-function swap2OPT(route,i,k,agentID){
-
-	var swappedRoute = [];
-	var pathList = [];
-	var targetList = [];
-
-
-	for(var p = 0; p<i; p++){
-		pathList[p] = route[0][p];
-		targetList[p] = route[1][p];
-	}
-	pathList[i] = getPathID(route[1][i],route[1][k]);
-	targetList[i] = route[1][i];
-	
-	count = 1;
-	for(var p = i+1; p<k; p++){
-		pathList[p] = route[0][k-count];
-		targetList[p] = route[1][k-count+1];
-		count++;
-	}
-	if(k==(route[0].length-1)){
-		pathList[k] = getPathID(route[1][i+1],route[1][0]);
-	}else{
-		pathList[k] = getPathID(route[1][i+1],route[1][k+1]);
-	}
-	targetList[k] = route[1][i+1];
-
-	for(var p = k+1; p<route[0].length; p++){
-		pathList[p] = route[0][p];
-		targetList[p] = route[1][p];
-	}
-
-	//print("Targets: "+route[1]);
-	//print("swapped Targets: "+targetList);
-	var cost = getMeanUncertainty(agentID,pathList,targetList);
-	if(cost<route[2]){
-		print("Paths: "+route[0]);
-		print("swapped Paths: "+pathList);
-		
-		print("Cost: "+route[2]);
-		print("Swapped Cost: "+cost);
-
-		consolePrint("Steady state mean uncertainty reduced by "+(route[2]-cost).toFixed(3)+" (to "+cost.toFixed(3)+") via 2-OPT method.");	
-		route = [pathList,targetList,cost]
-	} 
-	return route;
-	//print("Swapped cost: "+cost);
-		
-}
-
-
-function swap3OPT(route,i,j,k,agentID){
-
-	// Type 0 - nominal - cost = route[2]
-	minRouteSwap = [...route]; 
-	minCost = route[2];
-
-	// Type 1
-	var swappedRoute = [];
-	var pathList = [];
-	var targetList = [];
-
-	for(var p = 0; p<i; p++){
-		pathList[p] = route[0][p];
-		targetList[p] = route[1][p];
-	}
-	pathList[i] = getPathID(route[1][i],route[1][j]);
-	targetList[i] = route[1][i];
-	
-	
-	count = 1;
-	for(var p = i+1; p<j; p++){
-		pathList[p] = route[0][j-count];
-		targetList[p] = route[1][j-count+1];
-		count++;
-	}
-	pathList[j] = getPathID(route[1][k],route[1][i+1]);
-	targetList[j] = route[1][i+1];
-
-	
-	count = 1;
-	for(var p = j+1; p<k; p++){
-		pathList[p] = route[0][k-count];
-		targetList[p] = route[1][k-count+1];
-		count++;
-	}	
-	if(k==(route[0].length-1)){
-		pathList[k] = getPathID(route[1][j+1],route[1][0]);
-	}else{
-		pathList[k] = getPathID(route[1][j+1],route[1][k+1]);
-	}
-	targetList[k] = route[1][j+1];
-
-
-	for(var p = k+1; p<route[0].length; p++){
-		pathList[p] = route[0][p];
-		targetList[p] = route[1][p];
-	}
-
-	print("Targets: "+route[1]);
-	print("Paths: "+route[0]);
-	print("swapped1 Targets: "+targetList);
-	print("swapped1 Paths: "+pathList);
-	var cost = getMeanUncertainty(agentID,pathList,targetList);
-	if(cost<minCost){
-		minCost	= cost;
-		print("Prev cost: "+route[2]);
-		print("Swapped1 Cost: "+cost);
-		minRouteSwap = [pathList,targetList,cost]
-	} 
-	//for:1,0,4,2,3 -- under i,j,k= 0,2,4
-	//1-4-0-3-2 --- 1
-
-
-
-	// Type 2
-	var swappedRoute = [];
-	var pathList = [];
-	var targetList = [];
-
-	for(var p = 0; p<i; p++){
-		pathList[p] = route[0][p];
-		targetList[p] = route[1][p];
-	}
-	pathList[i] = getPathID(route[1][i],route[1][j+1]);
-	targetList[i] = route[1][i];
-	
-	
-	count = 1;
-	for(var p = j+1; p<k; p++){
-		pathList[i+count] = route[0][p];
-		targetList[i+count] = route[1][p];
-		count++;
-	}
-	pathList[i+count] = getPathID(route[1][k],route[1][i+1]);
-	targetList[i+count] = route[1][k];
-	count++;
-	
-	for(var p = i+1; p<j; p++){
-		pathList[i+count] = route[0][p];
-		targetList[i+count] = route[1][p];
-		count++;
-	}	
-	if(k==(route[0].length-1)){
-		pathList[i+count] = getPathID(route[1][j],route[1][0]);
-	}else{
-		pathList[i+count] = getPathID(route[1][j],route[1][k+1]);
-	}
-	targetList[i+count] = route[1][j];
-
-	print("check: i+count="+(i+count)+", k="+k);
-	for(var p = k+1; p<route[0].length; p++){
-		pathList[p] = route[0][p];
-		targetList[p] = route[1][p];
-	}
-
-	print("Targets: "+route[1]);
-	print("Paths: "+route[0]);
-	print("swapped2 Targets: "+targetList);
-	print("swapped2 Paths: "+pathList);
-	// 1-2-3-0-4-
-	var cost = getMeanUncertainty(agentID,pathList,targetList);
-	if(cost<minCost){
-		minCost	= cost;
-		print("Prev cost: "+route[2]);
-		print("Swapped2 Cost: "+cost);
-		minRouteSwap = [pathList,targetList,cost]
-	} 
-
-
-
-
-	// Type 3
-	var swappedRoute = [];
-	var pathList = [];
-	var targetList = [];
-
-	for(var p = 0; p<i; p++){
-		pathList[p] = route[0][p];
-		targetList[p] = route[1][p];
-	}
-	pathList[i] = getPathID(route[1][i],route[1][k]);
-	targetList[i] = route[1][i];
-	
-	
-	count = 1;
-	for(var p = i+1; p<i+(k-j); p++){
-		pathList[p] = route[0][k-count];
-		targetList[p] = route[1][k-count+1];
-		count++;
-	}
-	pathList[p] = getPathID(route[1][j+1],route[1][i+1]);
-	print("special: "+pathList[p]+", p="+p)
-	targetList[p] = route[1][j+1];
-	count ++;
-
-	for(var p = i+1; p<j; p++){
-		pathList[i+count] = route[0][p];
-		targetList[i+count] = route[1][p];
-		count++;
-	}	
-	if(k==(route[0].length-1)){
-		pathList[k] = getPathID(route[1][0],route[1][j]);
-	}else{
-		pathList[k] = getPathID(route[1][k+1],route[1][j]);
-	}
-	targetList[k] = route[1][j];
-
-
-	for(var p = k+1; p<route[0].length; p++){
-		pathList[p] = route[0][p];
-		targetList[p] = route[1][p];
-	}
-
-	print("Targets: "+route[1]);
-	print("swapped3 Targets: "+targetList);
-	print("Paths: "+route[0]);
-	print("swapped3 Paths: "+pathList);
-		//1-3-2-0-4
-	var cost = getMeanUncertainty(agentID,pathList,targetList);
-	if(cost<minCost){
-		minCost	= cost;
-		print("Prev cost: "+route[2]);
-		print("Swapped3 Cost: "+cost);
-		minRouteSwap = [pathList,targetList,cost]
-	} 
-
-	if(minCost!=route[2]){
-		consolePrint("Steady state mean uncertainty reduced by "+(route[2]-minCost).toFixed(3)+" (to "+minCost.toFixed(3)+") via 3-OPT method.");
-		print("Cost improved from 3-OPT!!!");	
-	}
-
-	return	minRouteSwap;
-		
-}
-
-
-
-// boosting
-
-// threshold based on TSP
-function generateThresholdsFromRoute(){
-    // biase the threshods
-    var agentID = 0;
-    if(cyclicRoutes.length==0){
-    	consolePrint("Generate initial trajectory first (Use 'Search' button)!!!");
-    	return;
-    }
-    var route = cyclicRoutes[agentID];
-    
-    var pathList = route[0];
-    var targetList = route[1];
-
-   	var z = agentID;
-    for(var p = 0; p < targets.length; p++){
-        for(var q = 0; q < targets.length; q++){
-            
-            if(p==q){// policy
-            	agents[z].threshold[p][q] = 0;
-            }else{
-            	var path_pq = getPathID(p,q);
-            	if(!pathList.includes(path_pq) && paths[path_pq].isPermenent){
-            		agents[z].threshold[p][q] = 100;	
-            	}else{
-            		var T_pIndex = pathList.indexOf(path_pq);
-            		var T_qIndex;
-            		if(T_pIndex==pathList.length-1){
-            			var T_qIndex = 0;
-            		}else{
-            			var T_qIndex = T_pIndex+1;
-            		}
-
-            		if(targetList[T_pIndex]==p && targetList[T_qIndex]==q){
-            			agents[z].threshold[p][q] = 0;		
-            		}else if(!paths[path_pq].isPermenent){
-            			agents[z].threshold[p][q] = 10000;	
-            		}else{
-            			agents[z].threshold[p][q] = 100;		
-            		}
-            	}
-            } 
-        }
-    }
-    
-
-    displayThresholds();
-}
 
 // mild perturbation
 function addRandomNoiseToThresholds(){
