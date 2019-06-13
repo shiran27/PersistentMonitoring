@@ -1021,6 +1021,11 @@ function resetSimulation(){
 
 
 function pauseSimulation(){
+    if(RGCComputingMode>0){
+        RGCComputingMode = 0;
+        simulationMode = 1;
+    }
+
     if(simulationMode == 0){
         simulationMode = 1;
         document.getElementById("pauseButton").innerHTML = "<i class='fa fa-pause' aria-hidden='true'></i>";     
@@ -1030,6 +1035,8 @@ function pauseSimulation(){
         document.getElementById("pauseButton").innerHTML = "<i class='fa fa-play' aria-hidden='true'></i>"; 
         consolePrint("Hybrid system simulation paused.");
     }
+
+
     
 }
 
