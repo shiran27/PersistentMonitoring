@@ -122,7 +122,12 @@ function draw() {
 
     if(RGCComputingMode>=1){
         // extend each cycle!
-        iterationOfComputingGreedyCycles();
+        if(!cycleGenerationMethod){
+            iterationOfComputingGreedyCycles();
+        }else{
+            iterationOfComputingGreedyCyclesAdvanced();
+        }
+        
         
     }
 

@@ -56,9 +56,11 @@ var boostingMode = 1;
 var cycles = [];
 var RGCComputingMode = 0;
 var cycleRefiningParameters = []; // to store i,j,k in 2-opt and 3-opt
+var cycleGenerationMethod;
+var thresholdGenerationMethod;
+
 
 var randomNoiseLevelForThresholds;
-
 
 function startModifyingProbConfig(){
 
@@ -381,7 +383,11 @@ function readInitialInterface(){
     stepSize = Number(document.getElementById("stepSize").value)*Math.pow(10,Number(document.getElementById("stepSizeMultiplier").value));
     numberOfUpdateSteps = Number(document.getElementById("numberOfUpdateSteps").value);
     randomNoiseLevelForThresholds = Number(document.getElementById("noiseLevel").value);
+    cycleGenerationMethod = document.getElementById("cycleGenerationMethod").checked;
+    thresholdGenerationMethod = document.getElementById("thresholdGenerationMethod").checked;
+    
     targetPrioritizationPolicyChanged();
+
 }
 
 function displayThresholdSensitivities(){ 
@@ -562,6 +568,27 @@ function targetPrioritizationPolicyChanged(){
     }
     print("targetPrioritizationPolicy: "+targetPrioritizationPolicy);
     
+}
+
+function  cycleGenerationMethodChanged(){
+    if(cycleGenerationMethod){
+        consolePrint("Multiple visits to an any target during the cycle is not allowed!");
+        cycleGenerationMethod = false;
+    }else{
+        consolePrint("Multiple visits to an any target during the cycle is allowed!");
+        cycleGenerationMethod = true;
+    }
+}
+
+
+function  thresholdGenerationMethodChanged(){
+    if(thresholdGenerationMethod){
+        consolePrint("Thresholds will be selected from the set {0,100,10000}.");
+        thresholdGenerationMethod = false;
+    }else{
+        consolePrint("Thresholds (for the cycles found) will be selected according to the steady state theoretical results!");
+        thresholdGenerationMethod = true;
+    }
 }
 
 function agentSelectDropdownEvent(){

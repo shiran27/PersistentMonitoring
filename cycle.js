@@ -232,19 +232,22 @@ function Cycle(agentID,targetSet){
 				}
 				////print("Paths: "+newPathsInTour);
 				//print("Targets: "+newTargetsInTour);
-				dummyTour.pathList.splice(p,1,newPath1,newPath2);// replace the element at index p with
-				dummyTour.targetList.splice(p+1,0,T_i);
-				dummyTour.computeMeanUncertaintyAdvanced(); // update the meanUncertainty and mean uncertainty gain
-				//print("Targets: "+newTargetsInTour);
-				var meanUncertaintyOfTheTour = dummyTour.meanUncertainty;
-				var gain = this.meanUncertainty  + meanUncertaintyIfNotCovered - meanUncertaintyOfTheTour;
-				//////print("gain:"+gain+", max: "+maxGain);
-				if(gain>maxGain1){
-					maxGain1 = gain;
-					bestTour1 = dummyTour.clone();
-		
+
+				if(paths[newPath1].isPermenent && paths[newPath2].isPermenent){
+					dummyTour.pathList.splice(p,1,newPath1,newPath2);// replace the element at index p with
+					dummyTour.targetList.splice(p+1,0,T_i);
+					dummyTour.computeMeanUncertaintyAdvanced(); // update the meanUncertainty and mean uncertainty gain
+					//print("Targets: "+newTargetsInTour);
+					var meanUncertaintyOfTheTour = dummyTour.meanUncertainty;
+					var gain = this.meanUncertainty  + meanUncertaintyIfNotCovered - meanUncertaintyOfTheTour;
+					//////print("gain:"+gain+", max: "+maxGain);
+					if(gain>maxGain1){
+						maxGain1 = gain;
+						bestTour1 = dummyTour.clone();
+					}
 				}	
 				
+
 			}
 
 		}
@@ -275,20 +278,22 @@ function Cycle(agentID,targetSet){
 				////print("Paths: "+newPathsInTour);
 				//print("Targets: "+newTargetsInTour);
 				var newPath = getPathID(T_i,T_j)
-				dummyTour.pathList.splice(j,0,newPath,newPath);// replace the element at index p with
-				dummyTour.targetList.splice(j+1,0,T_i,T_j);		
+				
+				if(paths[newPath].isPermenent){
+					dummyTour.pathList.splice(j,0,newPath,newPath);// replace the element at index p with
+					dummyTour.targetList.splice(j+1,0,T_i,T_j);		
 
 
-				dummyTour.computeMeanUncertaintyAdvanced(); // update the meanUncertainty and mean uncertainty gain
-				//print("Targets: "+newTargetsInTour);
-				var meanUncertaintyOfTheTour = dummyTour.meanUncertainty;
-				var gain = this.meanUncertainty  + meanUncertaintyIfNotCovered - meanUncertaintyOfTheTour;
-				//////print("gain:"+gain+", max: "+maxGain);
-				if(gain>maxGain2){
-					maxGain2 = gain;
-					bestTour2 = dummyTour.clone();
-		
-				}	
+					dummyTour.computeMeanUncertaintyAdvanced(); // update the meanUncertainty and mean uncertainty gain
+					//print("Targets: "+newTargetsInTour);
+					var meanUncertaintyOfTheTour = dummyTour.meanUncertainty;
+					var gain = this.meanUncertainty  + meanUncertaintyIfNotCovered - meanUncertaintyOfTheTour;
+					//////print("gain:"+gain+", max: "+maxGain);
+					if(gain>maxGain2){
+						maxGain2 = gain;
+						bestTour2 = dummyTour.clone();
+					}	
+				}
 				
 
 			}
@@ -338,9 +343,9 @@ function Cycle(agentID,targetSet){
 			}
 			
 			A.push([targets[T_i].uncertaintyRate]);
-			print("error:")
-			print(paths)
-			print("pathList:"+this.pathList+", i="+i)
+			////print("error:")
+			
+			////print("pathList:"+this.pathList+", i="+i)
 			dist = dist + paths[this.pathList[i]].distPath();
 			BMinusA.push([agents[this.deployedAgent].sensingRate-targets[T_i].uncertaintyRate]);
 		
@@ -517,7 +522,7 @@ function Cycle(agentID,targetSet){
 			print("Cost: "+this.meanUncertainty);
 			print("Swapped Cost: "+cost);
 
-			consolePrint("Steady state mean uncertainty reduced by "+(this.meanUncertainty-cost).toFixed(3)+" (to "+cost.toFixed(3)+") via 2-OPT method.");	
+			consolePrint("Steady state mean uncertainty reduced by "+(this.meanUncertainty-cost).toFixed(3)+" via 2-OPT method.");	
 			this.cloneFrom(dummyTour);
 			
 		} 
@@ -589,7 +594,7 @@ function Cycle(agentID,targetSet){
 				print("Prev cost: "+this.meanUncertainty);
 				print("Swapped1 Cost: "+cost);
 
-				consolePrint("Steady state mean uncertainty reduced by "+(this.meanUncertainty-minCost).toFixed(3)+" (to "+minCost.toFixed(3)+") via 3-OPT method.");
+				consolePrint("Steady state mean uncertainty reduced by "+(this.meanUncertainty-minCost).toFixed(3)+" via 3-OPT method.");
 				print("Cost improved from 3-OPT!!!");
 
 				this.cloneFrom(dummyTour);
@@ -654,7 +659,7 @@ function Cycle(agentID,targetSet){
 				print("Prev cost: "+this.meanUncertainty);
 				print("Swapped2 Cost: "+cost);
 
-				consolePrint("Steady state mean uncertainty reduced by "+(this.meanUncertainty-minCost).toFixed(3)+" (to "+minCost.toFixed(3)+") via 3-OPT method.");
+				consolePrint("Steady state mean uncertainty reduced by "+(this.meanUncertainty-minCost).toFixed(3)+" via 3-OPT method.");
 				print("Cost improved from 3-OPT!!!");
 
 				this.cloneFrom(dummyTour);
@@ -720,7 +725,7 @@ function Cycle(agentID,targetSet){
 				print("Prev cost: "+this.meanUncertainty);
 				print("Swapped3 Cost: "+cost);
 
-				consolePrint("Steady state mean uncertainty reduced by "+(this.meanUncertainty-minCost).toFixed(3)+" (to "+minCost.toFixed(3)+") via 3-OPT method.");
+				consolePrint("Steady state mean uncertainty reduced by "+(this.meanUncertainty-minCost).toFixed(3)+" via 3-OPT method.");
 				print("Cost improved from 3-OPT!!!");	
 
 				this.cloneFrom(dummyTour);
@@ -839,7 +844,7 @@ function Cycle(agentID,targetSet){
 	            }else{
 	            	var path_pq = getPathID(p,q);
 	            	if(!pathList.includes(path_pq) && paths[path_pq].isPermenent){
-	            		agents[z].threshold[p][q] = 1000;	
+	            		agents[z].threshold[p][q] = 100;	
 	            	}else{
 	            		print("p"+p+"; q"+q);
 	            		if(auxTargetData[p].length!=0){
@@ -858,14 +863,16 @@ function Cycle(agentID,targetSet){
 	            					
 	            					var lowerBound = targets[this.targetList[nextIndex]].uncertaintyRate*(T_cyc - this.subCycleDwellTimeList[currentIndex] - this.subCycleTravelTimeList[currentIndex] - this.dwellTimeList[nextIndex] - this.travelTimeList[nextIndex]);
 	            					print("lower: "+lowerBound+"; to block T_"+(this.targetList[pastIndex]+1));
-	            					var r = 0.1;
+	            					var r = 0.5;
 	            					var base = lowerBound+r*(upperBound-lowerBound);
+	            					
+	            					if(!thresholdGenerationMethod){base = 0;}
 	            					agents[z].threshold[p][q] = base;
 	            					valueApplied = true;
 	            				}
 	            			}
 	            			if(!valueApplied){
-	            				agents[z].threshold[p][q] = 1000;
+	            				agents[z].threshold[p][q] = 100;
 	            			}
 	    
 	            	
@@ -893,7 +900,7 @@ function Cycle(agentID,targetSet){
 		            		}else if(!paths[path_pq].isPermenent){
 		            			agents[z].threshold[p][q] = 10000;	
 		            		}else{
-		            			agents[z].threshold[p][q] = 1000;		
+		            			agents[z].threshold[p][q] = 100;		
 		            		}
 		            	}
 	            	}
@@ -920,13 +927,24 @@ function initiateComputingRefinedGreedyCycles(){
 	RGCComputingMode = 1; //start iteratively evolving the cycles
 }
 
-function iterationOfComputingGreedyCycles(){
+
+function iterationOfComputingGreedyCyclesAdvanced(){
 	print("Current route length: "+cycles[0].targetList.length+" targets.");
 	if(RGCComputingMode==1){//initial greedy
 		sleepFor(500);
 		var val = cycles[0].addTheBestAvailableTargetAdvanced();
 		if(val==-1){
-			consolePrint("Steady state mean uncertainty (J) ="+cycles[0].meanUncertainty.toFixed(3)+", achieved via greedy cycle search method.");
+			
+			var neglectedTargetInfo = computeNeglectedTargetCost();
+			if(neglectedTargetInfo[0] > 0){
+				consolePrint("Unvisited targets: "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".")
+			}else{
+				consolePrint("All targets covered.")
+			}
+			var meanSystemUncertaintyVal = cycles[0].meanUncertainty + neglectedTargetInfo[0];
+			consolePrint("Steady state mean system uncertainty (J) ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 2).");
+
+
 			if(cycles[0].pathList.length>3){
 				RGCComputingMode = 0;
 				cycleRefiningParameters[0] = [0,2]; //[i,k] for 2-opt
@@ -991,6 +1009,120 @@ function iterationOfComputingGreedyCycles(){
 	}
 }
 
+function iterationOfComputingGreedyCycles(){
+	print("Current route length: "+cycles[0].targetList.length+" targets.");
+	if(RGCComputingMode==1){//initial greedy
+		sleepFor(500);
+		var val = cycles[0].addTheBestAvailableTarget();
+		if(val==-1){
+
+			var neglectedTargetInfo = computeNeglectedTargetCost();
+			if(neglectedTargetInfo[0] > 0){
+				consolePrint("Unvisited targets: "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".")
+			}else{
+				consolePrint("All targets covered.")
+			}
+			var meanSystemUncertaintyVal = cycles[0].meanUncertainty + neglectedTargetInfo[0];
+			consolePrint("Steady state mean system uncertainty (J) ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 1).");
+
+			if(cycles[0].pathList.length>3){
+				RGCComputingMode = 2;
+				cycleRefiningParameters[0] = [0,2]; //[i,k] for 2-opt
+			}else{
+				RGCComputingMode = 0;
+			}
+			sleepFor(500);
+		}
+		
+	}else if(RGCComputingMode==2){//2-opt
+		var i = cycleRefiningParameters[0][0];
+		var k = cycleRefiningParameters[0][1];
+		sleepFor(10);
+		cycles[0].swap2OPT(i,k);
+		
+		k = k + 1;
+		if(k >= cycles[0].pathList.length){
+			i = i + 1;
+			if(i >= cycles[0].pathList.length-2){
+				consolePrint("2-Opt refining stage finished!");
+				RGCComputingMode = 3;
+				cycleRefiningParameters[1] = [0,1,2,0]; // i,j,k,l for 3-Opt
+				sleepFor(500);
+			}
+			k = i + 2;
+		}
+		cycleRefiningParameters[0][0] = i;
+		cycleRefiningParameters[0][1] = k;
+	
+	}else if(RGCComputingMode==3){//3-opt
+
+		var i = cycleRefiningParameters[1][0];
+		var j = cycleRefiningParameters[1][1];
+		var k = cycleRefiningParameters[1][2];
+		var l = cycleRefiningParameters[1][3];
+		sleepFor(10);
+		cycles[0].swap3OPT(i,j,k,l);
+		
+		l = l + 1;
+		if(l >= 3){	
+			k = k + 1;
+			if(k >= cycles[0].pathList.length){
+				j = j + 1;
+				if(j >= cycles[0].pathList.length-1){
+					i = i + 1;
+					if(i >= cycles[0].pathList.length-2){
+						consolePrint("3-Opt refining stage finished!");
+						RGCComputingMode = 0;
+
+						var neglectedTargetInfo = computeNeglectedTargetCost();
+						if(neglectedTargetInfo[0] > 0){
+							consolePrint("Unvisited targets: "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".")
+						}else{
+							consolePrint("All targets covered.")
+						}
+						var meanSystemUncertaintyVal = cycles[0].meanUncertainty + neglectedTargetInfo[0];
+						consolePrint("Steady state mean system uncertainty (J) ="+meanSystemUncertaintyVal.toFixed(3)+", achieved after refining (RGC-Method 1).");
+
+						sleepFor(500);
+					}
+					j = i + 1;
+				}
+				k = j + 1;
+			}
+			l = 0;
+		}
+		cycleRefiningParameters[1][0] = i;
+		cycleRefiningParameters[1][1] = j;
+		cycleRefiningParameters[1][2] = k;
+		cycleRefiningParameters[1][3] = l;
+
+	}
+}
+
+
+function computeNeglectedTargetCost(){
+	var neglectedTargetCost = 0;
+	var neglectedTargetListString = "(";
+
+	for(var i = 0; i<targets.length; i++){
+		var targetCovered = false;
+		for(var j = 0; j<cycles.length; j++){
+			if(cycles[j].targetList.includes(i)){
+				targetCovered = true;
+				j=cycles.length; // to exit
+			}
+		}
+		if(!targetCovered){
+			neglectedTargetCost = neglectedTargetCost + targets[i].initialUncertainty + 0.5*targets[i].uncertaintyRate*periodT;
+			neglectedTargetListString = neglectedTargetListString+(i+1)+",";
+		}
+
+	}
+	neglectedTargetListString = neglectedTargetListString.slice(0,-1) + ")";
+	return([neglectedTargetCost,neglectedTargetListString]);
+}
+
+
 
 function resetCycles(){
 	RGCComputingMode = 0;
@@ -1002,7 +1134,11 @@ function resetCycles(){
 
 function generateThresholdsFromRoutes(){
 	for(var i = 0; i<cycles.length; i++){
-		cycles[i].computeThresholdsAdvanced();
+		if(cycleGenerationMethod){
+			cycles[i].computeThresholdsAdvanced();
+		}else{
+			cycles[i].computeThresholds();
+		}
 	}
 }
 
