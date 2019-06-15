@@ -1097,7 +1097,19 @@ function problemConfigurationChanged(){
     var r = document.getElementById("arrivalDistributionDropdown").value;
     
     
-    if(r == 8){
+    if(r == 9){
+        removeAll();
+        startModifyingProbConfig();
+        for(var i = 0; i<15; i++){
+            addATargetAt(500*Math.random(),500*Math.random());
+        }
+        disconnectAllPaths();
+        document.getElementById('maximumPathLength').value = 200;
+        maximumPathLengthChanged();
+        addAnAgentAtTarget(0);
+        finishModifyingProbConfig();
+
+    }else if(r == 8){
         removeAll();
         startModifyingProbConfig();
         addATargetAt(135,486);
