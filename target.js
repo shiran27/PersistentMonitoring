@@ -64,7 +64,7 @@ function Target(x, y, r) {
 
     }
 
-
+    
 
     this.clicked = function(){
 

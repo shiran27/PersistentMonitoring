@@ -71,3 +71,8 @@ h4.scrollClass {
 }
 
 
+sub { 
+  vertical-align: sub;
+  font-size: smaller;
+}
+

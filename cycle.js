@@ -1108,9 +1108,9 @@ function Cycle(agentID,targetSet){
 	}
 
 	this.removeUnwantedAuxiliaryTargets = function(j,k){
-		var maxGain3 = -1;
-		var bestTour3 = -1;
-		var dummyTour = this.clone();
+		// var maxGain3 = -1;
+		// var bestTour3 = -1;
+		// var dummyTour = this.clone();
 		var L = this.targetList.length;
 
 		var T_j = this.targetList[j];
@@ -1184,12 +1184,236 @@ function Cycle(agentID,targetSet){
 			return;
 		}
 
-				
+	}
+
+
+
+
+	this.addTargetInTheBestWay = function(T_i){
+
+		if(this.targetList.includes(T_i)){
+			print("Target T_"+(T_i+1)+" is already included in the cycle!");
+			return -1;
+		}
+
+		var meanUncertaintyIfNotCovered = targets[T_i].initialUncertainty + 0.5*targets[T_i].uncertaintyRate*periodT;
+
+
+		// method 1 to extend the cycle
+
+		var maxGain1 = -Infinity;
+		var bestTour1 = -1;
+		var dummyTour = this.clone();
+		
+		
+		// for the candidate target, need to find the best path to remove from the existing tour
+		// to maximize the gain of adding the candidate target;
+		
+
+		for(var p = 0; p < this.pathList.length; p++){ // path to be removed so that T_c can be added via two new paths
+			var pID = this.pathList[p];
+
 			
+			if(this.targetList[p]==paths[pID].targets[0]){
+				var newPath1 = getPathID(paths[pID].targets[0],T_i);
+				var newPath2 = getPathID(paths[pID].targets[1],T_i);
+			}else{
+				var newPath1 = getPathID(paths[pID].targets[1],T_i);
+				var newPath2 = getPathID(paths[pID].targets[0],T_i);
+			}
+			////print("Paths: "+newPathsInTour);
+			//print("Targets: "+newTargetsInTour);
+
+			if(paths[newPath1].isPermenent && paths[newPath2].isPermenent){
+				dummyTour = this.clone();
+				dummyTour.pathList.splice(p,1,newPath1,newPath2);// replace the element at index p with
+				dummyTour.targetList.splice(p+1,0,T_i);
+				dummyTour.computeMeanUncertaintyAdvanced(); // update the meanUncertainty and mean uncertainty gain
+				//print("Targets: "+newTargetsInTour);
+				var meanUncertaintyOfTheTour = dummyTour.meanUncertainty;
+				var gain = this.meanUncertainty  + meanUncertaintyIfNotCovered - meanUncertaintyOfTheTour;
+				//////print("gain:"+gain+", max: "+maxGain);
+				if(gain>maxGain1 && dummyTour.meanUncertainty!=-1){
+					maxGain1 = gain;
+					bestTour1 = dummyTour.clone();
+				}
+			}			
+
+		}
 
 		
+		// end method 1
+
+
+
+		// Method 2 to extend the cycle
 		
+		var maxGain2 = -Infinity;
+		var bestTour2 = -1;
+		var dummyTour = this.clone();
+
+		
+		// for each candidate target, need to find the best way to connect to 
+		// the current cycle
+
+		for(var j = 0; j < this.targetList.length; j++){ // path to be removed so that T_c can be added via two new paths
+			var T_j = this.targetList[j]; // target T_j is to be added to the cycle
+
+			////print("Paths: "+newPathsInTour);
+			//print("Targets: "+newTargetsInTour);
+			var newPath = getPathID(T_i,T_j);
+			
+			if(paths[newPath].isPermenent){
+				dummyTour = this.clone();
+				dummyTour.pathList.splice(j,0,newPath,newPath);
+				if(dummyTour.pathList.length>2){
+					dummyTour.targetList.splice(j+1,0,T_i,T_j);		
+				}else{
+					dummyTour.targetList.splice(j,1,T_i,T_j);
+				}
+				dummyTour.computeMeanUncertaintyAdvanced(); // update the meanUncertainty and mean uncertainty gain
+
+				//print("Targets: "+newTargetsInTour);
+				var meanUncertaintyOfTheTour = dummyTour.meanUncertainty;
+				var gain = this.meanUncertainty  + meanUncertaintyIfNotCovered - meanUncertaintyOfTheTour;
+				//////print("gain:"+gain+", max: "+maxGain);
+				if(gain>maxGain2 && dummyTour.meanUncertainty!=-1 ){
+					maxGain2 = gain;
+					bestTour2 = dummyTour.clone();
+				}	
+			}
+			
+
+		}
+
+		
+
+		// end method 1
+
+
+
+		// Method 3 to extend the cycle
+		
+		var maxGain3 = -Infinity;
+		var bestTour3 = -1;
+		var dummyTour = this.clone();
+		var L = this.targetList.length;
+		
+
+		// for each candidate target, need to find the best way to connect to 
+		// the current cycle
+		
+		
+		// need to find two targets in the current cycle connected via set of aux targets
+		// so that those aux targets can be eliminated from the cycle, without compromizing the cyclic shape
+
+		for(var j = 0; j < this.targetList.length-2; j++){
+			var T_j = this.targetList[j];
+
+			for(var k = j+2; k<this.targetList.length; k++){
+				var T_k = this.targetList[k];
+
+				var newPath1 = getPathID(T_j,T_i);
+				var newPath2 = getPathID(T_i,T_k);
+				
+				if(paths[newPath1].isPermenent && paths[newPath2].isPermenent){
+					
+					// search for targets inbetween T_j and T_k in targetlist
+					var connectedViaAuxTargetsFwd = true;
+					for(var ind = j + 1; ind < k; ind++){//fwd searcg
+						if(!this.subCycleList[ind].includes(0)){
+							connectedViaAuxTargetsFwd = false;
+							break;// to break
+						}
+					}
+					var connectedViaAuxTargetsBwd = true;
+					for(var ind = j - 1; ind != k; ind--){//fwd searcg
+						if(ind==-1){ind = this.targetList.length-1;}
+						if(!this.subCycleList[ind].includes(0)){
+							connectedViaAuxTargetsBwd = false;
+							break;// to break
+						}
+					}
+
+					dummyTour = this.clone();	
+					if(connectedViaAuxTargetsFwd){
+						dummyTour.pathList.splice(j,k-j,newPath1,newPath2);// replace the element at index p with
+						dummyTour.targetList.splice(j+1,k-j-1,T_i);
+						
+						print("Method 3: Fwd j="+j+"; T_i="+T_i+"; k="+k);
+						print("paths ji="+newPath1+"; ik="+newPath2);
+						
+						print("Targets B: "+this.targetList);
+						print("Targets A: "+dummyTour.targetList);
+						print("Paths B: "+this.pathList);
+						print("Paths A: "+dummyTour.pathList);
+					
+					}else if(connectedViaAuxTargetsBwd){
+						if(j>0){
+							dummyTour.pathList.splice(0,j,newPath1);// replace the element at index p with
+							dummyTour.pathList.push(newPath2);
+							dummyTour.targetList.splice(0,j,T_i);	
+						}else{
+							dummyTour.pathList.splice(k,L-k,newPath2,newPath1);// replace the element at index p with
+							dummyTour.targetList.splice(k+1,L-k-1,T_i);
+						}
+						
+						print("Method 3: Bwd j="+j+"; T_i="+T_i+"; k="+k);
+						print("paths ji="+newPath1+"; ik="+newPath2);
+						print("Targets B: "+this.targetList);
+						print("Targets A: "+dummyTour.targetList);
+						print("Paths B: "+this.pathList);
+						print("Paths A: "+dummyTour.pathList);
+
+					}else{
+						break; // to try different T_i, T_j combination
+					}
+					dummyTour.computeMeanUncertaintyAdvanced(); // update the meanUncertainty and mean uncertainty gain
+
+					//print("Targets: "+newTargetsInTour);
+					var meanUncertaintyOfTheTour = dummyTour.meanUncertainty;
+					var gain = this.meanUncertainty  + meanUncertaintyIfNotCovered - meanUncertaintyOfTheTour;
+					//////print("gain:"+gain+", max: "+maxGain);
+					if(gain>maxGain3 && dummyTour.meanUncertainty!=-1){
+						maxGain3 = gain;
+						bestTour3 = dummyTour.clone();
+					}	
+				}
+
+				
+			}
+		}
+
+		
+		// end method  3
+
+
+
+		if(bestTour1==-1 && bestTour2==-1 && bestTour3==-1){
+			print("No way to improve! - Error!!!");
+			return -1;
+		}else if(maxGain1>=maxGain2 && maxGain1>=maxGain3){
+			print("Improve via normal way!")
+			print("Result: "+bestTour1.targetList);	
+			this.cloneFrom(bestTour1);
+			return +1;	
+		}else if(maxGain2>=maxGain1 && maxGain2>=maxGain3){
+			print("Improve via Aux Target!")
+			print("Result: "+bestTour2.targetList);	
+			this.cloneFrom(bestTour2);
+			return +1;	
+		}else{
+			print("Improve via Aux Target Cancellation!")
+			print("Result: "+bestTour3.targetList);	
+			this.cloneFrom(bestTour3);
+			return +1;
+		}
+
+
+
 	}
+
+
 
 
 }

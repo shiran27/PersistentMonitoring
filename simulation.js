@@ -62,6 +62,11 @@ var thresholdGenerationMethod;
 
 var randomNoiseLevelForThresholds;
 
+var similarityMeasureType;
+var spectralClusteringMethod;
+var neighborhoodWidthForClustering;
+
+
 function startModifyingProbConfig(){
 
     problemConfigurationEditMode = true;
@@ -373,6 +378,7 @@ function updateInterface(){
         document.getElementById("stepSizeDisplay").innerHTML = stepSize.toFixed(3);
         document.getElementById("stepSizeMultiplierDisplay").innerHTML = "10<sup>"+Number(document.getElementById("stepSizeMultiplier").value)+"</sup>";
         document.getElementById("noiseLevelDisplay").innerHTML = randomNoiseLevelForThresholds.toString();
+        document.getElementById("neighborhoodWidthForClusteringDisplay").innerHTML = neighborhoodWidthForClustering.toString();
     }
 
 }
@@ -383,9 +389,16 @@ function readInitialInterface(){
     stepSize = Number(document.getElementById("stepSize").value)*Math.pow(10,Number(document.getElementById("stepSizeMultiplier").value));
     numberOfUpdateSteps = Number(document.getElementById("numberOfUpdateSteps").value);
     randomNoiseLevelForThresholds = Number(document.getElementById("noiseLevel").value);
+    
     cycleGenerationMethod = document.getElementById("cycleGenerationMethod").checked;
     thresholdGenerationMethod = document.getElementById("thresholdGenerationMethod").checked;
     
+    similarityMeasureType = Number(document.getElementById("similarityMeasureTypeDropdown").value);
+    spectralClusteringMethod = Number(document.getElementById("spectralClusteringMethodDropdown").value);
+    neighborhoodWidthForClustering = Number(document.getElementById("neighborhoodWidthForClustering").value);
+    
+
+
     targetPrioritizationPolicyChanged();
 
 }
@@ -1078,6 +1091,36 @@ function stopSimulation(){
     consolePrint("Simulation stopped and reseted to the initial state.");
 
 }
+
+function similarityMeasureTypeChanged(){
+    similarityMeasureType = Number(document.getElementById('similarityMeasureTypeDropdown').value);
+    if(similarityMeasureType==0){
+        consolePrint('Similarity measure type changed. Now, similarity between two targets are defined by:');
+        consolePrint('Length of the shortest path between the two targets.');
+        
+    }else{
+        consolePrint('Similarity measure type changed. Now, similarity between two targets are defined by:');
+        consolePrint('Minimum (over all possible cycles) mean cycle uncertainty of a cycle containing both targets.');
+    }
+}
+
+function neighborhoodWidthForClusteringChanged(value){
+    neighborhoodWidthForClustering = value;
+    document.getElementById('neighborhoodWidthForClusteringDisplay').innerHTML = neighborhoodWidthForClustering.toString();
+    consolePrint('Neighborhood width used for clustering (to transform the similarity measure) changed!');
+}
+
+function spectralClusteringMethodChanged(){
+    spectralClusteringMethod = Number(document.getElementById('spectralClusteringMethod').value);
+    if(spectralClusteringMethod==0){
+        consolePrint('Spectral clustering method changed to: Unnormalized spectral clustering.');    
+    }else if(spectralClusteringMethod==1){
+        consolePrint('Spectral clustering method changed to: Normalized spectral clustering proposed in [Shi and Malik 2000].');
+    }else if(spectralClusteringMethod==2){
+        consolePrint('Spectral clustering method changed to: Normalized spectral clustering proposed in [Ng, Jordan, and Weiss 2002].');
+    }
+}
+
 
 
 function frameRateChanged(value){

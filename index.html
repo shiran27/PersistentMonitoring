@@ -47,12 +47,13 @@
 	<script src="path.js"></script>
 	<script src="plot.js"></script>
 	<script src="cycle.js"></script>
+	<script src="mathTools.js"></script>
 
 
 
     <link rel="stylesheet" href="style.css">
 	<link rel="stylesheet" type="text/css" href="libraries/bootstrap.min.css">
-
+	
 
 </head>
 
@@ -258,7 +259,7 @@
 
 						<div class="form-group row">
 
-							<div class="col col-xs-4">
+							<div class="col col-xs-4 border-right border-success">
 							    <label for="deltaT">&Delta;t=
 							    	<button class="btn btn-success" type="button" onclick="simulateHybridSystem();">
 		    							<i class="fa fa-play" aria-hidden="true"></i>
@@ -274,7 +275,7 @@
 							</div>
 							  
 
-							<div class="col col-xs-4">
+							<div class="col col-xs-4 border-right border-success">
 							    <label for="periodT">T = 
 							    	<button class="btn btn-success" type="button" onclick="solveForIPAEstimators();">
 		    							Run IPA
@@ -324,31 +325,85 @@
 
 
 		<div class="row" id="BoostingMenu">
-			<div class="col col-lg-4">
-				<h5>Generate A Candidate Cycle:</h5>
-					<button class="btn btn-success" type="button" onclick="initiateComputingRefinedGreedyCycles();">Search
-					</button> 
-					<button class="btn btn-danger" type="button" onclick="resetCycles();">Reset
-					</button>
-					<label for="initialTrajectoryGenerationMethod">Allow Multiple Visits to a Target on the Cycle:</label>
-					<input type="checkbox" id="cycleGenerationMethod" checked onchange="cycleGenerationMethodChanged();">
 
+			<div class="col col-lg-4 border-right border-success">
+				<h5>Spectral Graph Clustering:</h5>
+				
+				<label for="similarityMeasureTypeDropdown">Similarity measure based on:</label>
+				<select class="form-control custom-select" id="similarityMeasureTypeDropdown" onchange="similarityMeasureTypeChanged()">
+        				<option value="0">Shortest path length 
+        					d(T<small>i</small>,T<small>j</small>)</option>
+				    	<option value="1">Minimum mean cycle uncertainty 
+				    		J(cyc &#1014;{T<small>i</small>,T<small>j</small>})</option>
+				</select> 
+
+				<label for="neighborhoodWidthForClustering">Neighborhood width (&sigma;): <span id="neighborhoodWidthForClusteringDisplay"></span></label>
+				<input type="range" class="form-control slider" id="neighborhoodWidthForClustering" min="0" max="10" value="1.5" step="0.1" onchange="neighborhoodWidthForClusteringChanged(Number(this.value));">
+
+				<div class="row">
+					<div class="col col-lg-8">
+						<label for="spectralClusteringMethodDropdown">Spectral clustering method:</label>
+						<select class="form-control custom-select" id="spectralClusteringMethodDropdown" onchange="spectralClusteringMethodChanged()">
+		        				<option value="0">Unnormalized (L = D-W)</option>
+						    	<option value="1" disabled>Normalized-I (L<sub>rw</sub>)</option>
+						    	<option value="1" disabled>Normalized-II (L<sub>sym</sub>)</option>
+						</select> 
+					</div>
+
+					<div class="col col-lg-4">
+
+						<button class="btn btn-success" type="button" onclick="compluteClusters();">Cluster !
+						</button> 
+
+						<button class="btn btn-danger" type="button" onclick="resetGraphClusters();">Reset  
+						</button>
+
+					</div>
+					
+				</div>
+				
 
 				
+					
+
+			</div>	
+
+
+			<div class="col col-lg-4 border-right border-success">
+				<h5>Generating Candidate Cycles:</h5>
+				<button class="btn btn-success" type="button" onclick="initiateComputingRefinedGreedyCycles();">Greedy Search
+				</button> 
+				<button class="btn btn-danger" type="button" onclick="resetCycles();">Reset
+				</button>
+				<label for="initialTrajectoryGenerationMethod">Allow Multiple Visits to a Target on the Cycle:</label>
+				<input type="checkbox" id="cycleGenerationMethod" checked onchange="cycleGenerationMethodChanged();">
 			</div>		
 
-			<div class="col col-lg-3" id="BoostingMenu">
+			<div class="col col-lg-4" id="BoostingMenu">
 				<h5>Initialize thresholds:</h5>
-					<button class="btn btn-success" type="button" onclick="generateThresholdsFromRoutes();">Apply
-					</button> 
-					<button class="btn btn-danger" type="button" onclick="addRandomNoiseToThresholds();">Perturb
-					</button>
-					
-					<label for="thresholdGenerationMethod">Theoretical:</label>
-					<input type="checkbox" id="thresholdGenerationMethod" onchange="thresholdGenerationMethodChanged();">
 
-					<label for="noiseLevel">Noise Level:<span id="noiseLevelDisplay"></span></label>
-					<input type="range" class="form-control slider" id="noiseLevel" min="0" max="10" value="1.5" step="0.1" onchange="randomNoiseLevelChanged(Number(this.value));">
+				<div class="row">
+					
+					<div class="col col-lg-6">
+
+						<button class="btn btn-success" type="button" onclick="generateThresholdsFromRoutes();">Apply
+						</button> 
+
+						<button class="btn btn-danger" type="button" onclick="addRandomNoiseToThresholds();">Perturb
+						</button>
+						
+					</div>
+
+					<div class="col col-lg-6">
+						<label for="thresholdGenerationMethod">Theoretical:</label>
+						<input type="checkbox" id="thresholdGenerationMethod" onchange="thresholdGenerationMethodChanged();">	
+					</div>
+				
+				</div>
+				
+
+				<label for="noiseLevel">Noise Level: <span id="noiseLevelDisplay"></span></label>
+				<input type="range" class="form-control slider" id="noiseLevel" min="0" max="10" value="1.5" step="0.1" onchange="randomNoiseLevelChanged(Number(this.value));">
 
 				
 			</div>	
@@ -398,7 +453,7 @@
 
 			
 			
-			<div id="blankColumn" class="col col-lg-1">
+			<div id="blankColumn" class="col col-lg-1 border-right border-success">
 				
 			</div>
 
