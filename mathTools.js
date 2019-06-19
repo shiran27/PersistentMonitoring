@@ -323,7 +323,7 @@ function kMeansCluster(dataPoints){
     var N = agents.length; // dimention of a datapoint = N = number of agents = number of columns in dataPoints matrix
     
 
-    var numberOfKMeansIterations = 10;
+    var numberOfKMeansIterations = 100;
     var minCostAssignment;
     var minAssignmentCost = Infinity;
     
