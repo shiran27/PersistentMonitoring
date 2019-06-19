@@ -6,6 +6,8 @@ function Path(target1,target2){
 
 	this.isPermenent = true;
 
+	this.brokenDueToClustering = false;
+
 	this.inTheCycle = false;
 
 	this.id = paths.length;
@@ -44,6 +46,8 @@ function Path(target1,target2){
 
 		}else if(this.inTheCycle){
 			stroke(200,0,0);
+		}else if(this.brokenDueToClustering){
+			stroke(0,32);
 		}else if(this.isPermenent){
 			stroke(0);
 		}else{

@@ -65,6 +65,9 @@ var randomNoiseLevelForThresholds;
 var similarityMeasureType;
 var spectralClusteringMethod;
 var neighborhoodWidthForClustering;
+var displayClustersMode = false;
+var targetClusters = [];
+var interClusterPaths = [];
 
 
 function startModifyingProbConfig(){
@@ -398,7 +401,7 @@ function readInitialInterface(){
     neighborhoodWidthForClustering = Number(document.getElementById("neighborhoodWidthForClustering").value);
     
 
-
+    adjustNeighborhoodWidthForClusteringRange()
     targetPrioritizationPolicyChanged();
 
 }
@@ -1097,11 +1100,11 @@ function similarityMeasureTypeChanged(){
     if(similarityMeasureType==0){
         consolePrint('Similarity measure type changed. Now, similarity between two targets are defined by:');
         consolePrint('Length of the shortest path between the two targets.');
-        
     }else{
         consolePrint('Similarity measure type changed. Now, similarity between two targets are defined by:');
         consolePrint('Minimum (over all possible cycles) mean cycle uncertainty of a cycle containing both targets.');
     }
+    adjustNeighborhoodWidthForClusteringRange();
 }
 
 function neighborhoodWidthForClusteringChanged(value){
@@ -1111,7 +1114,7 @@ function neighborhoodWidthForClusteringChanged(value){
 }
 
 function spectralClusteringMethodChanged(){
-    spectralClusteringMethod = Number(document.getElementById('spectralClusteringMethod').value);
+    spectralClusteringMethod = Number(document.getElementById('spectralClusteringMethodDropdown').value);
     if(spectralClusteringMethod==0){
         consolePrint('Spectral clustering method changed to: Unnormalized spectral clustering.');    
     }else if(spectralClusteringMethod==1){
@@ -1120,6 +1123,53 @@ function spectralClusteringMethodChanged(){
         consolePrint('Spectral clustering method changed to: Normalized spectral clustering proposed in [Ng, Jordan, and Weiss 2002].');
     }
 }
+
+
+function adjustNeighborhoodWidthForClusteringRange(){
+
+    var similarityMatrix = computeSimilarityMatrix();
+    var M = targets.length;
+    var maxSimilarity = 0;
+    var minSimilarity = 0;
+
+    for(var i = 0; i < M; i++){
+        for(var j = 0; j < M; j++){
+            if(similarityMatrix[i][j]>maxSimilarity){
+                maxSimilarity = similarityMatrix[i][j]
+            }else if(similarityMatrix[i][j]>0 && similarityMatrix[i][j]<minSimilarity){
+                minSimilarity = similarityMatrix[i][j];
+            }
+        }
+    }
+
+    var maxSigma = maxSimilarity;
+    var minSigma = minSimilarity;
+    var defaultSigma = (minSigma+maxSigma)/2; // maxSimilarity is beyond 3*sigma
+    var stepSizeOfTheSlider = (maxSigma-minSigma)/100;
+    
+    document.getElementById('neighborhoodWidthForClustering').min = minSigma.toFixed(3);
+    document.getElementById('neighborhoodWidthForClustering').max = maxSigma.toFixed(3);
+    document.getElementById('neighborhoodWidthForClustering').step = stepSizeOfTheSlider.toFixed(3);
+    document.getElementById('neighborhoodWidthForClustering').value = defaultSigma.toFixed(3);
+    
+    neighborhoodWidthForClusteringChanged(defaultSigma.toFixed(3));
+    
+}
+
+function resetGraphClusters(){
+    // this function should have the inverse effect of the function
+    // applyFoundClustersToGroupTargets(clusteredPoints) found in mathtools.js 
+
+    targetClusters = [];
+    interClusterPaths = []; 
+    for(var p = 0; p < paths.length; p++){// check all paths
+        paths[p].brokenDueToClustering = false;
+    }
+    resetCycles();
+    displayClustersMode = false;
+
+}
+
 
 
 

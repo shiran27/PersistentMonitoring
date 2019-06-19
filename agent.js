@@ -670,8 +670,15 @@ function Agent(x, y, r) {
         }
 
     }
+
+    this.assignToTheTarget = function(targetID){
+        this.position = targets[targetID].position;
+        this.residingTarget = [targetID];
+        this.initialResidingTarget = targetID;
+    }
     
 }
+
 
 
 function addAnAgent(){

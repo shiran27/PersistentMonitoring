@@ -26,6 +26,8 @@
 	<script type="text/javascript" src="libraries/popper.min.js"></script>
 	<script type="text/javascript" src="libraries/fontawesome.js"></script>
 	<script type="text/javascript" src="libraries/seedrandom.js"></script>
+	<script type="text/javascript" src="libraries/numeric.js"></script>
+	
 
 	
 
@@ -129,8 +131,8 @@
 	            		<select class="form-control custom-select" id="arrivalDistributionDropdown" onchange="problemConfigurationChanged()">
             				<option value="0">Custom</option>
 					    	<option value="1">1-Agent(3T)</option>
-					    	<option value="2">2-Agent(5T)</option>
-					    	<option selected value="2.5">1-Agent(5T)</option>
+					    	<option selected value="2">2-Agent(5T)</option>
+					    	<option value="2.5">1-Agent(5T)</option>
 					    	<option value="3">1-Agent(4T)</option>
 					    	<option value="3.5">1-Agent(9T)</option>
 					    	<option value="4">3-Agent(9T)</option>
@@ -332,9 +334,9 @@
 				<label for="similarityMeasureTypeDropdown">Similarity measure based on:</label>
 				<select class="form-control custom-select" id="similarityMeasureTypeDropdown" onchange="similarityMeasureTypeChanged()">
         				<option value="0">Shortest path length 
-        					d(T<small>i</small>,T<small>j</small>)</option>
-				    	<option value="1">Minimum mean cycle uncertainty 
-				    		J(cyc &#1014;{T<small>i</small>,T<small>j</small>})</option>
+        					d(T_i,T_j)</option>
+				    	<option selected value="1">Minimum mean cycle uncertainty 
+				    		J(cyc &#1014;{T_i,T_j})</option>
 				</select> 
 
 				<label for="neighborhoodWidthForClustering">Neighborhood width (&sigma;): <span id="neighborhoodWidthForClusteringDisplay"></span></label>
@@ -344,15 +346,15 @@
 					<div class="col col-lg-8">
 						<label for="spectralClusteringMethodDropdown">Spectral clustering method:</label>
 						<select class="form-control custom-select" id="spectralClusteringMethodDropdown" onchange="spectralClusteringMethodChanged()">
-		        				<option value="0">Unnormalized (L = D-W)</option>
-						    	<option value="1" disabled>Normalized-I (L<sub>rw</sub>)</option>
-						    	<option value="1" disabled>Normalized-II (L<sub>sym</sub>)</option>
+		        				<option selected value="0">Unnormalized (L = D-W)</option>
+						    	<option value="1">Normalized-I (L_<sub>rw</sub>)</option>
+						    	<option value="2">Normalized-II (L_<sub>sym</sub>)</option>
 						</select> 
 					</div>
 
 					<div class="col col-lg-4">
 
-						<button class="btn btn-success" type="button" onclick="compluteClusters();">Cluster !
+						<button class="btn btn-success" type="button" onclick="computeClusters();">Cluster !
 						</button> 
 
 						<button class="btn btn-danger" type="button" onclick="resetGraphClusters();">Reset  
