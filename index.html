@@ -121,8 +121,11 @@
 	    				</button>
 
 	    				<button class="btn btn-danger" type="button" onclick="finishModifyingProbConfig();">
-	    					Finish Modifying
+	    					Finish
 	    				</button>
+
+	    				<button class="btn btn-danger" type="button" onclick="refreshRandomProblemConfiguration();"><i class="fa fa-refresh"></i>
+						</button> 
 
 	    			</div>
 
@@ -131,7 +134,7 @@
 	            		<select class="form-control custom-select" id="arrivalDistributionDropdown" onchange="problemConfigurationChanged()">
             				<option value="0">Custom</option>
 					    	<option value="1">1-Agent(3T)</option>
-					    	<option selected value="2">2-Agent(5T)</option>
+					    	<option value="2">2-Agent(5T)</option>
 					    	<option value="2.5">1-Agent(5T)</option>
 					    	<option value="3">1-Agent(4T)</option>
 					    	<option value="3.5">1-Agent(9T)</option>
@@ -140,7 +143,7 @@
 					    	<option value="6">3-Agent(General)</option>
 					    	<option value="7">3-Agent(Room)</option>
 					    	<option value="8">3-Agent(Blank)</option>
-					    	<option value="9">Random</option>
+					    	<option selected value="9">Random</option>
 					  	</select> 
 
 	    			</div>
@@ -329,7 +332,7 @@
 		<div class="row" id="BoostingMenu">
 
 			<div class="col col-lg-4 border-right border-success">
-				<h5>Spectral Graph Clustering:</h5>
+				<h5>Spectral Graph Clustering Parameters:</h5>
 				
 				<label for="similarityMeasureTypeDropdown">Similarity measure based on:</label>
 				<select class="form-control custom-select" id="similarityMeasureTypeDropdown" onchange="similarityMeasureTypeChanged()">
@@ -339,32 +342,32 @@
 				    		J(cyc &#1014;{T_i,T_j})</option>
 				</select> 
 
-				<label for="neighborhoodWidthForClustering">Neighborhood width (&sigma;): <span id="neighborhoodWidthForClusteringDisplay"></span></label>
+				<label for="neighborhoodWidthForClustering">Neighborhood width (&sigma;): <span id="neighborhoodWidthForClusteringDisplay"></span> 
+					<button class="btn btn-success" type="button" onclick="adjustNeighborhoodWidthForClusteringRange();">Tune Slider <i class="fa fa-refresh"></i>
+						</button> 
+				</label>
 				<input type="range" class="form-control slider" id="neighborhoodWidthForClustering" min="0" max="10" value="1.5" step="0.1" onchange="neighborhoodWidthForClusteringChanged(Number(this.value));">
 
 				<div class="row">
 					<div class="col col-lg-8">
 						<label for="spectralClusteringMethodDropdown">Spectral clustering method:</label>
 						<select class="form-control custom-select" id="spectralClusteringMethodDropdown" onchange="spectralClusteringMethodChanged()">
-		        				<option selected value="0">Unnormalized (L = D-W)</option>
-						    	<option value="1">Normalized-I (L_<sub>rw</sub>)</option>
+		        				<option value="0">Unnormalized (L = D-W)</option>
+						    	<option selected value="1">Normalized-I (L_<sub>rw</sub>)</option>
 						    	<option value="2">Normalized-II (L_<sub>sym</sub>)</option>
 						</select> 
 					</div>
 
 					<div class="col col-lg-4">
 
-						<button class="btn btn-success" type="button" onclick="computeClusters();">Cluster !
-						</button> 
-
-						<button class="btn btn-danger" type="button" onclick="resetGraphClusters();">Reset  
-						</button>
+						<label for="numOfKMeansIterations">K-M. Steps:</label>
+						<input class="form-control" id="numOfKMeansIterations" type="text" value="20" onchange="numOfKMeansIterationsChanged(Number(this.value));">
 
 					</div>
 					
 				</div>
 				
-
+				
 				
 					
 
@@ -372,13 +375,38 @@
 
 
 			<div class="col col-lg-4 border-right border-success">
-				<h5>Generating Candidate Cycles:</h5>
-				<button class="btn btn-success" type="button" onclick="initiateComputingRefinedGreedyCycles();">Greedy Search
-				</button> 
-				<button class="btn btn-danger" type="button" onclick="resetCycles();">Reset
-				</button>
-				<label for="initialTrajectoryGenerationMethod">Allow Multiple Visits to a Target on the Cycle:</label>
-				<input type="checkbox" id="cycleGenerationMethod" checked onchange="cycleGenerationMethodChanged();">
+				<h5>Cluster and Generate Cycles:</h5>
+
+				<div class="row">
+					<div class="col col-lg-12">
+						<label for="clusterButton">Cluster Targets:</label>
+						<button class="btn btn-success" id="clusterButton" type="button" onclick="computeClusters();">Cluster !
+						</button>
+					
+						<button class="btn btn-danger" type="button" onclick="resetGraphClusters();">Reset Clusters  
+						</button>
+					</div>
+				</div>
+
+				<div class="row">
+					<hr>
+				</div>
+				
+				<div class="row">
+					<div class="col col-lg-12">
+						<label for="generateCyclesButton">Generate Cycles:</label>
+						<button class="btn btn-success" id="generateCyclesButton" type="button" onclick="initiateComputingRefinedGreedyCycles();">Search !
+						</button> 
+						<button class="btn btn-danger" type="button" onclick="restartCycles();">Reset Cycles
+						</button>
+						<label for="initialTrajectoryGenerationMethod">Allow Multiple Visits to a Target on the Cycle:</label>
+						<input type="checkbox" id="cycleGenerationMethod" checked onchange="cycleGenerationMethodChanged();">	
+					</div>
+
+					
+				</div>
+				
+				
 			</div>		
 
 			<div class="col col-lg-4" id="BoostingMenu">

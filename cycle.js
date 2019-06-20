@@ -16,6 +16,9 @@ function Cycle(agentID,targetSet){
 	this.subCycleTravelTimeList = []; // M x 1 : t_ij values
 	this.subCycleDwellTimeList = []; 
 
+	this.RGCComputingMode = 0;
+	this.cycleRefiningParameters = [];
+
 	this.show = function(){
 		var colorValue = color(200,0,0,128);
 		for(var i = 0; i<this.pathList.length; i++){
@@ -24,11 +27,16 @@ function Cycle(agentID,targetSet){
 	}
 
 	this.highlight = function(){
-		if(RGCComputingMode==2){
+		if(this.RGCComputingMode==2){
 			var colorValue = color(0,200,0,128);
-		}else if(RGCComputingMode==3){
+		}else if(this.RGCComputingMode==3){
 			var colorValue = color(0,0,200,128);
+		}else{
+			//var colorValue = color(0,200,200,128);
 		}
+
+
+
 		for(var i = 0; i<this.pathList.length; i++){
 			paths[this.pathList[i]].highlight(colorValue);
 		}
@@ -46,6 +54,10 @@ function Cycle(agentID,targetSet){
 		resultCycle.subCycleList = [...this.subCycleList];
 		resultCycle.subCycleTravelTimeList = [...this.subCycleTravelTimeList];
 		resultCycle.subCycleDwellTimeList = [...this.subCycleDwellTimeList];
+		
+		resultCycle.cycleRefiningParameters = [...this.cycleRefiningParameters];
+		resultCycle.RGCComputingMode = this.RGCComputingMode;
+		
 		return resultCycle;
 	}
 
@@ -62,7 +74,9 @@ function Cycle(agentID,targetSet){
 		this.subCycleList = [...givenCycle.subCycleList];
 		this.subCycleTravelTimeList = [...givenCycle.subCycleTravelTimeList];
 		this.subCycleDwellTimeList = [...givenCycle.subCycleDwellTimeList];
-
+		
+		this.cycleRefiningParameters = [...givenCycle.cycleRefiningParameters];
+		this.RGCComputingMode = givenCycle.RGCComputingMode;
 	}
 
 
@@ -109,9 +123,15 @@ function Cycle(agentID,targetSet){
 		
 		}
 
-		this.pathList = [bestPath,bestPath];
-		this.targetList = [...paths[bestPath].targets];
-		this.meanUncertainty = minMeanUncertainty;
+		if(bestPath != -1){
+			this.pathList = [bestPath,bestPath];
+			this.targetList = [...paths[bestPath].targets];
+			this.meanUncertainty = minMeanUncertainty;
+		}else{
+			this.pathList = [];
+			this.targetList = [this.allowedTargetList[0]];
+			this.meanUncertainty = 0;
+		}
 	}
 
 
@@ -620,7 +640,9 @@ function Cycle(agentID,targetSet){
 	this.swap2OPT = function(i,k){
 		
 		var dummyTour = new Cycle(this.deployedAgent,this.allowedTargetList);
-		
+		dummyTour.RGCComputingMode = this.RGCComputingMode;
+		dummyTour.cycleRefiningParameters = [...this.cycleRefiningParameters];
+
 		for(var p = 0; p<i; p++){
 			dummyTour.pathList[p] = this.pathList[p];
 			dummyTour.targetList[p] = this.targetList[p];
@@ -629,7 +651,7 @@ function Cycle(agentID,targetSet){
 
 		dummyTour.targetList[i] = this.targetList[i];
 		
-		count = 1;
+		var count = 1;
 		for(var p = i+1; p<k; p++){
 			dummyTour.pathList[p] = this.pathList[k-count];
 			dummyTour.targetList[p] = this.targetList[k-count+1];
@@ -687,6 +709,8 @@ function Cycle(agentID,targetSet){
 
 			// Type 1
 			var dummyTour = new Cycle(this.deployedAgent,this.allowedTargetList);
+			dummyTour.RGCComputingMode = this.RGCComputingMode;
+			dummyTour.cycleRefiningParameters = [...this.cycleRefiningParameters];
 
 			for(var p = 0; p<i; p++){
 				dummyTour.pathList[p] = this.pathList[p];
@@ -727,12 +751,15 @@ function Cycle(agentID,targetSet){
 
 			print("Targets: "+this.targetList);
 			print("Paths: "+this.pathList);
-			print("swapped1 Targets: "+dummyTour.targetList);
-			print("swapped1 Paths: "+dummyTour.pathList);
+			print("swapped1 Targets: "+dummyTour.targetList.join());
+			print("swapped1 Paths: "+dummyTour.pathList.join());
 
-			dummyTour.computeMeanUncertainty();
 			
+			
+			dummyTour.computeMeanUncertainty();
 			var cost = dummyTour.meanUncertainty;
+			
+
 			if(cost<minCost){
 				minCost	= cost;
 				print("Prev cost: "+this.meanUncertainty);
@@ -752,6 +779,8 @@ function Cycle(agentID,targetSet){
 			// Type 2
 			
 			var dummyTour = new Cycle(this.deployedAgent,this.allowedTargetList);
+			dummyTour.RGCComputingMode = this.RGCComputingMode;
+			dummyTour.cycleRefiningParameters = [...this.cycleRefiningParameters];
 
 			for(var p = 0; p<i; p++){
 				dummyTour.pathList[p] = this.pathList[p];
@@ -817,6 +846,8 @@ function Cycle(agentID,targetSet){
 			// Type 3
 			
 			var dummyTour = new Cycle(this.deployedAgent,this.allowedTargetList);
+			dummyTour.RGCComputingMode = this.RGCComputingMode;
+			dummyTour.cycleRefiningParameters = [...this.cycleRefiningParameters];
 
 			for(var p = 0; p<i; p++){
 				dummyTour.pathList[p] = this.pathList[p];
@@ -980,6 +1011,13 @@ function Cycle(agentID,targetSet){
 
 	    var pathList = this.pathList;
 	    var targetList = this.targetList;
+
+
+	    if(this.travelTimeList.length == 0){
+	    	print("Computing missing data for agent "+(this.deployedAgent+1));
+	    	this.computeMeanUncertaintyAdvanced();
+	    }
+
 	    var T_cyc = math.multiply(math.ones(L),math.add(this.travelTimeList,this.dwellTimeList));
 	    print("T_cyc="+T_cyc);
 	   	var z = agentID;
@@ -1415,6 +1453,217 @@ function Cycle(agentID,targetSet){
 
 
 
+	this.computeNeglectedTargetCost = function(){
+		
+		var neglectedTargetCost = 0;
+		var neglectedTargetListString = "(";
+
+		for(var i = 0; i<this.allowedTargetList.length; i++){
+			
+			var T_i = this.allowedTargetList[i];
+			if(!this.targetList.includes(T_i)){
+				neglectedTargetCost = neglectedTargetCost + targets[i].initialUncertainty + 0.5*targets[i].uncertaintyRate*periodT;
+				neglectedTargetListString = neglectedTargetListString+(i+1)+",";
+			}
+
+		}
+		neglectedTargetListString = neglectedTargetListString.slice(0,-1) + ")";
+		return([neglectedTargetCost,neglectedTargetListString]);
+	
+	}
+
+
+	this.iterationOfComputingGreedyCycles = function(){
+
+		print("Cycle length of agent "+this.deployedAgent+" is "+this.targetList.length+" targets.");
+		
+		if(this.RGCComputingMode==1){//initial greedy
+			
+			sleepFor(50);
+			var val = this.addTheBestAvailableTarget(); // cannot add more to this cycle
+			if(val==-1){
+
+				var neglectedTargetInfo = this.computeNeglectedTargetCost();
+				if(neglectedTargetInfo[0] > 0){
+					consolePrint("Unvisited targets assigned to agent "+(this.deployedAgent+1)+": "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".");
+				}else{
+					consolePrint("All targets assigned to agent "+(this.deployedAgent+1)+" are covered.");
+				}
+				var meanSystemUncertaintyVal = this.meanUncertainty + neglectedTargetInfo[0];
+				consolePrint("Steady state mean cycle uncertainty of agent "+(this.deployedAgent+1)+" (J_"+(this.deployedAgent+1)+") ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 1).");
+
+				this.recorrectCycleErrors();
+				this.assignAgentToCycle();
+
+				if(this.pathList.length>3){
+					this.RGCComputingMode = 2;
+					this.cycleRefiningParameters[0] = [0,2]; //[i,k] for 2-opt
+				}else{
+					this.RGCComputingMode = 0;
+				}
+				sleepFor(50);
+			}
+			
+		}else if(this.RGCComputingMode==2){//2-opt
+			var i = this.cycleRefiningParameters[0][0];
+			var k = this.cycleRefiningParameters[0][1];
+			sleepFor(10);
+			this.swap2OPT(i,k);
+			
+			k = k + 1;
+			if(k >= this.pathList.length){
+				i = i + 1;
+				if(i >= this.pathList.length-2){
+					consolePrint("2-Opt refining stage for agent "+(this.deployedAgent+1)+" finished!");
+					this.RGCComputingMode = 3;
+					this.cycleRefiningParameters[1] = [0,1,2,0]; // i,j,k,l for 3-Opt
+					sleepFor(50);
+				}
+				k = i + 2;
+			}
+			
+			this.cycleRefiningParameters[0] = [i,k];
+		
+		}else if(this.RGCComputingMode==3){//3-opt
+
+			var i = this.cycleRefiningParameters[1][0];
+			var j = this.cycleRefiningParameters[1][1];
+			var k = this.cycleRefiningParameters[1][2];
+			var l = this.cycleRefiningParameters[1][3];
+			////sleepFor(10);
+			this.swap3OPT(i,j,k,l);
+			
+			l = l + 1;
+			if(l >= 3){	
+				k = k + 1;
+				if(k >= this.pathList.length){
+					j = j + 1;
+					if(j >= this.pathList.length-1){
+						i = i + 1;
+						if(i >= this.pathList.length-2){
+							consolePrint("3-Opt refining stage for agent "+(this.deployedAgent+1)+" finished!");
+							this.RGCComputingMode = 0;							
+
+							var neglectedTargetInfo = this.computeNeglectedTargetCost();
+							if(neglectedTargetInfo[0] > 0){
+								consolePrint("Unvisited targets assigned to agent "+(this.deployedAgent+1)+": "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".");
+							}else{
+								consolePrint("All targets assigned to agent "+(this.deployedAgent+1)+" are covered.");
+							}
+							var meanSystemUncertaintyVal = this.meanUncertainty + neglectedTargetInfo[0];
+							consolePrint("Steady state mean cycle uncertainty of agent "+(this.deployedAgent+1)+" (J_"+(this.deployedAgent+1)+") ="+meanSystemUncertaintyVal.toFixed(3)+", achieved after refining (RGC-Method 1).");
+							////sleepFor(50);
+						}
+						j = i + 1;
+					}
+					k = j + 1;
+				}
+				l = 0;
+			}
+			this.cycleRefiningParameters[1] = [i,j,k,l];
+
+		}
+	}
+
+
+	this.iterationOfComputingGreedyCyclesAdvanced = function(){
+
+		print("Cycle length of agent "+this.deployedAgent+" is "+this.targetList.length+" targets.");
+
+		if(this.RGCComputingMode==1){//initial greedy
+			sleepFor(50);
+
+			var val = this.addTheBestAvailableTargetAdvanced();
+			
+			if(val==-1){
+				
+				var neglectedTargetInfo = this.computeNeglectedTargetCost();
+				if(neglectedTargetInfo[0] > 0){
+					consolePrint("Unvisited targets assigned to agent "+(this.deployedAgent+1)+": "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".");
+				}else{
+					consolePrint("All targets assigned to agent "+(this.deployedAgent+1)+" are covered.");
+				}
+				var meanSystemUncertaintyVal = this.meanUncertainty + neglectedTargetInfo[0];
+				consolePrint("Steady state mean cycle uncertainty of agent "+(this.deployedAgent+1)+" (J_"+(this.deployedAgent+1)+") ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 1).");
+
+				this.recorrectCycleErrors();
+				this.assignAgentToCycle();
+				
+
+				if(this.pathList.length>3){
+					this.RGCComputingMode = 2;
+					this.cycleRefiningParameters[0] = [0,2]; //[i,k] for 2-opt
+				}else{
+					this.RGCComputingMode = 0;
+				}
+				sleepFor(50);
+			}
+			
+		}else if(this.RGCComputingMode==2){//2-opt ---> not actually
+			var j = this.cycleRefiningParameters[0][0];
+			var k = this.cycleRefiningParameters[0][1];
+			sleepFor(10);
+			this.removeUnwantedAuxiliaryTargets(j,k);
+			
+			k = k + 1;
+			if(k >= this.targetList.length){
+				j = j + 1;
+				if(j >= this.targetList.length-2){
+					consolePrint("Aux target removing stage finished of agent "+(this.deployedAgent+1)+"!");
+					this.RGCComputingMode = 0; // no 3-opt yet
+					this.cycleRefiningParameters[1] = [0,1,2,0]; // i,j,k,l for 3-Opt
+					sleepFor(50);
+				}
+				k = j + 2;
+			}
+			this.cycleRefiningParameters[0] = [j,k];
+		
+		}else if(this.RGCComputingMode==3){//3-opt
+
+			var i = this.cycleRefiningParameters[1][0];
+			var j = this.cycleRefiningParameters[1][1];
+			var k = this.cycleRefiningParameters[1][2];
+			var l = this.cycleRefiningParameters[1][3];
+			sleepFor(10);
+			this.swap3OPT(i,j,k,l);
+			
+			l = l + 1;
+			if(l >= 3){	
+				k = k + 1;
+				if(k >= this.pathList.length){
+					j = j + 1;
+					if(j >= this.pathList.length-1){
+						i = i + 1;
+						if(i >= this.pathList.length-2){
+							consolePrint("3-Opt refining stage finished!");
+							this.RGCComputingMode = 0;
+							sleepFor(50);
+						}
+						j = i + 1;
+					}
+					k = j + 1;
+				}
+				l = 0;
+			}
+			this.cycleRefiningParameters[1] = [i,j,k,l];
+
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
 
@@ -1422,194 +1671,212 @@ function Cycle(agentID,targetSet){
 
 
 function initiateComputingRefinedGreedyCycles(){
-	var agentID	= 0;
-	var targetSet = math.range(0,targets.length)._data;
-
-	cycles.push(new Cycle(agentID,targetSet)); //creating a cycle for the agent (with agent id) on the target set
 	
-	cycles[0].computeBestInitialCycle();
-	RGCComputingMode = 1; //start iteratively evolving the cycles
-}
-
-
-function iterationOfComputingGreedyCyclesAdvanced(){
-	print("Current route length: "+cycles[0].targetList.length+" targets.");
-	if(RGCComputingMode==1){//initial greedy
-		sleepFor(500);
-		var val = cycles[0].addTheBestAvailableTargetAdvanced();
-		if(val==-1){
-			
-			var neglectedTargetInfo = computeNeglectedTargetCost();
-			if(neglectedTargetInfo[0] > 0){
-				consolePrint("Unvisited targets: "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".")
-			}else{
-				consolePrint("All targets covered.")
-			}
-			var meanSystemUncertaintyVal = cycles[0].meanUncertainty + neglectedTargetInfo[0];
-			consolePrint("Steady state mean system uncertainty (J) ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 2).");
-
-			cycles[0].recorrectCycleErrors();
-			cycles[0].assignAgentToCycle();
-			
-
-
-
-			if(cycles[0].pathList.length>3){
-				RGCComputingMode = 2;
-				cycleRefiningParameters[0] = [0,2]; //[i,k] for 2-opt
-			}else{
-				RGCComputingMode = 0;
-			}
-			sleepFor(500);
-		}
-		
-	}else if(RGCComputingMode==2){//2-opt
-		var j = cycleRefiningParameters[0][0];
-		var k = cycleRefiningParameters[0][1];
-		sleepFor(100);
-		cycles[0].removeUnwantedAuxiliaryTargets(j,k);
-		
-		k = k + 1;
-		if(k >= cycles[0].targetList.length){
-			j = j + 1;
-			if(j >= cycles[0].targetList.length-2){
-				consolePrint("Aux target removing stage finished!");
-				RGCComputingMode = 0;
-				cycleRefiningParameters[1] = [0,1,2,0]; // i,j,k,l for 3-Opt
-				sleepFor(500);
-			}
-			k = j + 2;
-		}
-		cycleRefiningParameters[0][0] = j;
-		cycleRefiningParameters[0][1] = k;
-	
-	}else if(RGCComputingMode==3){//3-opt
-
-		var i = cycleRefiningParameters[1][0];
-		var j = cycleRefiningParameters[1][1];
-		var k = cycleRefiningParameters[1][2];
-		var l = cycleRefiningParameters[1][3];
-		sleepFor(10);
-		cycles[0].swap3OPT(i,j,k,l);
-		
-		l = l + 1;
-		if(l >= 3){	
-			k = k + 1;
-			if(k >= cycles[0].pathList.length){
-				j = j + 1;
-				if(j >= cycles[0].pathList.length-1){
-					i = i + 1;
-					if(i >= cycles[0].pathList.length-2){
-						consolePrint("3-Opt refining stage finished!");
-						RGCComputingMode = 0;
-						sleepFor(500);
-					}
-					j = i + 1;
-				}
-				k = j + 1;
-			}
-			l = 0;
-		}
-		cycleRefiningParameters[1][0] = i;
-		cycleRefiningParameters[1][1] = j;
-		cycleRefiningParameters[1][2] = k;
-		cycleRefiningParameters[1][3] = l;
-
+	if(agents.length>1 && targetClusters.length==0){
+		consolePrint("Cluster the targets first! (Using the 'Cluster !' button.)")
+		return;
+	}else if(agents.length==1 && cycles.length==0){// the usual single agent case
+		applyFoundClustersToGroupTargets(math.zeros(targets.length)._data);
+		// var agentID	= 0;
+		// var targetSet = math.range(0,targets.length)._data;
+		// cycles.push(new Cycle(agentID,targetSet)); //creating a cycle for the agent (with agent id) on the target set
 	}
-}
 
-function iterationOfComputingGreedyCycles(){
-	print("Current route length: "+cycles[0].targetList.length+" targets.");
-	if(RGCComputingMode==1){//initial greedy
-		sleepFor(500);
-		var val = cycles[0].addTheBestAvailableTarget();
-		if(val==-1){
-
-			var neglectedTargetInfo = computeNeglectedTargetCost();
-			if(neglectedTargetInfo[0] > 0){
-				consolePrint("Unvisited targets: "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".")
-			}else{
-				consolePrint("All targets covered.")
-			}
-			var meanSystemUncertaintyVal = cycles[0].meanUncertainty + neglectedTargetInfo[0];
-			consolePrint("Steady state mean system uncertainty (J) ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 1).");
-
-			cycles[0].recorrectCycleErrors();
-			cycles[0].assignAgentToCycle();
-
-			if(cycles[0].pathList.length>3){
-				RGCComputingMode = 2;
-				cycleRefiningParameters[0] = [0,2]; //[i,k] for 2-opt
-			}else{
-				RGCComputingMode = 0;
-			}
-			sleepFor(500);
-		}
-		
-	}else if(RGCComputingMode==2){//2-opt
-		var i = cycleRefiningParameters[0][0];
-		var k = cycleRefiningParameters[0][1];
-		sleepFor(10);
-		cycles[0].swap2OPT(i,k);
-		
-		k = k + 1;
-		if(k >= cycles[0].pathList.length){
-			i = i + 1;
-			if(i >= cycles[0].pathList.length-2){
-				consolePrint("2-Opt refining stage finished!");
-				RGCComputingMode = 3;
-				cycleRefiningParameters[1] = [0,1,2,0]; // i,j,k,l for 3-Opt
-				sleepFor(500);
-			}
-			k = i + 2;
-		}
-		cycleRefiningParameters[0][0] = i;
-		cycleRefiningParameters[0][1] = k;
-	
-	}else if(RGCComputingMode==3){//3-opt
-
-		var i = cycleRefiningParameters[1][0];
-		var j = cycleRefiningParameters[1][1];
-		var k = cycleRefiningParameters[1][2];
-		var l = cycleRefiningParameters[1][3];
-		sleepFor(10);
-		cycles[0].swap3OPT(i,j,k,l);
-		
-		l = l + 1;
-		if(l >= 3){	
-			k = k + 1;
-			if(k >= cycles[0].pathList.length){
-				j = j + 1;
-				if(j >= cycles[0].pathList.length-1){
-					i = i + 1;
-					if(i >= cycles[0].pathList.length-2){
-						consolePrint("3-Opt refining stage finished!");
-						RGCComputingMode = 0;
-
-						var neglectedTargetInfo = computeNeglectedTargetCost();
-						if(neglectedTargetInfo[0] > 0){
-							consolePrint("Unvisited targets: "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".")
-						}else{
-							consolePrint("All targets covered.")
-						}
-						var meanSystemUncertaintyVal = cycles[0].meanUncertainty + neglectedTargetInfo[0];
-						consolePrint("Steady state mean system uncertainty (J) ="+meanSystemUncertaintyVal.toFixed(3)+", achieved after refining (RGC-Method 1).");
-
-						sleepFor(500);
-					}
-					j = i + 1;
-				}
-				k = j + 1;
-			}
-			l = 0;
-		}
-		cycleRefiningParameters[1][0] = i;
-		cycleRefiningParameters[1][1] = j;
-		cycleRefiningParameters[1][2] = k;
-		cycleRefiningParameters[1][3] = l;
-
+	for(var j = 0; j<agents.length; j++){
+		cycles[j].computeBestInitialCycle();
+		cycles[j].RGCComputingMode = 1;  //start iteratively evolving the cycles
 	}
+
+	RGCComputingMode = 1; // global variable
+	
 }
+
+
+// function iterationOfComputingGreedyCyclesAdvanced(){
+// 	print("Current route length: "+cycles[0].targetList.length+" targets.");
+// 	if(RGCComputingMode==1){//initial greedy
+// 		sleepFor(500);
+
+// 		var val = cycles[0].addTheBestAvailableTargetAdvanced();
+		
+// 		if(val==-1){
+			
+// 			var neglectedTargetInfo = computeNeglectedTargetCost();
+// 			if(neglectedTargetInfo[0] > 0){
+// 				consolePrint("Unvisited targets: "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".")
+// 			}else{
+// 				consolePrint("All targets covered.")
+// 			}
+// 			var meanSystemUncertaintyVal = cycles[0].meanUncertainty + neglectedTargetInfo[0];
+// 			consolePrint("Steady state mean system uncertainty (J) ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 2).");
+
+// 			cycles[0].recorrectCycleErrors();
+// 			cycles[0].assignAgentToCycle();
+			
+
+
+
+// 			if(cycles[0].pathList.length>3){
+// 				RGCComputingMode = 2;
+// 				cycleRefiningParameters[0] = [0,2]; //[i,k] for 2-opt
+// 			}else{
+// 				RGCComputingMode = 0;
+// 			}
+// 			sleepFor(500);
+// 		}
+		
+// 	}else if(RGCComputingMode==2){//2-opt
+// 		var j = cycleRefiningParameters[0][0];
+// 		var k = cycleRefiningParameters[0][1];
+// 		sleepFor(100);
+// 		cycles[0].removeUnwantedAuxiliaryTargets(j,k);
+		
+// 		k = k + 1;
+// 		if(k >= cycles[0].targetList.length){
+// 			j = j + 1;
+// 			if(j >= cycles[0].targetList.length-2){
+// 				consolePrint("Aux target removing stage finished!");
+// 				RGCComputingMode = 0;
+// 				cycleRefiningParameters[1] = [0,1,2,0]; // i,j,k,l for 3-Opt
+// 				sleepFor(500);
+// 			}
+// 			k = j + 2;
+// 		}
+// 		cycleRefiningParameters[0][0] = j;
+// 		cycleRefiningParameters[0][1] = k;
+	
+// 	}else if(RGCComputingMode==3){//3-opt
+
+// 		var i = cycleRefiningParameters[1][0];
+// 		var j = cycleRefiningParameters[1][1];
+// 		var k = cycleRefiningParameters[1][2];
+// 		var l = cycleRefiningParameters[1][3];
+// 		sleepFor(10);
+// 		cycles[0].swap3OPT(i,j,k,l);
+		
+// 		l = l + 1;
+// 		if(l >= 3){	
+// 			k = k + 1;
+// 			if(k >= cycles[0].pathList.length){
+// 				j = j + 1;
+// 				if(j >= cycles[0].pathList.length-1){
+// 					i = i + 1;
+// 					if(i >= cycles[0].pathList.length-2){
+// 						consolePrint("3-Opt refining stage finished!");
+// 						RGCComputingMode = 0;
+// 						sleepFor(500);
+// 					}
+// 					j = i + 1;
+// 				}
+// 				k = j + 1;
+// 			}
+// 			l = 0;
+// 		}
+// 		cycleRefiningParameters[1][0] = i;
+// 		cycleRefiningParameters[1][1] = j;
+// 		cycleRefiningParameters[1][2] = k;
+// 		cycleRefiningParameters[1][3] = l;
+
+// 	}
+// }
+
+
+
+// function iterationOfComputingGreedyCycles(){
+// 	print("Current route length: "+cycles[0].targetList.length+" targets.");
+// 	if(RGCComputingMode==1){//initial greedy
+// 		sleepFor(500);
+// 		var val = cycles[0].addTheBestAvailableTarget();
+// 		if(val==-1){
+
+// 			var neglectedTargetInfo = computeNeglectedTargetCost();
+// 			if(neglectedTargetInfo[0] > 0){
+// 				consolePrint("Unvisited targets: "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".")
+// 			}else{
+// 				consolePrint("All targets covered.")
+// 			}
+// 			var meanSystemUncertaintyVal = cycles[0].meanUncertainty + neglectedTargetInfo[0];
+// 			consolePrint("Steady state mean system uncertainty (J) ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 1).");
+
+// 			cycles[0].recorrectCycleErrors();
+// 			cycles[0].assignAgentToCycle();
+
+// 			if(cycles[0].pathList.length>3){
+// 				RGCComputingMode = 2;
+// 				cycleRefiningParameters[0] = [0,2]; //[i,k] for 2-opt
+// 			}else{
+// 				RGCComputingMode = 0;
+// 			}
+// 			sleepFor(500);
+// 		}
+		
+// 	}else if(RGCComputingMode==2){//2-opt
+// 		var i = cycleRefiningParameters[0][0];
+// 		var k = cycleRefiningParameters[0][1];
+// 		sleepFor(10);
+// 		cycles[0].swap2OPT(i,k);
+		
+// 		k = k + 1;
+// 		if(k >= cycles[0].pathList.length){
+// 			i = i + 1;
+// 			if(i >= cycles[0].pathList.length-2){
+// 				consolePrint("2-Opt refining stage finished!");
+// 				RGCComputingMode = 3;
+// 				cycleRefiningParameters[1] = [0,1,2,0]; // i,j,k,l for 3-Opt
+// 				sleepFor(500);
+// 			}
+// 			k = i + 2;
+// 		}
+// 		cycleRefiningParameters[0][0] = i;
+// 		cycleRefiningParameters[0][1] = k;
+	
+// 	}else if(RGCComputingMode==3){//3-opt
+
+// 		var i = cycleRefiningParameters[1][0];
+// 		var j = cycleRefiningParameters[1][1];
+// 		var k = cycleRefiningParameters[1][2];
+// 		var l = cycleRefiningParameters[1][3];
+// 		sleepFor(10);
+// 		cycles[0].swap3OPT(i,j,k,l);
+		
+// 		l = l + 1;
+// 		if(l >= 3){	
+// 			k = k + 1;
+// 			if(k >= cycles[0].pathList.length){
+// 				j = j + 1;
+// 				if(j >= cycles[0].pathList.length-1){
+// 					i = i + 1;
+// 					if(i >= cycles[0].pathList.length-2){
+// 						consolePrint("3-Opt refining stage finished!");
+// 						RGCComputingMode = 0;
+
+// 						var neglectedTargetInfo = computeNeglectedTargetCost();
+// 						if(neglectedTargetInfo[0] > 0){
+// 							consolePrint("Unvisited targets: "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".")
+// 						}else{
+// 							consolePrint("All targets covered.")
+// 						}
+// 						var meanSystemUncertaintyVal = cycles[0].meanUncertainty + neglectedTargetInfo[0];
+// 						consolePrint("Steady state mean system uncertainty (J) ="+meanSystemUncertaintyVal.toFixed(3)+", achieved after refining (RGC-Method 1).");
+
+// 						sleepFor(500);
+// 					}
+// 					j = i + 1;
+// 				}
+// 				k = j + 1;
+// 			}
+// 			l = 0;
+// 		}
+// 		cycleRefiningParameters[1][0] = i;
+// 		cycleRefiningParameters[1][1] = j;
+// 		cycleRefiningParameters[1][2] = k;
+// 		cycleRefiningParameters[1][3] = l;
+
+// 	}
+// }
+
+
+
 
 
 function computeNeglectedTargetCost(){
@@ -1621,7 +1888,7 @@ function computeNeglectedTargetCost(){
 		for(var j = 0; j<cycles.length; j++){
 			if(cycles[j].targetList.includes(i)){
 				targetCovered = true;
-				j=cycles.length; // to exit
+				break; // to exit
 			}
 		}
 		if(!targetCovered){
@@ -1641,6 +1908,20 @@ function resetCycles(){
 	for(var i = cycles.length; i > 0; i--){
         removeACycle();
     }
+}
+
+function restartCycles(){
+	RGCComputingMode = 0;
+	for(var i = cycles.length; i > 0; i--){
+        removeACycle();
+    }
+    if(targetClusters.length>0){
+		var N = targetClusters.length; // number of agents
+		for(var j = 0; j < N; j++){
+	        cycles.push(new Cycle(j,targetClusters[j]));// deployedAgent,targetSet
+	        agents[j].assignToTheTarget(targetClusters[j][0]);
+	    }
+	}
 }
 
 

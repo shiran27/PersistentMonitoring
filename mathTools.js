@@ -312,6 +312,24 @@ function extractDataPointsFrom(V,lambda){
 
     print("Selected Data Points:")
     print(dataPoints);
+
+    if(spectralClusteringMethod==2){// datapoints matrix rows should be normalized 
+        for(var i = 0; i < M; i++){// each row
+            var rowSqSum = 0;
+            for(var j = 0; j < N; j++){
+                rowSqSum = rowSqSum + sq(dataPoints[i][j]);
+            }
+
+            for(var j = 0; j < N; j++){
+                dataPoints[i][j] = dataPoints[i][j]/Math.sqrt(rowSqSum);
+            }
+            
+        }
+    }
+
+
+
+
     return dataPoints;
 }
 
@@ -323,7 +341,6 @@ function kMeansCluster(dataPoints){
     var N = agents.length; // dimention of a datapoint = N = number of agents = number of columns in dataPoints matrix
     
 
-    var numberOfKMeansIterations = 100;
     var minCostAssignment;
     var minAssignmentCost = Infinity;
     
@@ -446,7 +463,7 @@ function applyFoundClustersToGroupTargets(clusteredPoints){ // adjust parameters
     var M = targets.length;
     var P = paths.length;
     
-    resetGraphClusters();
+    resetGraphClusters(); // this might be redundent but its safer
 
     // creating structure
     targetClusters = [];
@@ -486,7 +503,6 @@ function applyFoundClustersToGroupTargets(clusteredPoints){ // adjust parameters
     }
 
 
-
-
     displayClustersMode = true;
+
 }

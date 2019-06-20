@@ -10,7 +10,7 @@ var height;
 function setup() {
   	
 
-    Math.seedrandom('500'); // initial seed for random number generator
+    Math.seedrandom('9'); // initial seed for random number generator
 
 
   	pixelDensity(1);
@@ -122,10 +122,19 @@ function draw() {
 
     if(RGCComputingMode>=1){
         // extend each cycle!
-        if(!cycleGenerationMethod){
-            iterationOfComputingGreedyCycles();
-        }else{
-            iterationOfComputingGreedyCyclesAdvanced();
+        var RGCComputingModeCount = 0; 
+        
+        for(var j = 0; j < agents.length; j++){
+            if(!cycleGenerationMethod){
+                cycles[j].iterationOfComputingGreedyCycles();  
+            }else{
+                cycles[j].iterationOfComputingGreedyCyclesAdvanced();  
+            }
+            if(cycles[j].RGCComputingMode==0){RGCComputingModeCount++;}  
+        }
+
+        if(RGCComputingModeCount==agents.length){// all cycles complete
+            RGCComputingMode = 0;
         }
         
         

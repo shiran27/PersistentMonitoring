@@ -68,6 +68,7 @@ var neighborhoodWidthForClustering;
 var displayClustersMode = false;
 var targetClusters = [];
 var interClusterPaths = [];
+var numberOfKMeansIterations;
 
 
 function startModifyingProbConfig(){
@@ -209,6 +210,10 @@ function finishModifyingProbConfig(){
     
     }
     document.getElementById('thresholdSensitivities').innerHTML += HTMLTag2; 
+
+
+
+
 
 }
 
@@ -399,9 +404,11 @@ function readInitialInterface(){
     similarityMeasureType = Number(document.getElementById("similarityMeasureTypeDropdown").value);
     spectralClusteringMethod = Number(document.getElementById("spectralClusteringMethodDropdown").value);
     neighborhoodWidthForClustering = Number(document.getElementById("neighborhoodWidthForClustering").value);
+    numberOfKMeansIterations = Number(document.getElementById("numOfKMeansIterations").value);
     
 
-    adjustNeighborhoodWidthForClusteringRange()
+
+    adjustNeighborhoodWidthForClusteringRange();
     targetPrioritizationPolicyChanged();
 
 }
@@ -1128,13 +1135,14 @@ function spectralClusteringMethodChanged(){
 function adjustNeighborhoodWidthForClusteringRange(){
 
     var similarityMatrix = computeSimilarityMatrix();
+    print(similarityMatrix);
     var M = targets.length;
     var maxSimilarity = 0;
     var minSimilarity = 0;
 
     for(var i = 0; i < M; i++){
         for(var j = 0; j < M; j++){
-            if(similarityMatrix[i][j]>maxSimilarity){
+            if(similarityMatrix[i][j]>maxSimilarity && similarityMatrix[i][j]<Infinity){
                 maxSimilarity = similarityMatrix[i][j]
             }else if(similarityMatrix[i][j]>0 && similarityMatrix[i][j]<minSimilarity){
                 minSimilarity = similarityMatrix[i][j];
@@ -1142,9 +1150,9 @@ function adjustNeighborhoodWidthForClusteringRange(){
         }
     }
 
-    var maxSigma = maxSimilarity;
-    var minSigma = minSimilarity;
-    var defaultSigma = (minSigma+maxSigma)/2; // maxSimilarity is beyond 3*sigma
+    var maxSigma = maxSimilarity/3;
+    var minSigma = minSimilarity/3;
+    var defaultSigma = (0.7*minSigma+0.3*maxSigma); // maxSimilarity is beyond 3*sigma
     var stepSizeOfTheSlider = (maxSigma-minSigma)/100;
     
     document.getElementById('neighborhoodWidthForClustering').min = minSigma.toFixed(3);
@@ -1153,7 +1161,7 @@ function adjustNeighborhoodWidthForClusteringRange(){
     document.getElementById('neighborhoodWidthForClustering').value = defaultSigma.toFixed(3);
     
     neighborhoodWidthForClusteringChanged(defaultSigma.toFixed(3));
-    
+    consolePrint("Neighborhood width selecting slider's parameters are tuned." );
 }
 
 function resetGraphClusters(){
@@ -1170,8 +1178,25 @@ function resetGraphClusters(){
 
 }
 
+function refreshRandomProblemConfiguration(){
+    removeAll();
+    startModifyingProbConfig();
+    for(var i = 0; i<15; i++){
+        addATargetAt(500*Math.random(),500*Math.random());
+    }
+    disconnectAllPaths();
+    document.getElementById('maximumPathLength').value = 200;
+    maximumPathLengthChanged();
+    addAnAgentAtTarget(0);
+    addAnAgentAtTarget(5);
+    addAnAgentAtTarget(10);
+    finishModifyingProbConfig();
+}
 
-
+function numOfKMeansIterationsChanged(value){
+    numberOfKMeansIterations = value;
+    consolePrint("Number of K-Means steps (realizations) changed to "+value+".")
+}
 
 function frameRateChanged(value){
     simulationFrameRate = value;
@@ -1184,6 +1209,8 @@ function numberOfUpdateStepsChanged(value){
     consolePrint("Total number of gradient update steps changed to "+numberOfUpdateSteps+".");
     
 }
+
+
 
 function problemConfigurationChanged(){
     
@@ -1200,6 +1227,8 @@ function problemConfigurationChanged(){
         document.getElementById('maximumPathLength').value = 200;
         maximumPathLengthChanged();
         addAnAgentAtTarget(0);
+        addAnAgentAtTarget(5);
+        addAnAgentAtTarget(10);
         finishModifyingProbConfig();
 
     }else if(r == 8){
@@ -1374,7 +1403,7 @@ function problemConfigurationChanged(){
 
     }
 
-
+    
 }
 
 
