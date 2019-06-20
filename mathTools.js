@@ -327,10 +327,8 @@ function extractDataPointsFrom(V,lambda){
         }
     }
 
-
-
-
     return dataPoints;
+    
 }
 
 

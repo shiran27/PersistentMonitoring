@@ -134,6 +134,9 @@ function draw() {
         }
 
         if(RGCComputingModeCount==agents.length){// all cycles complete
+            
+
+            consolePrint('Theoretical Mean System Uncertainty = '+evaluateMeanSystemUncertainty().toFixed(3)+".");
             RGCComputingMode = 0;
         }
         

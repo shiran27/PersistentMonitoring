@@ -1097,6 +1097,12 @@ function Cycle(agentID,targetSet){
 	}
 
 	this.recorrectCycleErrors = function(){
+		
+		if(this.targetList.length == 1){
+			return;
+		}
+
+
 		for(var i = 0; i<this.targetList.length-1; i++){
 			var T_i = this.targetList[i];
 			var T_j = this.targetList[i+1];
@@ -1692,191 +1698,17 @@ function initiateComputingRefinedGreedyCycles(){
 }
 
 
-// function iterationOfComputingGreedyCyclesAdvanced(){
-// 	print("Current route length: "+cycles[0].targetList.length+" targets.");
-// 	if(RGCComputingMode==1){//initial greedy
-// 		sleepFor(500);
-
-// 		var val = cycles[0].addTheBestAvailableTargetAdvanced();
-		
-// 		if(val==-1){
-			
-// 			var neglectedTargetInfo = computeNeglectedTargetCost();
-// 			if(neglectedTargetInfo[0] > 0){
-// 				consolePrint("Unvisited targets: "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".")
-// 			}else{
-// 				consolePrint("All targets covered.")
-// 			}
-// 			var meanSystemUncertaintyVal = cycles[0].meanUncertainty + neglectedTargetInfo[0];
-// 			consolePrint("Steady state mean system uncertainty (J) ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 2).");
-
-// 			cycles[0].recorrectCycleErrors();
-// 			cycles[0].assignAgentToCycle();
-			
 
 
-
-// 			if(cycles[0].pathList.length>3){
-// 				RGCComputingMode = 2;
-// 				cycleRefiningParameters[0] = [0,2]; //[i,k] for 2-opt
-// 			}else{
-// 				RGCComputingMode = 0;
-// 			}
-// 			sleepFor(500);
-// 		}
-		
-// 	}else if(RGCComputingMode==2){//2-opt
-// 		var j = cycleRefiningParameters[0][0];
-// 		var k = cycleRefiningParameters[0][1];
-// 		sleepFor(100);
-// 		cycles[0].removeUnwantedAuxiliaryTargets(j,k);
-		
-// 		k = k + 1;
-// 		if(k >= cycles[0].targetList.length){
-// 			j = j + 1;
-// 			if(j >= cycles[0].targetList.length-2){
-// 				consolePrint("Aux target removing stage finished!");
-// 				RGCComputingMode = 0;
-// 				cycleRefiningParameters[1] = [0,1,2,0]; // i,j,k,l for 3-Opt
-// 				sleepFor(500);
-// 			}
-// 			k = j + 2;
-// 		}
-// 		cycleRefiningParameters[0][0] = j;
-// 		cycleRefiningParameters[0][1] = k;
-	
-// 	}else if(RGCComputingMode==3){//3-opt
-
-// 		var i = cycleRefiningParameters[1][0];
-// 		var j = cycleRefiningParameters[1][1];
-// 		var k = cycleRefiningParameters[1][2];
-// 		var l = cycleRefiningParameters[1][3];
-// 		sleepFor(10);
-// 		cycles[0].swap3OPT(i,j,k,l);
-		
-// 		l = l + 1;
-// 		if(l >= 3){	
-// 			k = k + 1;
-// 			if(k >= cycles[0].pathList.length){
-// 				j = j + 1;
-// 				if(j >= cycles[0].pathList.length-1){
-// 					i = i + 1;
-// 					if(i >= cycles[0].pathList.length-2){
-// 						consolePrint("3-Opt refining stage finished!");
-// 						RGCComputingMode = 0;
-// 						sleepFor(500);
-// 					}
-// 					j = i + 1;
-// 				}
-// 				k = j + 1;
-// 			}
-// 			l = 0;
-// 		}
-// 		cycleRefiningParameters[1][0] = i;
-// 		cycleRefiningParameters[1][1] = j;
-// 		cycleRefiningParameters[1][2] = k;
-// 		cycleRefiningParameters[1][3] = l;
-
-// 	}
-// }
-
-
-
-// function iterationOfComputingGreedyCycles(){
-// 	print("Current route length: "+cycles[0].targetList.length+" targets.");
-// 	if(RGCComputingMode==1){//initial greedy
-// 		sleepFor(500);
-// 		var val = cycles[0].addTheBestAvailableTarget();
-// 		if(val==-1){
-
-// 			var neglectedTargetInfo = computeNeglectedTargetCost();
-// 			if(neglectedTargetInfo[0] > 0){
-// 				consolePrint("Unvisited targets: "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".")
-// 			}else{
-// 				consolePrint("All targets covered.")
-// 			}
-// 			var meanSystemUncertaintyVal = cycles[0].meanUncertainty + neglectedTargetInfo[0];
-// 			consolePrint("Steady state mean system uncertainty (J) ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 1).");
-
-// 			cycles[0].recorrectCycleErrors();
-// 			cycles[0].assignAgentToCycle();
-
-// 			if(cycles[0].pathList.length>3){
-// 				RGCComputingMode = 2;
-// 				cycleRefiningParameters[0] = [0,2]; //[i,k] for 2-opt
-// 			}else{
-// 				RGCComputingMode = 0;
-// 			}
-// 			sleepFor(500);
-// 		}
-		
-// 	}else if(RGCComputingMode==2){//2-opt
-// 		var i = cycleRefiningParameters[0][0];
-// 		var k = cycleRefiningParameters[0][1];
-// 		sleepFor(10);
-// 		cycles[0].swap2OPT(i,k);
-		
-// 		k = k + 1;
-// 		if(k >= cycles[0].pathList.length){
-// 			i = i + 1;
-// 			if(i >= cycles[0].pathList.length-2){
-// 				consolePrint("2-Opt refining stage finished!");
-// 				RGCComputingMode = 3;
-// 				cycleRefiningParameters[1] = [0,1,2,0]; // i,j,k,l for 3-Opt
-// 				sleepFor(500);
-// 			}
-// 			k = i + 2;
-// 		}
-// 		cycleRefiningParameters[0][0] = i;
-// 		cycleRefiningParameters[0][1] = k;
-	
-// 	}else if(RGCComputingMode==3){//3-opt
-
-// 		var i = cycleRefiningParameters[1][0];
-// 		var j = cycleRefiningParameters[1][1];
-// 		var k = cycleRefiningParameters[1][2];
-// 		var l = cycleRefiningParameters[1][3];
-// 		sleepFor(10);
-// 		cycles[0].swap3OPT(i,j,k,l);
-		
-// 		l = l + 1;
-// 		if(l >= 3){	
-// 			k = k + 1;
-// 			if(k >= cycles[0].pathList.length){
-// 				j = j + 1;
-// 				if(j >= cycles[0].pathList.length-1){
-// 					i = i + 1;
-// 					if(i >= cycles[0].pathList.length-2){
-// 						consolePrint("3-Opt refining stage finished!");
-// 						RGCComputingMode = 0;
-
-// 						var neglectedTargetInfo = computeNeglectedTargetCost();
-// 						if(neglectedTargetInfo[0] > 0){
-// 							consolePrint("Unvisited targets: "+neglectedTargetInfo[1]+" contributes to the objective J by "+neglectedTargetInfo[0].toFixed(3)+".")
-// 						}else{
-// 							consolePrint("All targets covered.")
-// 						}
-// 						var meanSystemUncertaintyVal = cycles[0].meanUncertainty + neglectedTargetInfo[0];
-// 						consolePrint("Steady state mean system uncertainty (J) ="+meanSystemUncertaintyVal.toFixed(3)+", achieved after refining (RGC-Method 1).");
-
-// 						sleepFor(500);
-// 					}
-// 					j = i + 1;
-// 				}
-// 				k = j + 1;
-// 			}
-// 			l = 0;
-// 		}
-// 		cycleRefiningParameters[1][0] = i;
-// 		cycleRefiningParameters[1][1] = j;
-// 		cycleRefiningParameters[1][2] = k;
-// 		cycleRefiningParameters[1][3] = l;
-
-// 	}
-// }
-
-
-
+function evaluateMeanSystemUncertainty(){
+	var a = computeNeglectedTargetCost();
+	var neglectedTargetCost = a[0];
+	var meanSystemUncertaintyVal = 0;
+	for(var j = 0; j<cycles.length;j++){
+		meanSystemUncertaintyVal = meanSystemUncertaintyVal + cycles[j].meanUncertainty;
+	}
+	return meanSystemUncertaintyVal + neglectedTargetCost;
+}
 
 
 function computeNeglectedTargetCost(){
