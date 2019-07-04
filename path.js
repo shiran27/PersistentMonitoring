@@ -46,7 +46,7 @@ function Path(target1,target2){
 
 		}else if(this.inTheCycle){
 			stroke(200,0,0);
-		}else if(this.brokenDueToClustering){
+		}else if(this.brokenDueToClustering && this.isPermenent){
 			stroke(0,32);
 		}else if(this.isPermenent){
 			stroke(0);

@@ -120,7 +120,7 @@ function draw() {
     }
 
 
-    if(RGCComputingMode>=1){
+    if(RGCComputingMode==1){
         // extend each cycle!
         var RGCComputingModeCount = 0; 
         
@@ -134,13 +134,12 @@ function draw() {
         }
 
         if(RGCComputingModeCount==agents.length){// all cycles complete
-            
-
             consolePrint('Theoretical Mean System Uncertainty = '+evaluateMeanSystemUncertainty().toFixed(3)+".");
-            RGCComputingMode = 0;
+            RGCComputingMode = 2;
         }
-        
-        
+
+    }else if(RGCComputingMode==3){
+        executeABargainingStep();
     }
 
 
@@ -153,7 +152,7 @@ function draw() {
     }
 
     for(var i = 0; i < cycles.length; i++){
-        if(RGCComputingMode!=2 && RGCComputingMode!=3){
+        if(RGCComputingMode>0){
             cycles[i].show();    
         }
         

@@ -294,8 +294,16 @@ function extractDataPointsFrom(V,lambda){
     print("Un-sorted eigenvalues:"+lambda);
     print("Sorted eigenvalues:"+sortedEigenvalues);
 
+
+    // need to pick only the first non zero minimum amplitude eigenvalues!!!
+    // var indexArray = [];
+    // for(var i = 0; i < N; i++){
+    //     var highestEigIndex = lambda.indexOf(sortedEigenvalues[i]);
+    //     indexArray.push(highestEigIndex);
+    // }
+
     var indexArray = [];
-    for(var i = 0; i < N; i++){
+    for(var i = 1; i < N; i++){// neglecting the first eigenvalue which is 0 
         var highestEigIndex = lambda.indexOf(sortedEigenvalues[i]);
         indexArray.push(highestEigIndex);
     }
@@ -428,7 +436,7 @@ function kMeansCluster(dataPoints){
             if(convergedMeanCount==N){
                 isConverged = true;
                 print("K-Means step in spectral clustering converged in "+iterationsCount+" iterations!.");
-            }else if(iterationsCount > 100){
+            }else if(iterationsCount > 200){
                 isConverged = true;
                 print("K-Means step in spectral clustering - not converged!.");
                 assignmentCost = Infinity;
@@ -500,6 +508,48 @@ function applyFoundClustersToGroupTargets(clusteredPoints){ // adjust parameters
         agents[j].assignToTheTarget(targetClusters[j][0]);
     }
 
+
+    displayClustersMode = true;
+
+}
+
+
+function updateTargetClustersUsingCycles(){
+
+    var N = agents.length;
+    var M = targets.length;
+    var P = paths.length;
+    
+    // creating structure
+    targetClusters = [];
+    for(var j = 0; j < N; j++){
+        targetClusters[j] = [];
+    }
+
+    // creating target clusters
+    for(var i = 0; i < N; i++){
+        targetClusters[i] = [...cycles[i].targetList];    
+    }
+
+
+    // identifying inter cluster paths - for disp;ay  purposes
+    interClusterPaths = [];    
+    for(var p = 0; p < P; p++){// check all paths
+        paths[p].brokenDueToClustering = false;
+
+        for(var j = 0; j < N; j++){ // check over all target clusters
+            var L1 = targetClusters[j].includes(paths[p].targets[0]);
+            var L2 = targetClusters[j].includes(paths[p].targets[1]);
+            if( ((!L1) && L2) || (L1 && (!L2)) ){
+                interClusterPaths.push(p);
+                paths[p].brokenDueToClustering = true;
+            } 
+        }
+    }
+
+    for(var j = 0; j < N; j++){
+        agents[j].assignToTheTarget(targetClusters[j][0]);
+    }
 
     displayClustersMode = true;
 

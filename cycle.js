@@ -94,7 +94,7 @@ function Cycle(agentID,targetSet){
 			var T_j = paths[p].targets[1];
 			var A_a = this.deployedAgent;
 
-			if(this.allowedTargetList.includes(T_i) && this.allowedTargetList.includes(T_j)){
+			if(this.allowedTargetList.includes(T_i) && this.allowedTargetList.includes(T_j) && paths[p].isPermenent){
 				// B_A matrix
 				var B_A = [[agents[A_a].sensingRate-targets[T_i].uncertaintyRate, -targets[T_i].uncertaintyRate],[-targets[T_j].uncertaintyRate, agents[A_a].sensingRate-targets[T_j].uncertaintyRate]];
 				var A = [[targets[T_i].uncertaintyRate],[targets[T_j].uncertaintyRate]];
@@ -264,7 +264,7 @@ function Cycle(agentID,targetSet){
 					//print("Targets: "+newTargetsInTour);
 					var meanUncertaintyOfTheTour = dummyTour.meanUncertainty;
 					var gain = this.meanUncertainty  + meanUncertaintyIfNotCovered - meanUncertaintyOfTheTour;
-					//////print("gain:"+gain+", max: "+maxGain);
+					//print("diff:"+(gain-meanUncertaintyIfNotCovered)+"gain:"+gain+", max: "+maxGain1);
 					if(gain>maxGain1 && dummyTour.meanUncertainty!=-1){
 						maxGain1 = gain;
 						bestTour1 = dummyTour.clone();
@@ -918,6 +918,8 @@ function Cycle(agentID,targetSet){
 
 	// threshold based on TSP
 	this.computeThresholds = function(){
+
+		var blockingThreshold = 1000;
 	    // biase the threshods
 	    var agentID = this.deployedAgent;
 	    if(cycles.length==0){
@@ -937,7 +939,7 @@ function Cycle(agentID,targetSet){
 	            }else{
 	            	var path_pq = getPathID(p,q);
 	            	if(!pathList.includes(path_pq) && paths[path_pq].isPermenent){
-	            		agents[z].threshold[p][q] = 100;	
+	            		agents[z].threshold[p][q] = blockingThreshold;	
 	            	}else{
 	            		var T_pIndex = pathList.indexOf(path_pq);
 	            		var T_qIndex;
@@ -952,7 +954,7 @@ function Cycle(agentID,targetSet){
 	            		}else if(!paths[path_pq].isPermenent){
 	            			agents[z].threshold[p][q] = 10000;	
 	            		}else{
-	            			agents[z].threshold[p][q] = 100;		
+	            			agents[z].threshold[p][q] = blockingThreshold;		
 	            		}
 	            	}
 	            } 
@@ -964,6 +966,10 @@ function Cycle(agentID,targetSet){
 
 
 	this.computeThresholdsAdvanced = function(){
+
+		var blockingThreshold = 1000;
+
+
 	    // biase the threshods
 	    var agentID = this.deployedAgent;
 	    if(cycles.length==0){
@@ -1029,7 +1035,7 @@ function Cycle(agentID,targetSet){
 	            }else{
 	            	var path_pq = getPathID(p,q);
 	            	if(!pathList.includes(path_pq) && paths[path_pq].isPermenent){
-	            		agents[z].threshold[p][q] = 100;	
+	            		agents[z].threshold[p][q] = blockingThreshold;	
 	            	}else{
 	            		print("p"+p+"; q"+q);
 	            		if(auxTargetData[p].length!=0){
@@ -1057,7 +1063,7 @@ function Cycle(agentID,targetSet){
 	            				}
 	            			}
 	            			if(!valueApplied){
-	            				agents[z].threshold[p][q] = 100;
+	            				agents[z].threshold[p][q] = blockingThreshold;
 	            			}
 	    
 	            	
@@ -1085,7 +1091,7 @@ function Cycle(agentID,targetSet){
 		            		}else if(!paths[path_pq].isPermenent){
 		            			agents[z].threshold[p][q] = 10000;	
 		            		}else{
-		            			agents[z].threshold[p][q] = 100;		
+		            			agents[z].threshold[p][q] = blockingThreshold;		
 		            		}
 		            	}
 	            	}
@@ -1499,7 +1505,7 @@ function Cycle(agentID,targetSet){
 				consolePrint("Steady state mean cycle uncertainty of agent "+(this.deployedAgent+1)+" (J_"+(this.deployedAgent+1)+") ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 1).");
 
 				this.recorrectCycleErrors();
-				this.assignAgentToCycle();
+				if(RGCComputingMode!=3){this.assignAgentToCycle();}
 
 				if(this.pathList.length>3){
 					this.RGCComputingMode = 2;
@@ -1593,7 +1599,7 @@ function Cycle(agentID,targetSet){
 				consolePrint("Steady state mean cycle uncertainty of agent "+(this.deployedAgent+1)+" (J_"+(this.deployedAgent+1)+") ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 1).");
 
 				this.recorrectCycleErrors();
-				this.assignAgentToCycle();
+				if(RGCComputingMode!=3){this.assignAgentToCycle();}
 				
 
 				if(this.pathList.length>3){
@@ -1661,6 +1667,114 @@ function Cycle(agentID,targetSet){
 
 
 
+	//// stuff for the bargaining
+
+	this.effectOfAbandoningInternalTarget = function(internalTarget){
+		
+		var T_i = internalTarget;    
+        var meanUncertaintyIfNotCovered = targets[T_i].initialUncertainty + 0.5*targets[T_i].uncertaintyRate*periodT;
+
+
+		// need to compute the greedy cycle (refined) only considering the allowed target set - {internalTarget}
+		if(!this.targetList.includes(internalTarget)){// already abandoned!
+			print("Already abandoned target. No effect of loosing it!");
+			return [-1,0,this];
+		}else if(this.targetList.length==2){ // surgically have to remove the one agent out of two
+			if(this.targetList[0]==internalTarget){
+				var T_o = this.targetList[1]; 
+			}else{
+				var T_o = this.targetList[0]; 
+			}
+			var dummyTour = this.clone();
+			dummyTour.pathList = [];
+			dummyTour.targetList = [T_o];
+			var gain = this.meanUncertainty-(meanUncertaintyIfNotCovered)			
+			return [1,gain,dummyTour]; // no-way to abandon (lets take 2 target cycles to be our base line)
+		}else if(this.targetList.length<2){
+			return [-1,0,this]; // no-way to abandon
+		}
+
+
+		var dummyTour = this.clone();
+
+		var ind1 = dummyTour.allowedTargetList.indexOf(internalTarget);
+		var allowedList = [...dummyTour.allowedTargetList];
+		allowedList.splice(ind1,1);
+		dummyTour.allowedTargetList = [...allowedList]; // remove the inernalTarget
+
+		// initial greedy step
+		dummyTour.computeBestInitialCycle();
+		dummyTour.RGCComputingMode = 1; 
+
+		print("Inner greedy search to remove T_"+(internalTarget+1));
+		var iterationCount = 1;
+		while(dummyTour.RGCComputingMode!=0){ 
+			print("Inner greedy iteration "+iterationCount);
+			if(!cycleGenerationMethod){
+	            dummyTour.iterationOfComputingGreedyCycles();  
+	        }else{
+	            dummyTour.iterationOfComputingGreedyCyclesAdvanced();  
+	        }
+	        iterationCount = iterationCount+1;
+        }
+
+        print("Constructed new tour: ");
+        print(dummyTour.targetList);   	
+    	
+    	var meanUncertaintyOfNeglected = 0;
+        for(var i = 0; i<dummyTour.allowedTargetList.length; i++){
+        	var T_j = dummyTour.allowedTargetList[i];
+        	if(!dummyTour.targetList.includes(T_j)){
+        		meanUncertaintyOfNeglected = meanUncertaintyOfNeglected + targets[T_j].initialUncertainty + 0.5*targets[T_j].uncertaintyRate*periodT;
+        	}
+        }
+
+        var costOfAbandoning = this.meanUncertainty-(dummyTour.meanUncertainty+meanUncertaintyIfNotCovered+meanUncertaintyOfNeglected);
+        print("Cost of abandoning: "+costOfAbandoning);
+
+        return [+1,costOfAbandoning,dummyTour];
+
+	}
+
+
+
+
+
+
+	this.effectOfInsertionOfExternalTargetAdvanced = function(externalTargetIndex){
+
+		// this function returns: [validity, gain, requiredCycle]
+		// validity : -1 if there is no physical way to connect the given external target
+		// otherwise it is +1
+		// gain : if the external target is a neglected one, what would be the gain of adding it (gain can be negative!)
+		// requiredCycle : gives the best extended cycle which contains the external target 
+
+		var T_i = externalTargetIndex;
+		var meanUncertaintyIfNotCovered = targets[T_i].initialUncertainty + 0.5*targets[T_i].uncertaintyRate*periodT;
+
+
+		// for the single isolated agent case
+		if(this.targetList.length==1){
+			var dummyTour = this.clone();
+			var p = getPathID(this.targetList[0],T_i);
+			if(paths[p].isPermenent){
+				dummyTour.pathList = [p,p];
+			    dummyTour.targetList = [dummyTour.targetList[0],T_i];
+			    dummyTour.computeMeanUncertaintyAdvanced();
+
+			    var gain = this.meanUncertainty + meanUncertaintyIfNotCovered - dummyTour.meanUncertainty;
+				print("Improve via direct addition!")
+				print("Result: "+dummyTour.targetList);	
+				return [+1, gain, dummyTour];
+			}else{
+				print("No way to append the given external target to the isolated single target cycle");
+				return [-1,0,this];
+			}
+		}else if(this.targetList.includes(T_i)){
+			print("The external target is already included!")
+			return [-1,0,this];
+		}
+		// end single isolated agent case
 
 
 
@@ -1668,8 +1782,414 @@ function Cycle(agentID,targetSet){
 
 
 
+		// method 1 to extend the cycle
+
+		var maxGain1 = -Infinity;
+		var bestTour1 = -1;
+		var dummyTour = -1;
+		// for each candidate target, need to find the best path to remove from the existing tour
+		// to maximize the gain of adding the candidate target;
+
+		for(var p = 0; p < this.pathList.length; p++){ // path to be removed so that T_c can be added via two new paths
+			var pID = this.pathList[p];
+
+			
+			if(this.targetList[p]==paths[pID].targets[0]){
+				var newPath1 = getPathID(paths[pID].targets[0],T_i);
+				var newPath2 = getPathID(paths[pID].targets[1],T_i);
+			}else{
+				var newPath1 = getPathID(paths[pID].targets[1],T_i);
+				var newPath2 = getPathID(paths[pID].targets[0],T_i);
+			}
+			////print("Paths: "+newPathsInTour);
+			//print("Targets: "+newTargetsInTour);
+
+			if(paths[newPath1].isPermenent && paths[newPath2].isPermenent){
+				dummyTour = this.clone();
+				dummyTour.pathList.splice(p,1,newPath1,newPath2);// replace the element at index p with
+				dummyTour.targetList.splice(p+1,0,T_i);
+				dummyTour.computeMeanUncertaintyAdvanced(); // update the meanUncertainty and mean uncertainty gain
+				//print("Targets: "+newTargetsInTour);
+				var meanUncertaintyOfTheTour = dummyTour.meanUncertainty;
+				var gain = this.meanUncertainty  + meanUncertaintyIfNotCovered - meanUncertaintyOfTheTour;
+				//print("diff:"+(gain-meanUncertaintyIfNotCovered)+"gain:"+gain+", max: "+maxGain1);
+				if(gain>maxGain1 && dummyTour.meanUncertainty!=-1){
+					maxGain1 = gain;
+					bestTour1 = dummyTour.clone();
+				}
+			}	
+			
+
+		}
+		// end method 1
 
 
+		// Method 2 to extend the cycle
+		
+		var maxGain2 = -Infinity;
+		var bestTour2 = -1;
+		for(var j = 0; j < this.targetList.length; j++){ // path to be removed so that T_c can be added via two new paths
+			var T_j = this.targetList[j]; // target T_j is to be added to the cycle
+
+			////print("Paths: "+newPathsInTour);
+			//print("Targets: "+newTargetsInTour);
+			var newPath = getPathID(T_i,T_j);
+			
+			if(paths[newPath].isPermenent){
+				dummyTour = this.clone();
+				dummyTour.pathList.splice(j,0,newPath,newPath);
+				dummyTour.targetList.splice(j+1,0,T_i,T_j);		
+				dummyTour.computeMeanUncertaintyAdvanced(); // update the meanUncertainty and mean uncertainty gain
+
+				//print("Targets: "+newTargetsInTour);
+				var meanUncertaintyOfTheTour = dummyTour.meanUncertainty;
+				var gain = this.meanUncertainty  + meanUncertaintyIfNotCovered - meanUncertaintyOfTheTour;
+				//////print("gain:"+gain+", max: "+maxGain);
+				if(gain>maxGain2 && dummyTour.meanUncertainty!=-1 ){
+					maxGain2 = gain;
+					bestTour2 = dummyTour.clone();
+				}	
+			}
+			
+		}
+		// end method 2
+
+
+
+		// Method 3 to extend the cycle
+		
+		var maxGain3 = -Infinity;
+		var bestTour3 = -1;
+		var dummyTour = this.clone();
+		var L = this.targetList.length;
+		
+		// need to find two targets in the current cycle connected via set of aux targets
+		// so that those aux targets can be eliminated from the cycle, without compromizing the cyclic shape
+
+		for(var j = 0; j < this.targetList.length-2; j++){
+			var T_j = this.targetList[j];
+
+			for(var k = j+2; k<this.targetList.length; k++){
+				var T_k = this.targetList[k];
+
+				var newPath1 = getPathID(T_j,T_i);
+				var newPath2 = getPathID(T_i,T_k);
+				
+				if(paths[newPath1].isPermenent && paths[newPath2].isPermenent){
+					
+					// search for targets inbetween T_j and T_k in targetlist
+					var connectedViaAuxTargetsFwd = true;
+					for(var ind = j + 1; ind < k; ind++){//fwd searcg
+						if(!this.subCycleList[ind].includes(0)){
+							connectedViaAuxTargetsFwd = false;
+							break;// to break
+						}
+					}
+					var connectedViaAuxTargetsBwd = true;
+					for(var ind = j - 1; ind != k; ind--){//fwd searcg
+						if(ind==-1){ind = this.targetList.length-1;}
+						if(!this.subCycleList[ind].includes(0)){
+							connectedViaAuxTargetsBwd = false;
+							break;// to break
+						}
+					}
+
+					dummyTour = this.clone();	
+					if(connectedViaAuxTargetsFwd){
+						dummyTour.pathList.splice(j,k-j,newPath1,newPath2);// replace the element at index p with
+						dummyTour.targetList.splice(j+1,k-j-1,T_i);
+						
+						print("Method 3: Fwd j="+j+"; T_i="+T_i+"; k="+k);
+						print("paths ji="+newPath1+"; ik="+newPath2);
+						
+						print("Targets B: "+this.targetList);
+						print("Targets A: "+dummyTour.targetList);
+						print("Paths B: "+this.pathList);
+						print("Paths A: "+dummyTour.pathList);
+					
+					}else if(connectedViaAuxTargetsBwd){
+						if(j>0){
+							dummyTour.pathList.splice(0,j,newPath1);// replace the element at index p with
+							dummyTour.pathList.push(newPath2);
+							dummyTour.targetList.splice(0,j,T_i);	
+						}else{
+							dummyTour.pathList.splice(k,L-k,newPath2,newPath1);// replace the element at index p with
+							dummyTour.targetList.splice(k+1,L-k-1,T_i);
+						}
+						
+						print("Method 3: Bwd j="+j+"; T_i="+T_i+"; k="+k);
+						print("paths ji="+newPath1+"; ik="+newPath2);
+						print("Targets B: "+this.targetList);
+						print("Targets A: "+dummyTour.targetList);
+						print("Paths B: "+this.pathList);
+						print("Paths A: "+dummyTour.pathList);
+
+					}else{
+						break; // to try different T_i, T_j combination
+					}
+					dummyTour.computeMeanUncertaintyAdvanced(); // update the meanUncertainty and mean uncertainty gain
+
+					//print("Targets: "+newTargetsInTour);
+					var meanUncertaintyOfTheTour = dummyTour.meanUncertainty;
+					var gain = this.meanUncertainty  + meanUncertaintyIfNotCovered - meanUncertaintyOfTheTour;
+					//////print("gain:"+gain+", max: "+maxGain);
+					if(gain>maxGain3 && dummyTour.meanUncertainty!=-1){
+						maxGain3 = gain;
+						bestTour3 = dummyTour.clone();
+					}	
+				}
+				
+			}
+		}
+		
+		// end method  3
+
+		if(bestTour1==-1 && bestTour2==-1 && bestTour3==-1){
+			print("No way to improve!");
+			print("Final Cycle: "+this.targetList+", cost: "+this.meanUncertainty.toFixed(2));
+			return [-1,-1,this];
+		}else if(maxGain1>=maxGain2 && maxGain1>=maxGain3){
+			print("Improve via normal way!")
+			print("Result: "+bestTour1.targetList);	
+			////this.cloneFrom(bestTour1);
+			return [+1,maxGain1,bestTour1];	
+		}else if(maxGain2>=maxGain1 && maxGain2>=maxGain3){
+			print("Improve via Aux Target!")
+			print("Result: "+bestTour2.targetList);	
+			////this.cloneFrom(bestTour2);
+			return [+1,maxGain2,bestTour2];	
+		}else{
+			print("Improve via Aux Target Cancellation!")
+			print("Result: "+bestTour3.targetList);	
+			////this.cloneFrom(bestTour3);
+			return [+1,maxGain3,bestTour3];
+		}
+
+	}
+
+
+
+	this.effectOfInsertionOfExternalTarget = function(externalTargetIndex){
+
+		// this function returns: [validity, gain, requiredCycle]
+		// validity : -1 if there is no physical way to connect the given external target
+		// otherwise it is +1
+		// gain : if the external target is a neglected one, what would be the gain of adding it (gain can be negative!)
+		// requiredCycle : gives the best extended cycle which contains the external target 
+
+
+		var maxGain = -1;
+		var minMeanUncertainty = -1;
+		var bestTour = -1;
+		
+		
+		// for each candidate target, need to find the best path to remove from the existing tour
+		// to maximize the gain of adding the candidate target;
+		
+		var T_c =  externalTargetIndex;
+		var meanUncertaintyIfNotCovered = targets[T_c].initialUncertainty + 0.5*targets[T_c].uncertaintyRate*periodT;
+
+
+
+		// for the single isolated agent case
+		if(this.targetList.length==1){
+
+			var dummyTour = this.clone();
+			var p = getPathID(dummyTour.targetList[0],T_c);
+			if(paths[p].isPermenent){
+				dummyTour.pathList = [p,p];
+			    dummyTour.targetList = [dummyTour.targetList[0],T_c];
+			    dummyTour.computeMeanUncertaintyAdvanced();
+
+			    var gain = this.meanUncertainty + meanUncertaintyIfNotCovered - dummyTour.meanUncertainty;
+				print("Improve via direct addition!")
+				print("Result: "+dummyTour.targetList);	
+				return [+1, gain, dummyTour];
+			}else{
+				print("No way to append the given external target to the isolated single target cycle");
+				return [-1,0,this];
+			}
+
+		}else if(this.targetList.includes(T_c)){
+			print("The external target is already included!")
+			return [-1,0,this];
+		}
+		// end single isolated agent case
+
+
+
+
+		for(var p = 0; p < this.pathList.length; p++){ // path to be removed so that T_c can be added via two new paths
+			var pID = this.pathList[p];
+
+			
+			if(this.targetList[p]==paths[pID].targets[0]){
+				var newPath1 = getPathID(paths[pID].targets[0],T_c);
+				var newPath2 = getPathID(paths[pID].targets[1],T_c);
+			}else{
+				var newPath1 = getPathID(paths[pID].targets[1],T_c);
+				var newPath2 = getPathID(paths[pID].targets[0],T_c);
+			}
+			////print("Paths: "+newPathsInTour);
+			//print("Targets: "+newTargetsInTour);
+			if(paths[newPath1].isPermenent && paths[newPath2].isPermenent){
+				dummyTour = this.clone();
+				dummyTour.pathList.splice(p,1,newPath1,newPath2);// replace the element at index p with
+				dummyTour.targetList.splice(p+1,0,T_c);
+				dummyTour.computeMeanUncertainty(); // update the meanUncertainty and mean uncertainty gain
+				//print("Targets: "+newTargetsInTour);
+				var meanUncertaintyOfTheTour = dummyTour.meanUncertainty;
+				var gain = this.meanUncertainty  + meanUncertaintyIfNotCovered - meanUncertaintyOfTheTour;
+				//////print("gain:"+gain+", max: "+maxGain);
+				if(gain>maxGain && dummyTour.meanUncertainty!=-1){
+					maxGain	= gain;
+					bestTour = dummyTour.clone();
+		
+				}
+			}	
+			
+
+		}
+
+		
+		if(bestTour==-1){
+			print("No way to improve!");
+			print("Final Cycle: "+this.targetList+", cost: "+this.meanUncertainty.toFixed(2));
+			return [-1,-1,this];
+		}else{
+			print("Result: "+bestTour.targetList);	
+			////this.cloneFrom(bestTour);
+			return [+1,maxGain,bestTour];		
+		}
+
+
+	}
+
+
+
+
+
+
+}
+
+
+
+
+function executeABargainingStep(){
+
+	// generate offeres
+	var offersList = [];
+	for(var i = 0; i<cycles.length; i++){
+		for(var j = 0; j<targets.length; j++){
+			var offer;
+			if(!cycleGenerationMethod){
+	            offer = cycles[i].effectOfInsertionOfExternalTarget(j);  
+	        }else{
+	            offer = cycles[i].effectOfInsertionOfExternalTargetAdvanced(j);  
+	        }
+
+	        if(offer[0]==1){
+	        	offer.splice(1,0,i,j);
+	        	offersList.push(offer);
+	        }
+	    }
+	}
+	if(offersList.length>0){
+		print("Number of offers found: "+offersList.length);
+		print(offersList)
+	}else{
+		print("No offers found!");
+		RGCComputingMode = 4;
+		return;
+	}
+
+	// end generating offers
+
+	
+	// need to pick the best - independedt set of offers
+	var bestDealValue = -Infinity;
+	var bestDeal = -1;
+	for(var i = 0; i<cycles.length; i++){// each agent/cycle look for the relevent best offer to them from each other agents
+		for(var k = 0; k<offersList.length; k++){
+			
+			var T_i = offersList[k][2]
+			if(cycles[i].targetList.includes(offersList[k][2])){
+				// agent j has made us (i) an offer to take the target T_i
+				var dummyTour = cycles[i].clone();
+				var rebuttle = dummyTour.effectOfAbandoningInternalTarget(T_i);
+				if(rebuttle[1]+offersList[k][3] > bestDealValue && rebuttle[0]!=-1){
+					bestDealValue = rebuttle[1]+offersList[k][3];
+					rebuttle.splice(1,0,i); // who has to act (i.e. to contract accepting the offer)
+					bestDeal = [offersList[k],rebuttle];
+				}
+			}
+
+		}
+			
+	}
+	print("Net effect of best offer: "+bestDealValue);
+	print(bestDeal)
+	// end picking a offer
+	
+
+	// execute best deal
+	if(bestDealValue>0){
+		
+		
+		var A_i = bestDeal[0][1]; // best offer is made by agent A_i 
+		cycles[A_i].cloneFrom(bestDeal[0][4]);
+		
+		var T_added = bestDeal[0][2]; // the target added to A_i
+		var allowedList = [...bestDeal[0][4].allowedTargetList];
+		allowedList.push(T_added);
+		cycles[A_i].allowedTargetList = [...allowedList]; // remove the inernalTarget
+
+
+		var A_j = bestDeal[1][1]; // contraction has to be done to agent A_j
+		cycles[A_j].cloneFrom(bestDeal[1][3]);
+		
+		print("New cycles");
+		print(cycles[A_i]);
+
+		print(cycles[A_j]);
+		updateTargetClustersUsingCycles();
+		consolePrint("A Clustering (and cycle) adjustment found with gain "+bestDealValue.toFixed(3)+".")
+
+	}else{
+		
+		RGCComputingMode = 4;
+		var systemUncertainty = 0;
+		for(var i = 0; i<cycles.length; i++){
+			systemUncertainty = systemUncertainty + cycles[i].meanUncertainty;
+		}	
+		consolePrint("No further benificial clustering (and cycle) adjustments were found.")
+		consolePrint("Final Theoretical Mean System Uncertainty: "+systemUncertainty.toFixed(3)+".")
+	}
+	// end executing best deal
+
+	
+
+
+
+}
+
+function initiateInterCycleTargetBargaining(){
+	
+	if(agents.length>1 && targetClusters.length==0 && cycles.length==0){
+		consolePrint("Cluster the targets first! (Using the 'Cluster !' button.)");
+		return;
+	}else if(agents.length==1 && cycles.length==0){// the usual single agent case
+		consolePrint("Generate the agent cycle first! (Using the 'Search !' button.), then, no need to use this function.");
+		return;
+	}else if(RGCComputingMode < 2){
+		consolePrint("Generate the agent cycles first! (Using the 'Search !' button.), then, use this function.");
+		return;
+	}else{
+		consolePrint("Start adjustig initial cycles!");
+		RGCComputingMode = 3;
+		return;
+	}
+	// else RGCComputingMode >= 2 ---> we need to  adjust ! 
 
 }
 
@@ -1801,9 +2321,3 @@ function removeACycle(){
 	cycles.pop();
 }
 
-
-
-// fit cycles optimize and randomize again
-function identifyCycleAndOptimize(){
-    
-}
