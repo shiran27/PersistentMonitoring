@@ -1664,6 +1664,16 @@ function Cycle(agentID,targetSet){
 
 
 
+	this.computeNeglectedTargetCost = function(){
+		var meanUncertaintyOfNeglected = 0;
+        for(var i = 0; i<this.allowedTargetList.length; i++){
+        	var T_j = this.allowedTargetList[i];
+        	if(!this.targetList.includes(T_j)){
+        		meanUncertaintyOfNeglected = meanUncertaintyOfNeglected + targets[T_j].initialUncertainty + 0.5*targets[T_j].uncertaintyRate*periodT;
+        	}
+        }
+        return meanUncertaintyOfNeglected;
+	}
 
 
 
@@ -1676,8 +1686,21 @@ function Cycle(agentID,targetSet){
 
 
 		// need to compute the greedy cycle (refined) only considering the allowed target set - {internalTarget}
-		if(!this.targetList.includes(internalTarget)){// already abandoned!
-			print("Already abandoned target. No effect of loosing it!");
+		if(!this.targetList.includes(internalTarget) && this.allowedTargetList.includes(internalTarget)){// already abandoned!
+			
+			print("Already abandoned target. It would be a help if someone can taee care of this!");
+			var dummyTour = this.clone();
+			var ind1 = dummyTour.allowedTargetList.indexOf(internalTarget);
+			var allowedList = [...dummyTour.allowedTargetList];
+			allowedList.splice(ind1,1);
+			dummyTour.allowedTargetList = [...allowedList]; // remove the inernalTarget
+			
+        	var costOfAbandoning = this.meanUncertainty+this.computeNeglectedTargetCost()-(dummyTour.meanUncertainty+dummyTour.computeNeglectedTargetCost()+meanUncertaintyIfNotCovered);
+        	print("Cost of abandoning null target: "+costOfAbandoning);
+			return [1,costOfAbandoning,dummyTour];
+		
+		}else if(!this.targetList.includes(internalTarget) && !this.allowedTargetList.includes(internalTarget)){// already abandoned!
+			print("Not a relevent target. No effect of loosing it!");
 			return [-1,0,this];
 		}else if(this.targetList.length==2){ // surgically have to remove the one agent out of two
 			if(this.targetList[0]==internalTarget){
@@ -1688,7 +1711,7 @@ function Cycle(agentID,targetSet){
 			var dummyTour = this.clone();
 			dummyTour.pathList = [];
 			dummyTour.targetList = [T_o];
-			var gain = this.meanUncertainty-(meanUncertaintyIfNotCovered)			
+			var gain = this.meanUncertainty+this.computeNeglectedTargetCost()-(meanUncertaintyIfNotCovered)			
 			return [1,gain,dummyTour]; // no-way to abandon (lets take 2 target cycles to be our base line)
 		}else if(this.targetList.length<2){
 			return [-1,0,this]; // no-way to abandon
@@ -1721,15 +1744,15 @@ function Cycle(agentID,targetSet){
         print("Constructed new tour: ");
         print(dummyTour.targetList);   	
     	
-    	var meanUncertaintyOfNeglected = 0;
-        for(var i = 0; i<dummyTour.allowedTargetList.length; i++){
-        	var T_j = dummyTour.allowedTargetList[i];
-        	if(!dummyTour.targetList.includes(T_j)){
-        		meanUncertaintyOfNeglected = meanUncertaintyOfNeglected + targets[T_j].initialUncertainty + 0.5*targets[T_j].uncertaintyRate*periodT;
-        	}
-        }
+    	// var meanUncertaintyOfNeglected = 0;
+     //    for(var i = 0; i<dummyTour.allowedTargetList.length; i++){
+     //    	var T_j = dummyTour.allowedTargetList[i];
+     //    	if(!dummyTour.targetList.includes(T_j)){
+     //    		meanUncertaintyOfNeglected = meanUncertaintyOfNeglected + targets[T_j].initialUncertainty + 0.5*targets[T_j].uncertaintyRate*periodT;
+     //    	}
+     //    }
 
-        var costOfAbandoning = this.meanUncertainty-(dummyTour.meanUncertainty+meanUncertaintyIfNotCovered+meanUncertaintyOfNeglected);
+        var costOfAbandoning = this.meanUncertainty+this.computeNeglectedTargetCost()-(dummyTour.meanUncertainty+dummyTour.computeNeglectedTargetCost()+meanUncertaintyIfNotCovered);
         print("Cost of abandoning: "+costOfAbandoning);
 
         return [+1,costOfAbandoning,dummyTour];
