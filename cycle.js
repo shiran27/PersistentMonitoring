@@ -1664,7 +1664,7 @@ function Cycle(agentID,targetSet){
 
 
 
-	this.computeNeglectedTargetCost = function(){
+	this.computeNeglectedTargetCostDirect = function(){
 		var meanUncertaintyOfNeglected = 0;
         for(var i = 0; i<this.allowedTargetList.length; i++){
         	var T_j = this.allowedTargetList[i];
@@ -1695,7 +1695,7 @@ function Cycle(agentID,targetSet){
 			allowedList.splice(ind1,1);
 			dummyTour.allowedTargetList = [...allowedList]; // remove the inernalTarget
 			
-        	var costOfAbandoning = this.meanUncertainty+this.computeNeglectedTargetCost()-(dummyTour.meanUncertainty+dummyTour.computeNeglectedTargetCost()+meanUncertaintyIfNotCovered);
+        	var costOfAbandoning = this.meanUncertainty+this.computeNeglectedTargetCostDirect()-(dummyTour.meanUncertainty+dummyTour.computeNeglectedTargetCostDirect()+meanUncertaintyIfNotCovered);
         	print("Cost of abandoning null target: "+costOfAbandoning);
 			return [1,costOfAbandoning,dummyTour];
 		
@@ -1711,7 +1711,7 @@ function Cycle(agentID,targetSet){
 			var dummyTour = this.clone();
 			dummyTour.pathList = [];
 			dummyTour.targetList = [T_o];
-			var gain = this.meanUncertainty+this.computeNeglectedTargetCost()-(meanUncertaintyIfNotCovered)			
+			var gain = this.meanUncertainty+this.computeNeglectedTargetCostDirect()-(meanUncertaintyIfNotCovered)			
 			return [1,gain,dummyTour]; // no-way to abandon (lets take 2 target cycles to be our base line)
 		}else if(this.targetList.length<2){
 			return [-1,0,this]; // no-way to abandon
@@ -1752,7 +1752,7 @@ function Cycle(agentID,targetSet){
      //    	}
      //    }
 
-        var costOfAbandoning = this.meanUncertainty+this.computeNeglectedTargetCost()-(dummyTour.meanUncertainty+dummyTour.computeNeglectedTargetCost()+meanUncertaintyIfNotCovered);
+        var costOfAbandoning = this.meanUncertainty+this.computeNeglectedTargetCostDirect()-(dummyTour.meanUncertainty+dummyTour.computeNeglectedTargetCostDirect()+meanUncertaintyIfNotCovered);
         print("Cost of abandoning: "+costOfAbandoning);
 
         return [+1,costOfAbandoning,dummyTour];
