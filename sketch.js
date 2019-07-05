@@ -126,9 +126,9 @@ function draw() {
         
         for(var j = 0; j < agents.length; j++){
             if(!cycleGenerationMethod){
-                cycles[j].iterationOfComputingGreedyCycles();  
+                cycles[j].iterationOfComputingGreedyCycles(50);  
             }else{
-                cycles[j].iterationOfComputingGreedyCyclesAdvanced();  
+                cycles[j].iterationOfComputingGreedyCyclesAdvanced(50);  
             }
             if(cycles[j].RGCComputingMode==0){RGCComputingModeCount++;}  
         }

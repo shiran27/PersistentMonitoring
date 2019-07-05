@@ -1485,13 +1485,13 @@ function Cycle(agentID,targetSet){
 	}
 
 
-	this.iterationOfComputingGreedyCycles = function(){
+	this.iterationOfComputingGreedyCycles = function(delay){
 
 		print("Cycle length of agent "+this.deployedAgent+" is "+this.targetList.length+" targets.");
 		
 		if(this.RGCComputingMode==1){//initial greedy
 			
-			sleepFor(50);
+			sleepFor(delay);
 			var val = this.addTheBestAvailableTarget(); // cannot add more to this cycle
 			if(val==-1){
 
@@ -1513,7 +1513,7 @@ function Cycle(agentID,targetSet){
 				}else{
 					this.RGCComputingMode = 0;
 				}
-				sleepFor(50);
+				sleepFor(delay);
 			}
 			
 		}else if(this.RGCComputingMode==2){//2-opt
@@ -1529,7 +1529,7 @@ function Cycle(agentID,targetSet){
 					consolePrint("2-Opt refining stage for agent "+(this.deployedAgent+1)+" finished!");
 					this.RGCComputingMode = 3;
 					this.cycleRefiningParameters[1] = [0,1,2,0]; // i,j,k,l for 3-Opt
-					sleepFor(50);
+					sleepFor(delay);
 				}
 				k = i + 2;
 			}
@@ -1564,7 +1564,7 @@ function Cycle(agentID,targetSet){
 							}
 							var meanSystemUncertaintyVal = this.meanUncertainty + neglectedTargetInfo[0];
 							consolePrint("Steady state mean cycle uncertainty of agent "+(this.deployedAgent+1)+" (J_"+(this.deployedAgent+1)+") ="+meanSystemUncertaintyVal.toFixed(3)+", achieved after refining (RGC-Method 1).");
-							////sleepFor(50);
+							////sleepFor(delay);
 						}
 						j = i + 1;
 					}
@@ -1578,12 +1578,12 @@ function Cycle(agentID,targetSet){
 	}
 
 
-	this.iterationOfComputingGreedyCyclesAdvanced = function(){
+	this.iterationOfComputingGreedyCyclesAdvanced = function(delay){
 
 		print("Cycle length of agent "+this.deployedAgent+" is "+this.targetList.length+" targets.");
 
 		if(this.RGCComputingMode==1){//initial greedy
-			sleepFor(50);
+			sleepFor(delay);
 
 			var val = this.addTheBestAvailableTargetAdvanced();
 			
@@ -1608,7 +1608,7 @@ function Cycle(agentID,targetSet){
 				}else{
 					this.RGCComputingMode = 0;
 				}
-				sleepFor(50);
+				sleepFor(delay);
 			}
 			
 		}else if(this.RGCComputingMode==2){//2-opt ---> not actually
@@ -1624,7 +1624,7 @@ function Cycle(agentID,targetSet){
 					consolePrint("Aux target removing stage finished of agent "+(this.deployedAgent+1)+"!");
 					this.RGCComputingMode = 0; // no 3-opt yet
 					this.cycleRefiningParameters[1] = [0,1,2,0]; // i,j,k,l for 3-Opt
-					sleepFor(50);
+					sleepFor(delay);
 				}
 				k = j + 2;
 			}
@@ -1649,7 +1649,7 @@ function Cycle(agentID,targetSet){
 						if(i >= this.pathList.length-2){
 							consolePrint("3-Opt refining stage finished!");
 							this.RGCComputingMode = 0;
-							sleepFor(50);
+							sleepFor(delay);
 						}
 						j = i + 1;
 					}
@@ -1734,9 +1734,9 @@ function Cycle(agentID,targetSet){
 		while(dummyTour.RGCComputingMode!=0){ 
 			print("Inner greedy iteration "+iterationCount);
 			if(!cycleGenerationMethod){
-	            dummyTour.iterationOfComputingGreedyCycles();  
+	            dummyTour.iterationOfComputingGreedyCycles(0);  
 	        }else{
-	            dummyTour.iterationOfComputingGreedyCyclesAdvanced();  
+	            dummyTour.iterationOfComputingGreedyCyclesAdvanced(0);  
 	        }
 	        iterationCount = iterationCount+1;
         }
