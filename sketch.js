@@ -86,8 +86,8 @@ function draw() {
 
             
             for(var i = 0; i < agents.length; i++){
-                agents[i].updateCT2(); // IPA debug purposes
-                ////agents[i].updateCT(); // update positions of the agents  
+                ////agents[i].updateCT2(); // IPA debug purposes
+                agents[i].updateCT(); // update positions of the agents  
             }
 
             simulationTime = simulationTime + deltaT;
@@ -111,10 +111,27 @@ function draw() {
             displayThresholds();
             numberOfUpdateStepsCount = numberOfUpdateStepsCount + 1;
             var cost = Number(document.getElementById("simulationCost").innerHTML);
-            costArrayForPlot.push(cost);
             updateStepCountArray.push(numberOfUpdateStepsCount);
+
+            if(boostingMode==0){
+                costArrayForPlot.push(cost);
+                consolePrint("Iteration "+ numberOfUpdateStepsCount+ " completed. Cost: "+cost+".");
+            
+                boostedCostArrayToPlot.push(NaN);
+            }else{// in boosting mode!
+                var mappedCost = cost;
+                if(cost>worstCostFoundSoFar){ // upper bound threshold so that plot wont be distorted
+                    mappedCost = worstCostFoundSoFar;
+                }else if(cost<bestCostFoundSoFar){
+                    mappedCost = bestCostFoundSoFar;
+                }
+                boostedCostArrayToPlot.push(mappedCost);
+                consolePrint("Iteration "+ numberOfUpdateStepsCount+ " completed (while in boosting mode). Cost: "+cost+".");                
+                
+                costArrayForPlot.push(NaN);
+            }
             plotData();
-            consolePrint("Iteration "+ numberOfUpdateStepsCount+ " completed. Cost: "+cost+".");
+            
         }
 
     }

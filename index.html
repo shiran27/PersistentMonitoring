@@ -270,7 +270,7 @@
 		    							<i class="fa fa-play" aria-hidden="true"></i>
 		    						</button>
 		    						<button class="btn btn-success" type="button" onclick="simulateHybridSystemFast();">
-		    						<i class="fa fa-forward" aria-hidden="true"></i>
+		    						<i class="fa fa-fast-forward" aria-hidden="true"></i>
 		    						</button>
 		    					</label>
 							    <input class="form-control" id="deltaT" type="text" value="0.01" onchange="deltaTChanged(Number(this.value));">
@@ -281,9 +281,9 @@
 							  
 
 							<div class="col col-xs-4 border-right border-success">
-							    <label for="periodT">T = 
-							    	<button class="btn btn-success" type="button" onclick="solveForIPAEstimators();">
-		    							Run IPA
+								<label for="periodT">T = 
+							    	<button class="btn btn-success" type="button" onclick="optimizeThresholdsOneStep();">
+		    							IPA <i class="fa fa-step-forward"></i>
 		    						</button>
 							    </label>
 							    <input class="form-control" id="periodT" type="text" value="500" onchange="periodTChanged(Number(this.value));">
@@ -296,7 +296,7 @@
 							<div class="col col-xs-4">
 							    <label for="numberOfUpdateSteps">K = 
 							    	<button class="btn btn-success" type="button" onclick="optimizeThresholds();">
-			    						Run GD<!-- <i class="fa fa-forward" aria-hidden="true"></i> -->
+			    						IPA <i class="fa fa-play" aria-hidden="true"></i>
 			    					</button>
 							    </label>
 							    <input class="form-control" id="numberOfUpdateSteps" type="text" value="1000" onchange="numberOfUpdateStepsChanged(Number(this.value));">
@@ -424,32 +424,48 @@
 			</div>		
 
 			<div class="col col-lg-4" id="BoostingMenu">
-				<h5>Initialize thresholds:</h5>
+				
+				<div class="border-bottom">
+					<h5>Initialize thresholds:</h5>
 
-				<div class="row">
-					
-					<div class="col col-lg-6">
-
-						<button class="btn btn-success" type="button" onclick="generateThresholdsFromRoutes();">Apply
-						</button> 
-
-						<button class="btn btn-danger" type="button" onclick="addRandomNoiseToThresholds();">Perturb
-						</button>
+					<div class="row">
 						
-					</div>
+						<div class="col col-lg-6">
 
-					<div class="col col-lg-6">
-						<label for="thresholdGenerationMethod">Theoretical:</label>
-						<input type="checkbox" id="thresholdGenerationMethod" onchange="thresholdGenerationMethodChanged();">	
+							<button class="btn btn-success" type="button" onclick="generateThresholdsFromRoutes();">Apply
+							</button> 
+
+							<button class="btn btn-danger" type="button" onclick="addRandomNoiseToThresholds();">Perturb
+							</button>
+							
+						</div>
+
+						<div class="col col-lg-6">
+							<label for="thresholdGenerationMethod">Theoretical:</label>
+							<input type="checkbox" id="thresholdGenerationMethod" onchange="thresholdGenerationMethodChanged();">	
+						</div>
+					
 					</div>
-				
+					
+
+					<label for="noiseLevel">Noise Level: <span id="noiseLevelDisplay"></span></label>
+					<input type="range" class="form-control slider" id="noiseLevel" min="0" max="10" value="1.5" step="0.1" onchange="randomNoiseLevelChanged(Number(this.value));">
+
 				</div>
-				
 
-				<label for="noiseLevel">Noise Level: <span id="noiseLevelDisplay"></span></label>
-				<input type="range" class="form-control slider" id="noiseLevel" min="0" max="10" value="1.5" step="0.1" onchange="randomNoiseLevelChanged(Number(this.value));">
+				<div>
+					<h5>Boosting Menu:</h5>
+					<label for="boostingActivatedCheckBox">Boosting activated: </label>
+            		<input type="checkbox" id="boostingActivatedCheckBox" onchange="boostingActivated();">
 
-				
+            		<label for="boostingCoefficientAlpha">Boosting coefficient &alpha;: <span id="boostingCoefficientAlphaDisplay"></span></label>
+            		<input type="range" class="form-control slider" id="boostingCoefficientAlpha" min="0" max="10" value="0.5" step="0.01" onchange="boostingCoefficientAlphaChanged(Number(this.value));">
+            		
+            		<h6>Best cost (J) found so far: <span id="bestCostFoundSoFar"></span></h6>
+            		<button class="btn btn-danger" type="button" onclick="rollbackToBestPerformingThresholdsFoundSoFar();">Rollback !
+					</button> 
+
+				</div>
 			</div>	
 		</div>
 

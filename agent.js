@@ -676,6 +676,12 @@ function Agent(x, y, r) {
         this.residingTarget = [targetID];
         this.initialResidingTarget = targetID;
     }
+
+
+    this.driveToTheCycle = function(cycleID){
+        // agent thresholds should be modified such that it will be driven to the cycle 
+        // to whcih he is assigned.
+    }
     
 }
 

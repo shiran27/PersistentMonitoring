@@ -82,7 +82,15 @@ function Target(x, y, r) {
 
     this.updateIPA = function(){
         // update uncertainty values R_i(t) of target i
-        var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
+        var netAgentSensingRate = 0;
+        if(boostingMode==0){
+            netAgentSensingRate = this.getNetAgentSensingRate(); 
+        }else{
+            netAgentSensingRate = this.getNetAgentSensingRateBoosted()
+        }
+        var netUncertaintyGrowthRate = this.uncertaintyRate - netAgentSensingRate;
+    
+
         var oldUncertainty = this.uncertainty;
         if(this.uncertainty==0 && netUncertaintyGrowthRate<0){
             this.uncertainty = 0;
@@ -163,6 +171,27 @@ function Target(x, y, r) {
             }
         }
         return sumValue;
+    }
+
+    this.getNetAgentSensingRateBoosted = function(){
+        var sumValue = 0;
+        var agentCount = 0;
+        var factorial = 1; // 0!
+        var alpha = boostingCoefficientAlpha;
+        for(var i = 0; i<agents.length; i++){
+            if(agents[i].residingTarget.length == 1 && agents[i].residingTarget[0]==this.id){
+                
+                if(agentCount==0){// to avoid numerical computational errors
+                    sumValue = sumValue + agents[i].sensingRate*1;
+                }else{// agentCount = (N_i-1)
+                    sumValue = sumValue + agents[i].sensingRate*Math.pow(-1*boostingCoefficientAlpha*agentCount,agentCount)/factorial;    
+                }
+                
+                agentCount = agentCount + 1;
+                factorial = factorial*agentCount;
+            }
+        }
+        return sumValue;    
     }
 
 

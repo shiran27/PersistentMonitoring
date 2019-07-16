@@ -4,8 +4,11 @@ function plotData(){
 	
 
    	if(costPlotMode){
-		var trace1 = {x:updateStepCountArray, y: costArrayForPlot, type: 'scatter', line: {shape: 'hv'}};
-	   	
+		var trace1 = {x:updateStepCountArray, y: costArrayForPlot, 
+						type: 'scatter', line: {shape: 'hv'}, name:'Normal'};
+	   	var trace2 = {x:updateStepCountArray, y: boostedCostArrayToPlot,
+	   					 type: 'scatter', line: {shape: 'hv'}, name:'Boosting'};
+      
 	   	var plotLayout1 = 
 			{
 				title: 'Evolution of Objective Function Value', 
@@ -35,11 +38,11 @@ function plotData(){
 				    ////automargin: true,
 				},
 				
-	   		}
+	   		};
 
 		var myPlot1 = document.getElementById('myPlot1');
 				////Plotly.newPlot(myPlot, data, plotLayout,{displayModeBar: false});
-		Plotly.newPlot(myPlot1, [trace1], plotLayout1);
+		Plotly.newPlot(myPlot1, [trace1,trace2], plotLayout1);
 	}
 
 

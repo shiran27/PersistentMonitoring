@@ -50,7 +50,18 @@ var targetPrioritizationPolicy; // targetPrioritizationPolicyChanged()
 
 var printMode = true;
 
-var boostingMode = 1; 
+// boosting related stuff
+var boostingMode = 0; 
+var bestCostFoundSoFar = Infinity;
+var bestThresholdsFoundSoFar = [];
+
+var worstCostFoundSoFar = 100; // for plotting purposes
+var boostedUpdateStepCountArray = []; 
+var boostedCostArrayToPlot = [];
+var boostingCoefficientAlpha;
+var thresholdSensitivityMagnitudes = [];
+// end boosting related stuff
+
 
 ////var cyclicRoutes = [];
 var cycles = [];
@@ -365,6 +376,7 @@ function updateInterface(){
     document.getElementById("numberOfAgentsDisplay").innerHTML = agents.length;
     
 
+
     if(problemConfigurationEditMode){
         document.getElementById("uncertaintyRateDisplay").innerHTML = document.getElementById("uncertaintyRate").value;
         document.getElementById("sensingRateDisplay").innerHTML = document.getElementById("sensingRate").value;
@@ -387,6 +399,10 @@ function updateInterface(){
         document.getElementById("stepSizeMultiplierDisplay").innerHTML = "10<sup>"+Number(document.getElementById("stepSizeMultiplier").value)+"</sup>";
         document.getElementById("noiseLevelDisplay").innerHTML = randomNoiseLevelForThresholds.toString();
         document.getElementById("neighborhoodWidthForClusteringDisplay").innerHTML = neighborhoodWidthForClustering.toString();
+    
+        document.getElementById("bestCostFoundSoFar").innerHTML = bestCostFoundSoFar.toFixed(3);
+        document.getElementById("boostingCoefficientAlphaDisplay").innerHTML = boostingCoefficientAlpha.toFixed(3);
+
     }
 
 }
@@ -406,6 +422,7 @@ function readInitialInterface(){
     neighborhoodWidthForClustering = Number(document.getElementById("neighborhoodWidthForClustering").value);
     numberOfKMeansIterations = Number(document.getElementById("numOfKMeansIterations").value);
     
+    boostingCoefficientAlpha = Number(document.getElementById("boostingCoefficientAlpha").value);
 
 
     adjustNeighborhoodWidthForClusteringRange();
@@ -416,19 +433,16 @@ function readInitialInterface(){
 function displayThresholdSensitivities(){ 
 
     for(var a = 0; a<agents.length; a++){
-
         for(var i = 0; i<targets.length; i++){//rows
-            
             for(var j = 0; j<targets.length; j++){//columns
                 var thresholdSensitivity = agents[a].sensitivityOfThreshold[i][j];
                 document.getElementById("thresholdSensitivities_"+(i+1)+"_"+(j+1)+"_"+(a+1)).innerHTML = thresholdSensitivity.toFixed(3);
             }
-            
-        }
-
+        }    
     }
 
-    consolePrint("Obtained threshold sensitivities were loaded to the display.")
+    
+    ////consolePrint("Obtained threshold sensitivities were loaded to the display.")
 }
 
 
@@ -459,6 +473,26 @@ function updateRTThresholdValuesRandom(){
     consolePrint("All thresholds were randomly updated.");
 
 }
+
+
+function rollbackToBestPerformingThresholdsFoundSoFar(){
+    print("Best thresholds: ");
+    print(bestThresholdsFoundSoFar);
+    print("Current thresholds: ");
+    // cloning multi-dimentional arrays is a tricky thing! - better to do element wise
+    for(var a = 0; a<agents.length; a++){
+        print(agents[a].threshold);
+        for(var i = 0; i<targets.length; i++){//rows
+            for(var j = 0; j<targets.length; j++){//columns
+                agents[a].threshold[i][j] = bestThresholdsFoundSoFar[a][i][j];
+            }
+        }
+    }
+
+    displayThresholds();
+    
+}
+
 
 function updateRTThresholdValues(){
 
@@ -529,6 +563,11 @@ function randomNoiseLevelChanged(val){
     consolePrint("Random noise level, which is to be added once perturbed, changed to "+val+".");
     randomNoiseLevelForThresholds = Number(document.getElementById("noiseLevel").value);
 
+}
+
+function boostingCoefficientAlphaChanged(val){
+    consolePrint("Boosting coefficient alpha changed to "+val+".");
+    boostingCoefficientAlpha = val;
 }
 
 
@@ -674,7 +713,6 @@ function periodTChanged(val){
 
 function stepSizeChanged(){
     
-    
     var stepSizeRaw = Number(document.getElementById("stepSize").value);
     var stepSizeMultiplier = Number(document.getElementById("stepSizeMultiplier").value);
 
@@ -690,6 +728,18 @@ function stepSizeChanged(){
 
 
 
+
+function boostingActivated(){
+    boostingMode = Number(document.getElementById('boostingActivatedCheckBox').checked);
+    if(boostingMode == 1) {
+        consolePrint("Boosting Activated!");
+    }else{
+        consolePrint("Boosting Deactivated");
+    }
+}
+
+
+
 function simulateHybridSystem(){ // run the hybrid system indefinitely in real-time while displaying
 
     consolePrint("Initiated simulating the hybrid system indefinitely under the given threshold policy.");
@@ -698,9 +748,7 @@ function simulateHybridSystem(){ // run the hybrid system indefinitely in real-t
     simulationTime = 0;
     discreteTimeSteps = 0;
 
-
 }
-
 
 
 function simulateHybridSystemFast(){ // run the hybrid system for time T period (without displaying agent movements) and get the IPA estimtors
@@ -866,6 +914,7 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
     }
     // end HS simulation
 
+
     // computing objective function
     var meanUncertainty = 0;
     for(var i = 0; i<targets.length; i++){
@@ -891,10 +940,10 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
             }
         }
     }
-    displayThresholdSensitivities();
+    // display sensitivities as well as get an idea about the general gradient magnitude
+    displayThresholdSensitivities(); 
+    
     // end - sensitivity of thresholds
-
-
 
 
     // resetAgentsAndTargets();
@@ -905,7 +954,6 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
     //         agents[i].position = targets[agents[i].residingTarget[1]].position;
     //         agents[i].residingTarget = [agents[i].residingTarget[1]];
     //     }else{
-
     //     }
     // }
     // end rest agents and targets
@@ -914,9 +962,32 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
     document.getElementById("simulationTime").innerHTML = simulationTime.toFixed(2).toString();
     document.getElementById("simulationCost").innerHTML = meanUncertainty.toFixed(3).toString();
 
+    // tracking the best/worst cost found so far
+    if(meanUncertainty<bestCostFoundSoFar && boostingMode==0){
+        bestCostFoundSoFar = meanUncertainty;
+        
+        // cloning multi-dimentional arrays is a tricky thing! - better to do element wise
+        bestThresholdsFoundSoFar = [];
+        for(var a = 0; a<agents.length; a++){
+            bestThresholdsFoundSoFar.push([]);
+            for(var i = 0; i<targets.length; i++){//rows
+                bestThresholdsFoundSoFar[a].push([]);
+                for(var j = 0; j<targets.length; j++){//columns
+                    bestThresholdsFoundSoFar[a][i][j] = agents[a].threshold[i][j];
+                }
+            }
+        }
+    
+    }
+    if(meanUncertainty > worstCostFoundSoFar && boostingMode==0){// just for plotting purposes
+        worstCostFoundSoFar = meanUncertainty;
+    }
 
-    consolePrint("Cost : "+meanUncertainty.toFixed(3));
-    ////simulationMode = 0;
+
+    // end tracking best cost so far
+
+    print("Cost : "+meanUncertainty.toFixed(3));
+
 }
 
 
@@ -946,27 +1017,90 @@ function sensitivityUpdateAtEvent(){
     }
 }
 
+
+
+
+function optimizeThresholdsOneStep(){
+
+    if(simulationMode != 5 && simulationMode !=4){// taking  step for the first time
+
+        simulationMode = 5;
+        costArrayForPlot = [];
+        updateStepCountArray = [];
+        numberOfUpdateStepsCount = 0;
+        // to reset from perturbations
+        defaultUncertaintyRates = []; // to test boosting
+        defaultSensingRates = []; // to test boosting
+        for(var i = 0; i<targets.length; i++){
+            defaultUncertaintyRates.push(targets[i].uncertaintyRate);
+        }
+        for(var i = 0; i<agents.length; i++){
+            defaultSensingRates.push(agents[i].sensingRate);
+        }
+        // to reset from perturbations
+        consolePrint("Finding optimal threshold policy using IPA estimators started (Step-by-Step).");
+    
+    }
+
+    simulationMode = 5;
+    solveForIPAEstimators();
+    updateThresholdPolicy(); 
+    displayThresholds();
+    numberOfUpdateStepsCount = numberOfUpdateStepsCount + 1;
+    var cost = Number(document.getElementById("simulationCost").innerHTML);
+    
+    updateStepCountArray.push(numberOfUpdateStepsCount);
+
+    if(boostingMode==0){
+        costArrayForPlot.push(cost);
+        consolePrint("Iteration "+ numberOfUpdateStepsCount+ " completed. Cost: "+cost+".");
+    
+        boostedCostArrayToPlot.push(NaN);
+    }else{// in boosting mode!
+        var mappedCost = cost;
+        if(cost>worstCostFoundSoFar){ // upper bound threshold so that plot wont be distorted
+            mappedCost = worstCostFoundSoFar;
+        }else if(cost<bestCostFoundSoFar){
+            mappedCost = bestCostFoundSoFar;
+        }
+        boostedCostArrayToPlot.push(mappedCost);
+        consolePrint("Iteration "+ numberOfUpdateStepsCount+ " completed (while in boosting mode). Cost: "+cost+".");                
+        
+        costArrayForPlot.push(NaN);
+    }
+    plotData();
+
+    ////consolePrint("IPA step "+ numberOfUpdateStepsCount+ " completed. Cost: "+cost+".");
+    
+}
+
+
+
 function optimizeThresholds(){// use solveForIPAEstimators() iteratively to updte the thresholds 
 
     consolePrint("Finding optimal threshold policy using IPA estimators started.");
-    simulationMode = 4;
-    costArrayForPlot = [];
-    updateStepCountArray = [];
-    numberOfUpdateStepsCount = 0;
 
-    // to reset from perturbations
-    defaultUncertaintyRates = []; // to test boosting
-    defaultSensingRates = []; // to test boosting
-    for(var i = 0; i<targets.length; i++){
-        defaultUncertaintyRates.push(targets[i].uncertaintyRate);
-    }
-    for(var i = 0; i<agents.length; i++){
-        defaultSensingRates.push(agents[i].sensingRate);
-    }
-    // to reset from perturbations
-   
+    if(simulationMode == 5 || simulationMode == 4){// havve been using the step-by-step method, so just continue
+        simulationMode = 4;
+    }else{
+        simulationMode = 4;
+        costArrayForPlot = [];
+        updateStepCountArray = [];
+        numberOfUpdateStepsCount = 0;
 
-   // test case:
+        // to reset from perturbations
+        defaultUncertaintyRates = []; // to test boosting
+        defaultSensingRates = []; // to test boosting
+        for(var i = 0; i<targets.length; i++){
+            defaultUncertaintyRates.push(targets[i].uncertaintyRate);
+        }
+        for(var i = 0; i<agents.length; i++){
+            defaultSensingRates.push(agents[i].sensingRate);
+        }
+        // to reset from perturbations
+    }
+
+    // test case:
     // agents[0].threshold = [[16.3397,5.3083,5.1771,1.7396,0.7245],[2.8752,1.0177,18.5617,22.1334,24.5507],[23.7571,9.9299,9.8039,23.8161,8.4909],[12.0548,5.8283,4.5564,23.2786,17.6672],[21.8119,21.0435,18.5885,10.3858,9.0469]];
     // agents[1].threshold = [[0.8776,22.1273, 3.3326,10.8125,22.2834],[21.3765,22.6049,17.4481, 0.4536,22.9551],[16.4313, 0.2605, 9.9551,17.2859, 1.8280],[19.1421, 1.8639,22.0781,11.7423, 1.1362],[13.8522, 6.1157, 4.5252, 3.2056,10.9643]];
     // displayThresholds();
@@ -975,8 +1109,13 @@ function optimizeThresholds(){// use solveForIPAEstimators() iteratively to updt
 function updateThresholdPolicy(){
     // stepSize is a global variable
 
+    thresholdSensitivityMagnitudes = [];
+    var globalSensitivityMagnitude = 0;
+
     for(var z = 0; z<agents.length; z++){
+        var maxRowSum = 0;
         for(var p = 0; p < targets.length; p++){
+            var rowAbsoluteSum = 0;
             for(var q = 0; q < targets.length; q++){
                 var val = agents[z].threshold[p][q] - stepSize*agents[z].sensitivityOfThreshold[p][q];
                 if(val<=0){
@@ -984,11 +1123,23 @@ function updateThresholdPolicy(){
                 }else if(val>10000){
                     val = 10000;
                 } 
+
+                rowAbsoluteSum = rowAbsoluteSum + Math.abs(agents[z].threshold[p][q] - val);
+                
                 agents[z].threshold[p][q] = val;
             }
+
+            if(rowAbsoluteSum>maxRowSum){
+                maxRowSum = rowAbsoluteSum;
+            }
         }
+
+        thresholdSensitivityMagnitudes.push(maxRowSum);
+        globalSensitivityMagnitude = globalSensitivityMagnitude + maxRowSum;
+
     }
     
+    consolePrint("Global sensitivity magnitude: "+globalSensitivityMagnitude.toFixed(3)+".");
     
 }
 
@@ -1092,7 +1243,12 @@ function pauseSimulation(){
 
 function stopSimulation(){
     
-    simulationMode = 0;
+    if(simulationMode == 4){// continuous running IPA to step mode
+        simulationMode = 5;
+    }else{
+        simulationMode = 0;    
+    }
+    
     simulationTime = 0;
     discreteTimeSteps = 0;
 
