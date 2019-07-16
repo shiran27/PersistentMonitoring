@@ -1026,6 +1026,7 @@ function optimizeThresholdsOneStep(){
 
         simulationMode = 5;
         costArrayForPlot = [];
+        boostedCostArrayToPlot = [];
         updateStepCountArray = [];
         numberOfUpdateStepsCount = 0;
         // to reset from perturbations
@@ -1085,6 +1086,7 @@ function optimizeThresholds(){// use solveForIPAEstimators() iteratively to updt
     }else{
         simulationMode = 4;
         costArrayForPlot = [];
+        boostedCostArrayToPlot = [];
         updateStepCountArray = [];
         numberOfUpdateStepsCount = 0;
 
