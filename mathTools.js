@@ -177,7 +177,7 @@ function computeSimilarityMatrix(){
         }else if(similarityMeasureType==1){
             minimumDistancesFound = findMinimumMeanCycleUncertaintiesFrom(i);    
         }
-        affinityMatrix[i] = minimumDistancesFound[0]; // distances matrix from T_i;
+        affinityMatrix[i] = [...minimumDistancesFound[0]]; // distances matrix from T_i;
     }
 
     return affinityMatrix;
@@ -492,7 +492,8 @@ function applyFoundClustersToGroupTargets(clusteredPoints){ // adjust parameters
         for(var j = 0; j < N; j++){ // check over all target clusters
             var L1 = targetClusters[j].includes(paths[p].targets[0]);
             var L2 = targetClusters[j].includes(paths[p].targets[1]);
-            if( ((!L1) && L2) || (L1 && (!L2)) ){
+            if(L1 ^ L2){
+            //if( ((!L1) && L2) || (L1 && (!L2)) ){
                 interClusterPaths.push(p);
                 paths[p].brokenDueToClustering = true;
             } 
@@ -505,9 +506,8 @@ function applyFoundClustersToGroupTargets(clusteredPoints){ // adjust parameters
     resetCycles(); // to make cycles = [];
     for(var j = 0; j < N; j++){
         cycles.push(new Cycle(j,targetClusters[j]));// deployedAgend,targetSet
-        agents[j].assignToTheTarget(targetClusters[j][0]);
+        //////agents[j].assignToTheTarget(targetClusters[j][0]);
     }
-
 
     displayClustersMode = true;
 
@@ -548,7 +548,7 @@ function updateTargetClustersUsingCycles(){
     }
 
     for(var j = 0; j < N; j++){
-        agents[j].assignToTheTarget(targetClusters[j][0]);
+        //////agents[j].assignToTheTarget(targetClusters[j][0]);
     }
 
     displayClustersMode = true;

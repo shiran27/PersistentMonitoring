@@ -917,7 +917,7 @@ function Cycle(agentID,targetSet){
 
 
 	// threshold based on TSP
-	this.computeThresholds = function(){
+	this.computeThresholds = function(transientPath){
 
 		var blockingThreshold = 1000;
 	    // biase the threshods
@@ -961,11 +961,25 @@ function Cycle(agentID,targetSet){
 	        }
 	    }
 
+	    // making path for the transients
+	    if(transientPath.length>1){// need to move before cycling!
+	    	for(var  i = 0; i<transientPath.length-1; i++){
+	    		var p = transientPath[i];
+	    		var q = transientPath[i+1];
+
+	    		agents[z].threshold[p][p] = blockingThreshold; // dont waste time there
+	    		agents[z].threshold[p][q] = 0; // move to q
+	    		
+	    	}
+	    }
+
+
+
 	    displayThresholds();
 	}
 
 
-	this.computeThresholdsAdvanced = function(){
+	this.computeThresholdsAdvanced = function(transientPath){
 
 		var blockingThreshold = 1000;
 
@@ -1019,7 +1033,7 @@ function Cycle(agentID,targetSet){
 	    var targetList = this.targetList;
 
 
-	    if(this.travelTimeList.length == 0){
+	    if(this.travelTimeList.length == 0 || this.travelTimeList.length != L ){
 	    	print("Computing missing data for agent "+(this.deployedAgent+1));
 	    	this.computeMeanUncertaintyAdvanced();
 	    }
@@ -1037,23 +1051,23 @@ function Cycle(agentID,targetSet){
 	            	if(!pathList.includes(path_pq) && paths[path_pq].isPermenent){
 	            		agents[z].threshold[p][q] = blockingThreshold;	
 	            	}else{
-	            		print("p"+p+"; q"+q);
+	            		//////print("p"+p+"; q"+q);
 	            		if(auxTargetData[p].length!=0){
 	            			// new method
-	            			print("Aug data exists!")
+	            			//////print("Aug data exists!")
 	            			var valueApplied = false;
 	            			for(k = 0; k<auxTargetData[p].length; k++){
 	            				var pastIndex = auxTargetData[p][k][0];
 	            				var currentIndex = auxTargetData[p][k][1];
 	            				var nextIndex = auxTargetData[p][k][2];
 	            				if(p==this.targetList[currentIndex] && q==this.targetList[nextIndex]){
-	            					print("Decide policy: T_"+(p+1)+" to T_"+(q+1)+"; carefully!");
+	            					//////print("Decide policy: T_"+(p+1)+" to T_"+(q+1)+"; carefully!");
 	            					//  note that T_j_n = q = this.targetList[auxTargetData[p][k][1]]; 
 	            					var upperBound = targets[this.targetList[nextIndex]].uncertaintyRate*(T_cyc - this.dwellTimeList[nextIndex] - this.travelTimeList[nextIndex]);
-	            					print("upper: "+upperBound+"; to goto T_"+(this.targetList[nextIndex]+1));
+	            					//////print("upper: "+upperBound+"; to goto T_"+(this.targetList[nextIndex]+1));
 	            					
 	            					var lowerBound = targets[this.targetList[nextIndex]].uncertaintyRate*(T_cyc - this.subCycleDwellTimeList[currentIndex] - this.subCycleTravelTimeList[currentIndex] - this.dwellTimeList[nextIndex] - this.travelTimeList[nextIndex]);
-	            					print("lower: "+lowerBound+"; to block T_"+(this.targetList[pastIndex]+1));
+	            					//////print("lower: "+lowerBound+"; to block T_"+(this.targetList[pastIndex]+1));
 	            					var r = 0.5;
 	            					var base = lowerBound+r*(upperBound-lowerBound);
 	            					
@@ -1081,7 +1095,7 @@ function Cycle(agentID,targetSet){
 	            					nextTarget = targetList[k+1];
 	            				}
 	            				if(presentTarget == p && nextTarget == q){
-	            					print("Agent has gone from: T_"+(p+1)+" to T_"+(q+1)+" directly!");
+	            					//////print("Agent has gone from: T_"+(p+1)+" to T_"+(q+1)+" directly!");
 	            					agentHasGoneFrompToq = true;
 	            				}
 	            			}
@@ -1097,6 +1111,20 @@ function Cycle(agentID,targetSet){
 	            	}
 	            } 
 	        }
+	    }
+
+
+
+	    // making path for the transients
+	    if(transientPath.length>1){// need to move before cycling!
+	    	for(var  i = 0; i<transientPath.length-1; i++){
+	    		var p = transientPath[i];
+	    		var q = transientPath[i+1];
+
+	    		agents[z].threshold[p][p] = blockingThreshold; // dont waste time there
+	    		agents[z].threshold[p][q] = 0; // move to q
+	    		
+	    	}
 	    }
 
 	    displayThresholds();
@@ -1505,7 +1533,7 @@ function Cycle(agentID,targetSet){
 				consolePrint("Steady state mean cycle uncertainty of agent "+(this.deployedAgent+1)+" (J_"+(this.deployedAgent+1)+") ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 1).");
 
 				this.recorrectCycleErrors();
-				if(RGCComputingMode!=3){this.assignAgentToCycle();}
+				//////if(RGCComputingMode!=3){this.assignAgentToCycle();}
 
 				if(this.pathList.length>3){
 					this.RGCComputingMode = 2;
@@ -1599,7 +1627,7 @@ function Cycle(agentID,targetSet){
 				consolePrint("Steady state mean cycle uncertainty of agent "+(this.deployedAgent+1)+" (J_"+(this.deployedAgent+1)+") ="+meanSystemUncertaintyVal.toFixed(3)+", achieved via greedy cycle search (Method 1).");
 
 				this.recorrectCycleErrors();
-				if(RGCComputingMode!=3){this.assignAgentToCycle();}
+				//////if(RGCComputingMode!=3){this.assignAgentToCycle();}
 				
 
 				if(this.pathList.length>3){
@@ -2294,18 +2322,36 @@ function restartCycles(){
 		var N = targetClusters.length; // number of agents
 		for(var j = 0; j < N; j++){
 	        cycles.push(new Cycle(j,targetClusters[j]));// deployedAgent,targetSet
-	        agents[j].assignToTheTarget(targetClusters[j][0]);
+	        //////agents[j].assignToTheTarget(targetClusters[j][0]);
 	    }
 	}
 }
 
 
 function generateThresholdsFromRoutes(){
+
+	var sol = decideAgentAssignmentToTheCycles(); 
+	var cycleAssignments = sol[0];
+	var transientPaths = sol[1];
+
+	print("Cycle assignments to agents: ");
+	print(cycleAssignments);
+
+	print("Paths to bring the assigned agents to the cycles: ");
+	print(transientPaths);
+	
+	// define each cluster's agent assignement, each agents path to get to the cycle 
+	// Removing the use of: agents[a].assignToTheTarget(); cycles[c].assignAgentToCycle(); 
+
+
 	for(var i = 0; i<cycles.length; i++){
+
+		cycles[i].deployedAgent = cycleAssignments[i];
+
 		if(cycleGenerationMethod){
-			cycles[i].computeThresholdsAdvanced();
+			cycles[i].computeThresholdsAdvanced(transientPaths[i]);
 		}else{
-			cycles[i].computeThresholds();
+			cycles[i].computeThresholds(transientPaths[i]);
 		}
 	}
 }
@@ -2337,6 +2383,73 @@ function addRandomNoiseToThresholds(){
 
     displayThresholds();
 }
+
+
+function decideAgentAssignmentToTheCycles(){
+
+	// shortest distance based 
+	var minimumDistancesFoundAgentToCycles = [];
+	var minimumPathsFoundAgentToCycles = [];
+	var minimumTargetsFoundAgentToCycles = [];
+
+	for(var a = 0; a<agents.length; a++){
+		minimumDistancesFoundAgentToCycles.push([]);
+		minimumPathsFoundAgentToCycles.push([]);
+		minimumTargetsFoundAgentToCycles.push([]);
+
+		var T_a_i = agents[a].initialResidingTarget;
+
+		// distances from the initial position to all other targets
+		var minimumDistancesFoundToAllTargets = findMinimumDistancesFrom(T_a_i);// [shortestDist,PathTargetsList]	
+		var affinities = [...minimumDistancesFoundToAllTargets[0]];
+		print(affinities)
+		// shortest distances to cycles from agent a initially located at target T_a_i
+		for(var c = 0; c<cycles.length; c++){	
+
+			var minDistToCycC = Infinity;
+			var minDistTarInCycC;
+			for(var i = 0; i<targets.length; i++){
+				if(cycles[c].targetList.includes(i) && affinities[i]<minDistToCycC){
+					minDistToCycC = affinities[i];
+					minDistTarInCycC = i;
+				}
+			}
+			minimumDistancesFoundAgentToCycles[a][c] = minDistToCycC;
+			minimumPathsFoundAgentToCycles[a][c] = [...minimumDistancesFoundToAllTargets[1][minDistTarInCycC]];
+			minimumTargetsFoundAgentToCycles[a][c] = minDistTarInCycC;
+		}
+		//minimumDistancesFound[0]
+	}
+	
+	print("Distances: ")
+	print(minimumDistancesFoundAgentToCycles);
+	print("Paths: ")
+	print(minimumPathsFoundAgentToCycles);
+	print("Targets: ")
+	print(minimumTargetsFoundAgentToCycles);
+
+
+	var assignmentSolution = linearAssignmentProblemSolve(agents.length,minimumDistancesFoundAgentToCycles);
+	print("assignment Solution");
+	print(assignmentSolution);
+
+
+	var cycleAssignments = assignmentSolution.col;// thinking that cycles are assigned to agents
+	var transientPaths = [];
+	
+	for(var c = 0; c<cycles.length; c++){
+		// assigned cycle
+		var a = cycleAssignments[c];
+		transientPaths.push([...minimumPathsFoundAgentToCycles[a][c]]);
+	}
+	
+	// returning [eachAgentAssignedToCycles, pathsToBringThoseAgents]
+	return [cycleAssignments,transientPaths] 
+
+
+}
+
+
 
 
 
