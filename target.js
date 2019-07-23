@@ -23,7 +23,7 @@ function Target(x, y, r) {
     this.meanUncertainty = this.initialUncertainty;
 
     this.neighbors = [];
-
+    this.arcBoostingInitiated = false;
     
     this.show = function(){
 
@@ -82,26 +82,67 @@ function Target(x, y, r) {
 
     this.updateIPA = function(){
         // update uncertainty values R_i(t) of target i
-        var netAgentSensingRate = 0;
-        if(boostingMode==0){
-            netAgentSensingRate = this.getNetAgentSensingRate(); 
-        }else{
-            netAgentSensingRate = this.getNetAgentSensingRateBoosted()
-        }
-        var netUncertaintyGrowthRate = this.uncertaintyRate - netAgentSensingRate;
+        
+        if(boostingMode==0){ // normal mode
+            
+            var netAgentSensingRate = this.getNetAgentSensingRate(); 
+            var netUncertaintyGrowthRate = this.uncertaintyRate - netAgentSensingRate;
     
-
-        var oldUncertainty = this.uncertainty;
-        if(this.uncertainty==0 && netUncertaintyGrowthRate<0){
-            this.uncertainty = 0;
-        }else{
-            this.uncertainty = this.uncertainty + netUncertaintyGrowthRate*deltaT;
-            if(this.uncertainty<0){
+            if(this.uncertainty==0 && netUncertaintyGrowthRate<=0){
                 this.uncertainty = 0;
+            }else{
+                this.uncertainty = this.uncertainty + netUncertaintyGrowthRate*deltaT;
+                if(this.uncertainty<0){
+                    this.uncertainty = 0;
+                }
             }
+            // since we are running one whole simulation at a time, re do not need the running-mean value
+            this.meanUncertainty = this.meanUncertainty + this.uncertainty;
+        
+        }else if(boostingMethod == 1 && boostingMode==1){ // neighbor boosting is used and is in boosting mode
+
+            var netAgentSensingRate = this.getNetAgentSensingRateNeighborBoosted();
+            var netUncertaintyGrowthRate = this.uncertaintyRate - netAgentSensingRate;
+    
+            if(this.uncertainty==0 && netUncertaintyGrowthRate<=0){
+                this.uncertainty = 0;
+            }else{
+                this.uncertainty = this.uncertainty + netUncertaintyGrowthRate*deltaT;
+                if(this.uncertainty<0){
+                    this.uncertainty = 0;
+                }
+            }
+            // since we are running one whole simulation at a time, re do not need the running-mean value
+            this.meanUncertainty = this.meanUncertainty + this.uncertainty;
+        
+        }else if(boostingMethod == 2 && boostingMode==1){ // neighbor boosting is used and is in boosting mode
+            
+            var answer = this.getNetAgentSensingRateArcBoosted();
+         
+            var netAgentSensingRate = answer[0];
+            var agentCount = answer[1];
+            var resAgent = answer[2];
+
+            var netUncertaintyGrowthRate = this.uncertaintyRate - netAgentSensingRate;
+            
+            if(agentCount==1 && netUncertaintyGrowthRate<=0 && (this.uncertainty==0||this.arcBoostingInitiated)){
+                this.arcBoostingInitiated = true;
+                this.pushResidingAgentsAway(resAgent); 
+                this.uncertainty = 0; //this.uncertainty - netUncertaintyGrowthRate*deltaT;
+            }else{
+                this.arcBoostingInitiated = false;
+                this.uncertainty = this.uncertainty + netUncertaintyGrowthRate*deltaT;
+                if(this.uncertainty<0){
+                    this.uncertainty = 0;
+                }
+                
+            }
+            this.meanUncertainty = this.meanUncertainty + this.uncertainty;
+            // since we are running one whole simulation at a time, re do not need the running-mean value
+            
+        
         }
         
-        this.meanUncertainty = this.meanUncertainty + this.uncertainty;
 
 
     }
@@ -114,7 +155,7 @@ function Target(x, y, r) {
         // update uncertainty values R_i(t) of target i
         var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
         
-        if(this.uncertainty==0 && netUncertaintyGrowthRate<0){
+        if(this.uncertainty==0 && netUncertaintyGrowthRate<=0){
             this.uncertainty = 0;
         }else{
             this.uncertainty = this.uncertainty + netUncertaintyGrowthRate*deltaT;
@@ -123,6 +164,8 @@ function Target(x, y, r) {
             }
         }
         
+        // following line is inaccurate, yet it does not matter as target.meanuncertainty is irrelevent
+        // in the middle of the simulation (at the end of the simulation run, we have to divide it)
         this.meanUncertainty = this.meanUncertainty + this.uncertainty;
 
 
@@ -132,7 +175,7 @@ function Target(x, y, r) {
         // update uncertainty values R_i(t) of target i
         var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
         var oldUncertainty = this.uncertainty;
-        if(this.uncertainty==0 && netUncertaintyGrowthRate<0){
+        if(this.uncertainty==0 && netUncertaintyGrowthRate<=0){
             this.uncertainty = 0;
         }else{
             this.uncertainty = this.uncertainty + netUncertaintyGrowthRate*deltaT;
@@ -145,11 +188,11 @@ function Target(x, y, r) {
     }
 
 
-    this.updateCT2 = function(){
+    this.updateCT2 = function(){ // not used any more
         // update uncertainty values R_i(t) of target i
         var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
         var oldUncertainty = this.uncertainty;
-        if(this.uncertainty==0 && netUncertaintyGrowthRate<0){
+        if(this.uncertainty==0 && netUncertaintyGrowthRate<=0){
             this.uncertainty = 0;
         }else{
             this.uncertainty = this.uncertainty + netUncertaintyGrowthRate*deltaT;
@@ -173,16 +216,18 @@ function Target(x, y, r) {
         return sumValue;
     }
 
-    this.getNetAgentSensingRateBoosted = function(){
+    this.getNetAgentSensingRateNeighborBoosted = function(){
+
         var sumValue = 0;
         var agentCount = 0;
         var factorial = 1; // 0!
         var alpha = boostingCoefficientAlpha;
+
         for(var i = 0; i<agents.length; i++){
             if(agents[i].residingTarget.length == 1 && agents[i].residingTarget[0]==this.id){
                 
                 if(agentCount==0){// to avoid numerical computational errors
-                    sumValue = sumValue + agents[i].sensingRate*1;
+                    sumValue = sumValue + agents[i].sensingRate*1;// agent will feel the target uncertainty behaves 
                 }else{// agentCount = (N_i-1)
                     sumValue = sumValue + agents[i].sensingRate*Math.pow(-1*boostingCoefficientAlpha*agentCount,agentCount)/factorial;    
                 }
@@ -191,11 +236,54 @@ function Target(x, y, r) {
                 factorial = factorial*agentCount;
             }
         }
-        return sumValue;    
+
+        return sumValue;        
+        
+        
+    }
+
+    
+    this.getNetAgentSensingRateArcBoosted = function(){
+
+        var sumValue = 0;
+        var agentCount = 0;
+        var factorial = 1; // 0!
+        var alpha = boostingCoefficientAlpha;
+        var resAgent;
+        for(var i = 0; i<agents.length; i++){
+            if(agents[i].residingTarget.length == 1 && agents[i].residingTarget[0]==this.id){
+                
+                if(agentCount==0){// to avoid numerical computational errors
+                    sumValue = sumValue + agents[i].sensingRate*1;// agent will feel the target uncertainty behaves 
+                }else{// agentCount = (N_i-1)
+                    sumValue = sumValue + agents[i].sensingRate*Math.pow(-1*boostingCoefficientAlpha*agentCount,agentCount)/factorial;    
+                }
+                
+                agentCount = agentCount + 1;
+                resAgent = i;
+                factorial = factorial*agentCount;
+            }
+        }
+
+
+        // boosting part 2
+
+        
+        
+        return [sumValue, agentCount, resAgent];
+        
     }
 
 
-  
+    this.pushResidingAgentsAway = function(a){
+        
+        var q = agents[a].findProbableNextTarget(this.id);
+        var p = this.id;
+        agents[a].threshold[p][q] = 0;    
+        
+        
+    }
+
 }
 
 

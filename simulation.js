@@ -48,10 +48,11 @@ var defaultSensingRates = [];
 var targetPrioritizationPolicy; // targetPrioritizationPolicyChanged()
 
 
-var printMode = true;
+var printMode = false;
 
 // boosting related stuff
-var boostingMode = 0; 
+var boostingMode = 0;  // starts i normal mode
+var boostingMethod;
 var bestCostFoundSoFar = Infinity;
 var bestThresholdsFoundSoFar = [];
 
@@ -59,7 +60,9 @@ var worstCostFoundSoFar = 100; // for plotting purposes
 var boostedUpdateStepCountArray = []; 
 var boostedCostArrayToPlot = [];
 var boostingCoefficientAlpha;
-var thresholdSensitivityMagnitudes = [];
+var thresholdSensitivityMagnitudes = []; // for each agent
+
+var modeSwitchingThresholdAlpha; 
 // end boosting related stuff
 
 
@@ -402,6 +405,7 @@ function updateInterface(){
     
         document.getElementById("bestCostFoundSoFar").innerHTML = bestCostFoundSoFar.toFixed(3);
         document.getElementById("boostingCoefficientAlphaDisplay").innerHTML = boostingCoefficientAlpha.toFixed(3);
+        document.getElementById("modeSwitchingThresholdAlphaDisplay").innerHTML = modeSwitchingThresholdAlpha.toFixed(3);
 
     }
 
@@ -423,7 +427,8 @@ function readInitialInterface(){
     numberOfKMeansIterations = Number(document.getElementById("numOfKMeansIterations").value);
     
     boostingCoefficientAlpha = Number(document.getElementById("boostingCoefficientAlpha").value);
-
+    modeSwitchingThresholdAlpha = Number(document.getElementById("modeSwitchingThresholdAlpha").value);
+    boostingMethod = Number(document.getElementById("boostingMethodDropdown").value);
 
     adjustNeighborhoodWidthForClusteringRange();
     targetPrioritizationPolicyChanged();
@@ -568,6 +573,11 @@ function randomNoiseLevelChanged(val){
 function boostingCoefficientAlphaChanged(val){
     consolePrint("Boosting coefficient alpha changed to "+val+".");
     boostingCoefficientAlpha = val;
+}
+
+function modeSwitchingThresholdAlphaChanged(val){
+    consolePrint("Mode switching (i.e. between: Normal and Boosting) threshold changed to "+val+".");
+    modeSwitchingThresholdAlpha = val;
 }
 
 
@@ -727,16 +737,43 @@ function stepSizeChanged(){
 
 
 
+function boostingMethodChanged(){
+    boostingMethod = Number(document.getElementById('boostingMethodDropdown').value);
+    
+    if(boostingMode==1){// if we were inside a boosting mode, go back to normal mode
+        initiateForcedModeSwitch();
+    }
+
+    if(boostingMethod==0){
+        consolePrint("No boosting method will be used.");
+    }else if(boostingMethod==1){
+        consolePrint("Neighbor boosting method will be used.");
+    }else if(boostingMethod==2){
+        consolePrint("Arc-boosting method will be used.")
+    }
 
 
-function boostingActivated(){
-    boostingMode = Number(document.getElementById('boostingActivatedCheckBox').checked);
-    if(boostingMode == 1) {
+
+
+}
+
+
+function initiateForcedModeSwitch(){
+    if(boostingMode == 0){
         consolePrint("Boosting Activated!");
-    }else{
+        boostingMode = 1;
+        document.getElementById("forcedModeSwitchButton").innerHTML = "Norm."; 
+        document.getElementById("forcedModeSwitchButton").classList.add('btn-success');
+        document.getElementById("forcedModeSwitchButton").classList.remove('btn-danger'); 
+    }else if(boostingMode == 1){
         consolePrint("Boosting Deactivated");
+        boostingMode = 0;
+        document.getElementById("forcedModeSwitchButton").innerHTML = "Boost";
+        document.getElementById("forcedModeSwitchButton").classList.add('btn-danger');
+        document.getElementById("forcedModeSwitchButton").classList.remove('btn-success');
     }
 }
+
 
 
 
@@ -1081,7 +1118,7 @@ function optimizeThresholds(){// use solveForIPAEstimators() iteratively to updt
 
     consolePrint("Finding optimal threshold policy using IPA estimators started.");
 
-    if(simulationMode == 5 || simulationMode == 4){// havve been using the step-by-step method, so just continue
+    if(simulationMode == 5 || simulationMode == 4){// have been using the step-by-step method, so just continue
         simulationMode = 4;
     }else{
         simulationMode = 4;

@@ -343,11 +343,27 @@
 				    		J(cyc &#1014;{T_i,T_j})</option>
 				</select> 
 
-				<label for="neighborhoodWidthForClustering">Neighborhood width (&sigma;): <span id="neighborhoodWidthForClusteringDisplay"></span> 
-					<button class="btn btn-success" type="button" onclick="adjustNeighborhoodWidthForClusteringRange();">Tune Slider <i class="fa fa-refresh"></i>
+				<div class="row">
+					<hr>
+				</div>
+
+				<div class="row">
+					<div class="col col-lg-7">
+						<label for="neighborhoodWidthForClustering">Neighborhood width (&sigma;): <span id="neighborhoodWidthForClusteringDisplay"></span>
+						</label>
+					</div>
+
+					<div class="col col-lg-5">
+						<button class="btn btn-success" type="button" onclick="adjustNeighborhoodWidthForClusteringRange();">Auto Tune <i class="fa fa-refresh"></i>
 						</button> 
-				</label>
+					</div>
+				</div>
+				
 				<input type="range" class="form-control slider" id="neighborhoodWidthForClustering" min="0" max="10" value="1.5" step="0.1" onchange="neighborhoodWidthForClusteringChanged(Number(this.value));">
+				
+				<div class="row">
+					<hr>
+				</div>
 
 				<div class="row">
 					<div class="col col-lg-8">
@@ -376,11 +392,12 @@
 
 
 			<div class="col col-lg-4 border-right border-success">
-				<h5>Cluster and Generate Cycles:</h5>
+				
+				<h5>Construct A Periodic Policy:</h5>
 
 				<div class="row">
 					<div class="col col-lg-12">
-						<label for="clusterButton">Cluster Targets:</label>
+						<label for="clusterButton">1. Cluster Targets:</label>
 						<button class="btn btn-success" id="clusterButton" type="button" onclick="computeClusters();">Cluster !
 						</button>
 					
@@ -395,7 +412,7 @@
 				
 				<div class="row">
 					<div class="col col-lg-12">
-						<label for="generateCyclesButton">Generate Cycles:</label>
+						<label for="generateCyclesButton">2. Generate Cycles:</label>
 						<button class="btn btn-success" id="generateCyclesButton" type="button" onclick="initiateComputingRefinedGreedyCycles();">Search !
 						</button> 
 						<button class="btn btn-danger" type="button" onclick="restartCycles();">Reset Cycles
@@ -415,58 +432,110 @@
 				<div class="row">
 
 					<div class="col col-lg-12">
-						<label for="autoAdjustCyclesButton">Auto-Adjust Cycles:</label>
+						<label for="autoAdjustCyclesButton">3. Auto-Adjust Cycles:</label>
 						<button class="btn btn-success" id="autoAdjustCyclesButton" type="button" onclick="initiateInterCycleTargetBargaining();">Adjust !
 						</button> 	
 					</div>
 
+				</div>
+
+				<div class="row">
+					<hr>
+				</div>
+
+				<div class="row">
+					
+					<div class="col col-lg-9">
+						<label for="thresholdButton">4. Compute Thresholds:</label>
+						<button class="btn btn-success" id="thresholdButton" type="button" onclick="generateThresholdsFromRoutes();">Apply
+						</button> 
+					</div>
+
+					<div class="col col-lg-3">
+						<label for="thresholdGenerationMethod">Theo.:</label>
+						<input type="checkbox" id="thresholdGenerationMethod" onchange="thresholdGenerationMethodChanged();">	
+					</div>
+				
 				</div>
 				
 			</div>		
 
 			<div class="col col-lg-4" id="BoostingMenu">
 				
-				<div class="border-bottom">
-					<h5>Initialize thresholds:</h5>
+				<h5>Boosting Menu:</h5>
 
-					<div class="row">
-						
-						<div class="col col-lg-6">
+				<label for="boostingMethodDropdown">Boosting method:</label>
+				<select class="form-control custom-select" id="boostingMethodDropdown" onchange="boostingMethodChanged()">
+        				<option value="0">Disabled</option>
+				    	<option value="1">Neighbor</option>
+				    	<option selected value="2">Arc</option>
+				    	<option value="3">Random</option>
+				</select> 
 
-							<button class="btn btn-success" type="button" onclick="generateThresholdsFromRoutes();">Apply
-							</button> 
+				<div class="row">
+					<div class="col col-lg-6">
+						<label for="boostingCoefficientAlpha">Boosting coefficient &alpha;<sub>B</sub>: <span id="boostingCoefficientAlphaDisplay"></span>
+						</label>
+					</div>
+					<div class="col col-lg-6">
+						<input type="range" class="form-control slider" id="boostingCoefficientAlpha" min="0" max="10" value="0.5" step="0.01" onchange="boostingCoefficientAlphaChanged(Number(this.value));">
+					</div>
+				</div>
+        		
 
-							<button class="btn btn-danger" type="button" onclick="addRandomNoiseToThresholds();">Perturb
-							</button>
-							
-						</div>
-
-						<div class="col col-lg-6">
-							<label for="thresholdGenerationMethod">Theoretical:</label>
-							<input type="checkbox" id="thresholdGenerationMethod" onchange="thresholdGenerationMethodChanged();">	
-						</div>
-					
+        		<div class="row">
+					<div class="col col-lg-6">
+						<label for="modeSwitchingThresholdAlpha">Switching threshold &alpha;<sub>S</sub>: 
+							<span id="modeSwitchingThresholdAlphaDisplay"></span>
+						</label>
 					</div>
 					
+					<div class="col col-lg-3">
+						<input type="range" class="form-control slider" id="modeSwitchingThresholdAlpha" min="0.1" max="5" value="2" step="0.1" onchange="modeSwitchingThresholdAlphaChanged(Number(this.value));">
+					</div>
 
-					<label for="noiseLevel">Noise Level: <span id="noiseLevelDisplay"></span></label>
-					<input type="range" class="form-control slider" id="noiseLevel" min="0" max="10" value="1.5" step="0.1" onchange="randomNoiseLevelChanged(Number(this.value));">
-
+					<div class="col col-lg-3">
+						<button class="btn btn-danger" type="button" onclick="initiateForcedModeSwitch();" id="forcedModeSwitchButton">Boost</button>
+					</div>
 				</div>
+        		
 
-				<div>
-					<h5>Boosting Menu:</h5>
-					<label for="boostingActivatedCheckBox">Boosting activated: </label>
-            		<input type="checkbox" id="boostingActivatedCheckBox" onchange="boostingActivated();">
+        		
+        		<div class="row">
+        			<div class="col col-lg-8">
+        				<h6>Best cost found so far:</h6>
+        				 <h6> J<sub>min</sub>: <span id="bestCostFoundSoFar"></span></h6>
+        			</div>
 
-            		<label for="boostingCoefficientAlpha">Boosting coefficient &alpha;: <span id="boostingCoefficientAlphaDisplay"></span></label>
-            		<input type="range" class="form-control slider" id="boostingCoefficientAlpha" min="0" max="10" value="0.5" step="0.01" onchange="boostingCoefficientAlphaChanged(Number(this.value));">
-            		
-            		<h6>Best cost (J) found so far: <span id="bestCostFoundSoFar"></span></h6>
-            		<button class="btn btn-danger" type="button" onclick="rollbackToBestPerformingThresholdsFoundSoFar();">Rollback !
-					</button> 
+        			<div class="col col-lg-4">
+        				<button class="btn btn-danger" type="button" onclick="rollbackToBestPerformingThresholdsFoundSoFar();">Rollback !
+        				</button>
+        			</div>
+        		</div>
+        		
+        		 
 
+				
+				
+				<h6>Randomly perturb thresholds:</h6>
+				<div class="row">
+					<div class="col col-lg-6">
+						<label for="noiseLevel">Noise Level: <span id="noiseLevelDisplay"></span>
+						</label>
+					</div>
+					
+					<div class="col col-lg-3">
+						<input type="range" class="form-control slider" id="noiseLevel" min="0" max="10" value="1.5" step="0.1" onchange="randomNoiseLevelChanged(Number(this.value));">
+					</div>
+
+					<div class="col col-lg-3">
+						<button class="btn btn-danger" type="button" onclick="addRandomNoiseToThresholds();">Perturb
+						</button>
+					</div>
 				</div>
+				
+
+
 			</div>	
 		</div>
 

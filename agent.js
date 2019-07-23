@@ -609,6 +609,10 @@ function Agent(x, y, r) {
         return sumVal;
     }
 
+
+
+
+
     this.findNextTarget = function(currentTargetIndex){// to find j such that R_j(t)<theta_{ij}^a
         var i = currentTargetIndex;
         var jArray = []; // set of candidate targets
@@ -670,6 +674,26 @@ function Agent(x, y, r) {
         }
 
     }
+
+
+    this.findProbableNextTarget = function(currentTargetIndex){// to find j such that R_j(t)<theta_{ij}^a
+        var i = currentTargetIndex;
+        
+        var nextTarget = i;
+        var nextTargetValue = targets[i].uncertainty; // 0
+
+        for(var j = 0; j<targets.length; j++){
+            var val = targets[j].uncertainty;
+            var pID = getPathID(i,j);
+            if( j != i && nextTargetValue>=val && paths[pID].isPermanent){
+                nextTargetValue = val;
+                nextTarget = j;    
+            }
+        }
+
+        return nextTarget;
+    }
+
 
     this.assignToTheTarget = function(targetID){
         this.position = targets[targetID].position;
