@@ -63,6 +63,8 @@ var boostingCoefficientAlpha;
 var thresholdSensitivityMagnitudes = []; // for each agent
 
 var modeSwitchingThresholdAlpha; 
+var stepSizeSelectionMethod = 0; // 0- constant, 1 -diminishing, 2- diminishing with margin for error
+var numberOfUpdateStepsCountTemp = 0;
 // end boosting related stuff
 
 
@@ -429,7 +431,8 @@ function readInitialInterface(){
     boostingCoefficientAlpha = Number(document.getElementById("boostingCoefficientAlpha").value);
     modeSwitchingThresholdAlpha = Number(document.getElementById("modeSwitchingThresholdAlpha").value);
     boostingMethod = Number(document.getElementById("boostingMethodDropdown").value);
-
+    stepSizeSelectionMethod = Number(document.getElementById("stepSizeSelectionMethodDropdown").value);
+    
     adjustNeighborhoodWidthForClusteringRange();
     targetPrioritizationPolicyChanged();
 
@@ -580,6 +583,20 @@ function modeSwitchingThresholdAlphaChanged(val){
     modeSwitchingThresholdAlpha = val;
 }
 
+function stepSizeSelectionMethodChanged(){
+    stepSizeSelectionMethod = Number(document.getElementById("stepSizeSelectionMethodDropdown").value);
+
+    if(stepSizeSelectionMethod==0){
+        consolePrint("Step size selection method: Constant with value: "+stepSize+".");
+    }else if(stepSizeSelectionMethod==1){
+        consolePrint("Step size selection method: Diminishing according to: "+stepSize+"/SQRT(k).");
+    }else if(stepSizeSelectionMethod==2){
+        consolePrint("Step size selection method: Square summable: "+stepSize+"/("+stepSize+"+k).");
+    }else{
+        consolePrint("Step size selection method: Constant with value "+stepSize+".");
+    }
+}
+
 
 function sensingRateChanged(val){
     if(agentSelectDropdownUsed){
@@ -728,7 +745,9 @@ function stepSizeChanged(){
 
     stepSize = stepSizeRaw * Math.pow(10,stepSizeMultiplier);
 
-    consolePrint("Step size of the gradient descent scheme changed to: "+stepSize+".");
+    stepSizeSelectionMethodChanged();
+
+    ////consolePrint("Step size of the gradient descent scheme changed to: "+stepSize+".");
     
     document.getElementById("stepSizeDisplay").innerHTML = stepSize.toString();
     document.getElementById("stepSizeMultiplierDisplay").innerHTML = "10<sup>"+stepSizeMultiplier+"</sup>";
@@ -753,8 +772,6 @@ function boostingMethodChanged(){
     }
 
 
-
-
 }
 
 
@@ -765,12 +782,14 @@ function initiateForcedModeSwitch(){
         document.getElementById("forcedModeSwitchButton").innerHTML = "Norm."; 
         document.getElementById("forcedModeSwitchButton").classList.add('btn-success');
         document.getElementById("forcedModeSwitchButton").classList.remove('btn-danger'); 
+        numberOfUpdateStepsCountTemp = 0;
     }else if(boostingMode == 1){
         consolePrint("Boosting Deactivated");
         boostingMode = 0;
         document.getElementById("forcedModeSwitchButton").innerHTML = "Boost";
         document.getElementById("forcedModeSwitchButton").classList.add('btn-danger');
         document.getElementById("forcedModeSwitchButton").classList.remove('btn-success');
+        numberOfUpdateStepsCountTemp = 0
     }
 }
 
@@ -1066,6 +1085,7 @@ function optimizeThresholdsOneStep(){
         boostedCostArrayToPlot = [];
         updateStepCountArray = [];
         numberOfUpdateStepsCount = 0;
+        numberOfUpdateStepsCountTemp = 0;
         // to reset from perturbations
         defaultUncertaintyRates = []; // to test boosting
         defaultSensingRates = []; // to test boosting
@@ -1085,6 +1105,8 @@ function optimizeThresholdsOneStep(){
     updateThresholdPolicy(); 
     displayThresholds();
     numberOfUpdateStepsCount = numberOfUpdateStepsCount + 1;
+    numberOfUpdateStepsCountTemp = numberOfUpdateStepsCountTemp + 1;
+
     var cost = Number(document.getElementById("simulationCost").innerHTML);
     
     updateStepCountArray.push(numberOfUpdateStepsCount);
@@ -1126,6 +1148,7 @@ function optimizeThresholds(){// use solveForIPAEstimators() iteratively to updt
         boostedCostArrayToPlot = [];
         updateStepCountArray = [];
         numberOfUpdateStepsCount = 0;
+        numberOfUpdateStepsCountTemp = 0;
 
         // to reset from perturbations
         defaultUncertaintyRates = []; // to test boosting
@@ -1146,7 +1169,21 @@ function optimizeThresholds(){// use solveForIPAEstimators() iteratively to updt
 }
 
 function updateThresholdPolicy(){
+
+
     // stepSize is a global variable
+    if(stepSizeSelectionMethod==0){//constant step
+        stepSizeValue = stepSize;
+    }else if(stepSizeSelectionMethod==1){// diminishing
+        stepSizeValue = stepSize/Math.sqrt(numberOfUpdateStepsCountTemp+1);
+    }else if(stepSizeSelectionMethod==2){
+        stepSizeValue = stepSize/(stepSize + numberOfUpdateStepsCountTemp+1);
+    }else{
+        stepSizeValue = stepSize;
+    }
+    // end step size selection
+    
+
 
     thresholdSensitivityMagnitudes = [];
     var globalSensitivityMagnitude = 0;
@@ -1156,7 +1193,7 @@ function updateThresholdPolicy(){
         for(var p = 0; p < targets.length; p++){
             var rowAbsoluteSum = 0;
             for(var q = 0; q < targets.length; q++){
-                var val = agents[z].threshold[p][q] - stepSize*agents[z].sensitivityOfThreshold[p][q];
+                var val = agents[z].threshold[p][q] - stepSizeValue*agents[z].sensitivityOfThreshold[p][q];
                 if(val<=0){
                     val = 0;
                 }else if(val>10000){
@@ -1178,8 +1215,27 @@ function updateThresholdPolicy(){
 
     }
     
+
     consolePrint("Global sensitivity magnitude: "+globalSensitivityMagnitude.toFixed(3)+".");
     
+
+    // mode switch
+    if(boostingMethod==1 && boostingMode==0 && globalSensitivityMagnitude<modeSwitchingThresholdAlpha){
+        initiateForcedModeSwitch();
+    }else if(boostingMethod==1 && boostingMode==1 && globalSensitivityMagnitude<8*modeSwitchingThresholdAlpha){
+        initiateForcedModeSwitch();
+    }
+
+    if(boostingMethod==2 && boostingMode==0 && globalSensitivityMagnitude<modeSwitchingThresholdAlpha){
+        initiateForcedModeSwitch();
+    }else if(boostingMethod==2 && boostingMode==1 && (globalSensitivityMagnitude<8*modeSwitchingThresholdAlpha || numberOfUpdateStepsCountTemp>5)){
+        initiateForcedModeSwitch();
+    }
+
+
+
+
+
 }
 
 

@@ -110,6 +110,7 @@ function draw() {
             updateThresholdPolicy(); 
             displayThresholds();
             numberOfUpdateStepsCount = numberOfUpdateStepsCount + 1;
+            numberOfUpdateStepsCountTemp = numberOfUpdateStepsCountTemp + 1;
             var cost = Number(document.getElementById("simulationCost").innerHTML);
             updateStepCountArray.push(numberOfUpdateStepsCount);
 
