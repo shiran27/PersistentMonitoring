@@ -7,6 +7,9 @@ var canvas;
 var width;
 var height;
 
+
+var saveSketch = false;
+
 function setup() {
   	
 
@@ -186,6 +189,21 @@ function draw() {
 
 
     
+
+    /// for J3 saving canvas
+
+    if(RGCComputingMode==3){
+               //save(); 
+        if(cycleGenerationMethod){
+
+            //save();
+        }
+    }
+
+    if(saveSketch){
+        ////save();
+        saveSketch   = false;
+    }
 
 
 

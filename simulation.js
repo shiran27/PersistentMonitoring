@@ -86,6 +86,8 @@ var targetClusters = [];
 var interClusterPaths = [];
 var numberOfKMeansIterations;
 
+var blockingThreshold = 100;
+
 
 function startModifyingProbConfig(){
 
@@ -408,6 +410,8 @@ function updateInterface(){
         document.getElementById("bestCostFoundSoFar").innerHTML = bestCostFoundSoFar.toFixed(3);
         document.getElementById("boostingCoefficientAlphaDisplay").innerHTML = boostingCoefficientAlpha.toFixed(3);
         document.getElementById("modeSwitchingThresholdAlphaDisplay").innerHTML = modeSwitchingThresholdAlpha.toFixed(3);
+        
+        document.getElementById("blockingThresholdDisplay").innerHTML = blockingThreshold.toFixed(2);
 
     }
 
@@ -433,6 +437,8 @@ function readInitialInterface(){
     boostingMethod = Number(document.getElementById("boostingMethodDropdown").value);
     stepSizeSelectionMethod = Number(document.getElementById("stepSizeSelectionMethodDropdown").value);
     
+    blockingThreshold = Number(document.getElementById("blockingThreshold").value);
+
     adjustNeighborhoodWidthForClusteringRange();
     targetPrioritizationPolicyChanged();
 
@@ -581,6 +587,13 @@ function boostingCoefficientAlphaChanged(val){
 function modeSwitchingThresholdAlphaChanged(val){
     consolePrint("Mode switching (i.e. between: Normal and Boosting) threshold changed to "+val+".");
     modeSwitchingThresholdAlpha = val;
+}
+
+function blockingThresholdChanged(val){
+    consolePrint("Blocking threshold changed to "+val+".");
+
+    blockingThreshold = val;
+    generateThresholdsFromRoutes();
 }
 
 function stepSizeSelectionMethodChanged(){
@@ -1503,6 +1516,22 @@ function problemConfigurationChanged(){
         addAnAgentAtTarget(8);
         finishModifyingProbConfig();
 
+    }else if(r==7.5){
+        removeAll();
+        startModifyingProbConfig();
+        addATargetAt(110,50);
+        addATargetAt(530,110);
+        addATargetAt(480,510);
+        addATargetAt(60,470);
+        addATargetAt(250,220);
+        addATargetAt(350,250);
+        addATargetAt(320,350);
+        addATargetAt(220,320);
+        disconnectAllPaths();
+        connectPathsBetween([0,1,1,2,2,3,0,3,0,4,1,5,2,6,3,7,4,5,5,6,6,7,7,4,0,7,1,4,2,5,3,6,4,6,5,7,4,7]);
+        addAnAgentAtTarget(0);
+        finishModifyingProbConfig();
+
     }else if(r==7){
         removeAll();
         startModifyingProbConfig();
@@ -1579,6 +1608,25 @@ function problemConfigurationChanged(){
         addAnAgentAtTarget(0);
         addAnAgentAtTarget(4);
         addAnAgentAtTarget(8);
+        finishModifyingProbConfig();
+    }else if(r==3.75){
+        removeAll();
+        startModifyingProbConfig();
+        addATargetAt(40,370);
+        addATargetAt(130,480);
+        addATargetAt(240,540);
+        addATargetAt(400,480);
+        addATargetAt(500,370);
+        addATargetAt(470,210);
+        addATargetAt(340,100);
+        addATargetAt(160,80);
+        addATargetAt(60,140);
+        disconnectAllPaths();
+        document.getElementById('maximumPathLength').value = 240;
+        maximumPathLengthChanged();
+        addAnAgentAtTarget(0);
+        addAnAgentAtTarget(3);
+        addAnAgentAtTarget(6);
         finishModifyingProbConfig();
     }else if(r==3.5){
         removeAll();

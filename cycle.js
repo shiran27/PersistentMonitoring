@@ -132,6 +132,8 @@ function Cycle(agentID,targetSet){
 			this.targetList = [this.allowedTargetList[0]];
 			this.meanUncertainty = 0;
 		}
+
+		////saveSketch = true;
 	}
 
 
@@ -919,7 +921,7 @@ function Cycle(agentID,targetSet){
 	// threshold based on TSP
 	this.computeThresholds = function(transientPath){
 
-		var blockingThreshold = 1000;
+		////var blockingThreshold = 100;
 	    // biase the threshods
 	    var agentID = this.deployedAgent;
 	    if(cycles.length==0){
@@ -981,7 +983,7 @@ function Cycle(agentID,targetSet){
 
 	this.computeThresholdsAdvanced = function(transientPath){
 
-		var blockingThreshold = 1000;
+		////var blockingThreshold = 100;
 
 
 	    // biase the threshods
@@ -2264,6 +2266,7 @@ function initiateComputingRefinedGreedyCycles(){
 		cycles[j].RGCComputingMode = 1;  //start iteratively evolving the cycles
 	}
 
+	////RGCComputingMode = 1.5; // global variable
 	RGCComputingMode = 1; // global variable
 	
 }

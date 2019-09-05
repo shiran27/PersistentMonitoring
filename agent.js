@@ -618,7 +618,11 @@ function Agent(x, y, r) {
         var jArray = []; // set of candidate targets
         for(var j = 0; j<targets.length; j++){
             if( j != i && targets[j].uncertainty > this.threshold[i][j]){
-                jArray.push(j);    
+                //print(paths[getPathID(i,j)].isPermanent)
+                if(paths[getPathID(i,j)].isPermenent){
+                    jArray.push(j);        
+                }
+                
             }
         }
 
@@ -669,8 +673,7 @@ function Agent(x, y, r) {
             }else{
                 return minDistanceTargetIndex;
             }
-            
-
+          
         }
 
     }

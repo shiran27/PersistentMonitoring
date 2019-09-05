@@ -139,10 +139,12 @@
 					    	<option value="2.5">1-Agent(5T)</option>
 					    	<option value="3">1-Agent(4T)</option>
 					    	<option value="3.5">1-Agent(9T)</option>
+					    	<option value="3.75">1-Agent(9T)R</option>
 					    	<option value="4">3-Agent(9T)</option>
 					    	<option value="5">3-Agent(Maze)</option>
 					    	<option selected value="6">3-Agent(General)</option>
 					    	<option value="7">3-Agent(Room)</option>
+					    	<option value="7.5">1-Agent(Room)</option>
 					    	<option value="8">3-Agent(Blank)</option>
 					    	<option value="9">Random</option>
 					  	</select> 
@@ -468,8 +470,8 @@
 					<div class="col col-lg-6">
 						<label for="boostingMethodDropdown">Boosting method:</label>
 						<select class="form-control custom-select" id="boostingMethodDropdown" onchange="boostingMethodChanged()">
-	        				<option value="0">Disabled</option>
-					    	<option selected value="1">Neighbor</option>
+	        				<option selected value="0">Disabled</option>
+					    	<option value="1">Neighbor</option>
 					    	<option value="2">Arc</option>
 					    	<option value="3">Random</option>
 						</select> 
@@ -477,8 +479,8 @@
 					<div class="col col-lg-6">
 						<label for="stepSizeSelectionMethodDropdown">Step sizes:</label>
 						<select class="form-control custom-select" id="stepSizeSelectionMethodDropdown" onchange="stepSizeSelectionMethodChanged()">
-	        				<option selected value="0">Constant</option>
-					    	<option value="1">Diminishing</option>
+	        				<option value="0">Constant</option>
+					    	<option selected value="1">Diminishing</option>
 					    	<option value="2">Sq. Summable</option>
 					    </select>
 					</div>	
@@ -631,6 +633,17 @@
 	            		<label for="maximumUncertaintyPolicyCheckBox">Maximum Uncertainty: </label>
 	            		<input type="checkbox" checked id="maximumUncertaintyPolicyCheckBox" onchange="targetPrioritizationPolicyChanged();">
 	            	</div>
+            	</div>
+
+            	<div class="row">
+            		<div class="col col-lg-4">
+						<label for="blockingThreshol">Blocking Threshold: <span id="blockingThresholdDisplay"></span>
+						</label>
+					</div>
+					
+					<div class="col col-lg-8">
+						<input type="range" class="form-control slider" id="blockingThreshold" min="0" max="1000" value="100" step="0.1" onchange="blockingThresholdChanged(Number(this.value));">
+					</div>
             	</div>
 					
 				
