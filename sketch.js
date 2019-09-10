@@ -117,21 +117,21 @@ function draw() {
             var cost = Number(document.getElementById("simulationCost").innerHTML);
             updateStepCountArray.push(numberOfUpdateStepsCount);
 
-            if(boostingMode==0){
+            var justSwitched = numberOfUpdateStepsCount>1 && numberOfUpdateStepsCountTemp == 1;
+
+            if(boostingMode==0 && !justSwitched){
                 costArrayForPlot.push(cost);
                 consolePrint("Iteration "+ numberOfUpdateStepsCount+ " completed. Cost: "+cost+".");
-            
                 boostedCostArrayToPlot.push(NaN);
             }else{// in boosting mode!
                 var mappedCost = cost;
-                if(cost>worstCostFoundSoFar){ // upper bound threshold so that plot wont be distorted
-                    mappedCost = worstCostFoundSoFar;
-                }else if(cost<bestCostFoundSoFar){
-                    mappedCost = bestCostFoundSoFar;
-                }
+                // if(cost>worstCostFoundSoFar){ // upper bound threshold so that plot wont be distorted
+                //     mappedCost = worstCostFoundSoFar;
+                // }else if(cost<bestCostFoundSoFar){
+                //     mappedCost = bestCostFoundSoFar;
+                // }
                 boostedCostArrayToPlot.push(mappedCost);
                 consolePrint("Iteration "+ numberOfUpdateStepsCount+ " completed (while in boosting mode). Cost: "+cost+".");                
-                
                 costArrayForPlot.push(NaN);
             }
             plotData();

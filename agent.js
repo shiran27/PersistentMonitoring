@@ -66,8 +66,14 @@ function Agent(x, y, r) {
     this.updateIPA = function(){
         // update the agent position s_a(t) of agent a
         if(this.residingTarget.length==1){//residing in some target - agent in stationary mode
+            
             var i = this.residingTarget[0];
-            var nextTarget = this.findNextTarget(i);
+            if(boostingMethod==4 && boostingMode==1){
+                var nextTarget = this.findNextTargetSplitBoost(i);
+            }else{
+                var nextTarget = this.findNextTarget(i);
+            }
+
 
 
             // event printing
@@ -145,6 +151,7 @@ function Agent(x, y, r) {
             }
 
         }else{// going from T_i to T_j (as this.residingTarget = [T_i, T_j]) 
+
             ////print("travelling i to j");
             this.position = plusP2(this.position, this.headingDirectionStep);
             var i = this.residingTarget[0];
@@ -362,6 +369,8 @@ function Agent(x, y, r) {
                 this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
                 this.position = plusP2(this.position, this.headingDirectionStep);
                 this.orientation = headingAngle;
+
+                if(dataPlotMode){recordSystemState();}// agent Started Moving towards a new target
             }
         }else{// going from T_i to T_j (as this.residingTarget = [T_i, T_j]) 
             ////print("travelling i to j");
@@ -369,6 +378,9 @@ function Agent(x, y, r) {
             if(distP2(this.position,targets[this.residingTarget[0]].position)>distP2(targets[this.residingTarget[1]].position,targets[this.residingTarget[0]].position)){
                 this.position = targets[this.residingTarget[1]].position;
                 this.residingTarget = [this.residingTarget[1]]; 
+
+                if(dataPlotMode){recordSystemState();}// record agent reached destination target event
+            
             }
         }
     }
@@ -611,8 +623,6 @@ function Agent(x, y, r) {
 
 
 
-
-
     this.findNextTarget = function(currentTargetIndex){// to find j such that R_j(t)<theta_{ij}^a
         var i = currentTargetIndex;
         var jArray = []; // set of candidate targets
@@ -677,6 +687,104 @@ function Agent(x, y, r) {
         }
 
     }
+
+
+
+    this.findNextTargetSplitBoost = function(currentTargetIndex){// to find j such that R_j(t)<theta_{ij}^a
+        
+        var i = currentTargetIndex;
+        var nextTargetOfThis = this.findNextTarget(i);
+
+        //// split begin
+        var otherAgentsReadyToLeaveForSameTarget = [];
+        for(var a = 0; a<agents.length; a++){
+            if(agents[a].residingTarget[0]==i && a<this.id){// target is being shared with a dominent neighbor 
+                var j = agents[a].findNextTarget(i);
+                if(targets[i].uncertainty < agents[a].threshold[i][i] && nextTargetOfThis==j){
+                    otherAgentsReadyToLeaveForSameTarget.push(a);
+                }
+            }
+        }
+        // if(otherAgentsReadyToLeaveForSameTarget.length>0){
+        //     //print("This: "+this.id+" , followed by: "+otherAgentsReadyToLeaveForSameTarget);    
+        // }
+        //print("Length = "+residingAgentsInTarget.length);
+        //// split end
+
+
+        
+        var jArray = []; // set of candidate targets
+        for(var j = 0; j<targets.length; j++){
+            if( j != i && targets[j].uncertainty > this.threshold[i][j]){
+                //print(paths[getPathID(i,j)].isPermanent)
+                if(paths[getPathID(i,j)].isPermenent){
+                    if(nextTargetOfThis==j && otherAgentsReadyToLeaveForSameTarget.length>0){
+                        this.threshold[i][j] = boostingCoefficientAlpha*targets[j].uncertainty + (1-boostingCoefficientAlpha)*this.threshold[i][j];// +  boostingCoefficientAlpha;
+                         
+                        // cannot go to j !!!!
+                    }else{
+                        jArray.push(j);    // j is an available option         
+                    }
+                    
+                }
+                
+            }
+        }
+
+        if(jArray.length==0){// no need to go to a neighbor
+            return i;
+        }else if(jArray.length == 1){
+            ////print("Goto j");
+            return jArray[0];
+        }else{
+            ////print("Need a tie breaker");
+
+            // minimum distance tie breaker
+            var minDistanceTargetIndex = jArray[0];
+            var minDistanceFound = 10000;
+            for(var k = 0; k < jArray.length; k++){
+                var j = jArray[k];
+                var distance_ij = distP2(targets[i].position,targets[j].position);
+                if(distance_ij<minDistanceFound){
+                    minDistanceFound = distance_ij;
+                    minDistanceTargetIndex = j;
+                }
+            }
+            //return minDistanceTargetIndex;
+            // end minimum distance tie breaker
+
+            // maximum uncertainty tie breaker?
+            var maxUncertaintyTargetIndex = jArray[0];
+            var maxUncertaintyFound = 0;
+            for(var k = 0; k < jArray.length; k++){
+                var j = jArray[k];
+                var uncertaintyLevel = targets[j].uncertainty;
+                if(uncertaintyLevel>maxUncertaintyFound){
+                    maxUncertaintyFound = uncertaintyLevel;
+                    maxUncertaintyTargetIndex = j;
+                }
+            }
+           //return maxUncertaintyTargetIndex;
+            // end maximum uncertainty tie breaker?
+
+            if(targetPrioritizationPolicy==3){
+                if(Math.random()>0.5){
+                    return minDistanceTargetIndex;
+                }else{
+                    return maxUncertaintyTargetIndex;
+                }    
+            }else if(targetPrioritizationPolicy==2){
+                return maxUncertaintyTargetIndex;
+            }else{
+                return minDistanceTargetIndex;
+            }
+          
+        }
+
+    }
+
+
+
 
 
     this.findProbableNextTarget = function(currentTargetIndex){// to find j such that R_j(t)<theta_{ij}^a

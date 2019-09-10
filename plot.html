@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+
+
+	<meta charset="UTF-8">
+	<meta name=viewport content=width=device-width,user-scalable=no,initial-scale=1>
+
+	<link rel="icon" href="Coverage.jpg">
+	<title>Plots</title>
+
+	<script src="plot.js"></script>
+	
+	<script src="libraries/plotly-latest.min.js"></script>
+	<script src="libraries/fontawesome.js"></script>
+
+	<link rel="stylesheet" type="text/css" href="libraries/bootstrap.min.css">
+    <link rel="stylesheet" href="style.css">
+
+
+</head>
+
+
+<body>
+
+	<div class="container">
+		<div class="jumbotron">
+			
+			<h2 align="center">
+				<i class="fa fa-area-chart" aria-hidden="true"></i>
+				<i class="fa fa-line-chart" aria-hidden="true"></i>
+				<!-- <i class="fa fa-stack-exchange" aria-hidden="true"></i> -->
+				<i class="fa fa-bar-chart" aria-hidden="true"></i>
+				<!-- <i class="fa fa-clock-o" aria-hidden="true"></i>
+				<i class="fa fa-battery-quarter" aria-hidden="true"></i> -->
+			</h2>
+	        
+	        <h2 align="center">Related Plots</h2>
+			
+		</div>
+	</div>
+
+
+	<div class="container">
+
+		<div class="row">
+			
+			<div class="col col-lg-2">
+				<button class="btn btn-success" type="button" onclick="plotTargetStateData();">Plot target state data</button> 
+			</div>
+
+			<div class="col col-lg-2">
+				<button class="btn btn-primary" type="button" onclick="customizeTargetSelection(1);">Select All</button> 
+				<button class="btn btn-danger" type="button" onclick="customizeTargetSelection(0);">Deselect All</button> 
+			</div>
+
+			<div class="col col-lg-7" id="targetSelectCheckBoxes"></div>
+
+			<div class="col col-lg-1">
+				<label for="meanUncertaintyDisplay">J = <span id="meanUncertaintyDisplay"></span></label>
+			</div>
+
+
+
+			<div class="col col-lg-12">
+				<div id="targetStateDataPlotHolder"></div>
+			</div>
+
+		</div> 
+
+
+
+		<div class="row">
+			<hr>
+		</div>
+
+
+
+		<div class="row">
+			
+			<div class="col col-lg-2">
+				<button class="btn btn-success" type="button" onclick="plotAgentStateData();">Plot agent state data</button> 
+			</div>
+
+			<div class="col col-lg-2">
+				<button class="btn btn-primary" type="button" onclick="customizeAgentSelection(1);">Select All</button> 
+				<button class="btn btn-danger" type="button" onclick="customizeAgentSelection(0);">Deselect All</button> 
+			</div>
+
+			<div class="col col-lg-8" id="agentSelectCheckBoxes"></div>
+			
+			
+
+			<div class="col col-lg-12">
+				<div id="agentStateDataPlotHolder"></div>
+			</div>
+			
+
+		</div> 
+	</div>
+
+
+	<div class="container">
+		
+		<div class="row">
+			
+			<div class="col col-lg-6" id="derivativePlotsParent">
+
+				<!-- <div class="col col-lg-12">
+					<div id="myPlot1" style="width:600px;height:250px;"></div>
+				</div> -->
+							
+			</div>
+
+			<div class="col col-lg-6" id="betaPlotsParent">
+				
+				<!-- <div class="col col-lg-12">
+					<div id="myPlot1" style="width:600px;height:250px;"></div>
+				</div> -->
+
+			</div>
+
+		</div>
+
+	</div>
+
+
+
+		<!-- <script>
+			var graph1 = document.getElementById('myPlot');
+			var data1 = localStorage.getItem('key1');
+
+			var plotLayout = {
+				title: 'Coverage Cost Increment Vs Iteration Number', 
+				autosize: true,
+			    width: 500,
+			    height: 300,
+			    xaxis: {
+					title: 'Iteration Number', 
+					showline: true,
+					showgrid: true, 
+					zeroline: true,
+				}, 
+				yaxis: {
+					title: 'Cost Increment', 
+				    showline: true,
+				    showgrid: true,
+				    zeroline: true,
+				}
+			}
+			Plotly.newPlot(graph1, data1, plotLayout,{displayModeBar: false});
+			
+		</script> -->
+
+	<!-- plotting -->
+
+	
+
+
+	<!-- just have these two lines  all the time-->
+	<script src="https://code.jquery.com/jquery-3.3.1.js"
+	  integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
+	  crossorigin="anonymous"></script>
+
+	<script type="text/javascript" src="libraries/bootstrap.min.js"></script>
+	<!-- <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script> -->
+
+
+</body>
+</html>

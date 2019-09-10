@@ -470,10 +470,11 @@
 					<div class="col col-lg-6">
 						<label for="boostingMethodDropdown">Boosting method:</label>
 						<select class="form-control custom-select" id="boostingMethodDropdown" onchange="boostingMethodChanged()">
-	        				<option selected value="0">Disabled</option>
+	        				<option value="0">Disabled</option>
 					    	<option value="1">Neighbor</option>
 					    	<option value="2">Arc</option>
 					    	<option value="3">Random</option>
+					    	<option selected value="4">Split</option>
 						</select> 
 					</div>
 					<div class="col col-lg-6">
@@ -490,11 +491,13 @@
 
 				<div class="row">
 					<div class="col col-lg-6">
-						<label for="boostingCoefficientAlpha">Boosting coefficient &alpha;<sub>B</sub>: <span id="boostingCoefficientAlphaDisplay"></span>
+						<label for="boostingCoefficientAlpha">Boosting coefficient &alpha;<sub>B</sub>: 
+							<!-- <span id="boostingCoefficientAlphaDisplay"></span> -->
 						</label>
 					</div>
 					<div class="col col-lg-6">
-						<input type="range" class="form-control slider" id="boostingCoefficientAlpha" min="0" max="10" value="0.5" step="0.01" onchange="boostingCoefficientAlphaChanged(Number(this.value));">
+						<input class="form-control" id="boostingCoefficientAlpha" type="text" value="0.5" onchange="boostingCoefficientAlphaChanged(Number(this.value));">
+						<!-- <input type="range" class="form-control slider" id="boostingCoefficientAlpha" min="0" max="10" value="0.5" step="0.01" onchange="boostingCoefficientAlphaChanged(Number(this.value));"> -->
 					</div>
 				</div>
         		
@@ -502,12 +505,13 @@
         		<div class="row">
 					<div class="col col-lg-6">
 						<label for="modeSwitchingThresholdAlpha">Switching threshold &alpha;<sub>S</sub>: 
-							<span id="modeSwitchingThresholdAlphaDisplay"></span>
+							<!-- <span id="modeSwitchingThresholdAlphaDisplay"></span> -->
 						</label>
 					</div>
 					
 					<div class="col col-lg-3">
-						<input type="range" class="form-control slider" id="modeSwitchingThresholdAlpha" min="0.01" max="1" value="0.25" step="0.01" onchange="modeSwitchingThresholdAlphaChanged(Number(this.value));">
+						<input class="form-control" id="modeSwitchingThresholdAlpha" type="text" value="0.1" onchange="modeSwitchingThresholdAlphaChanged(Number(this.value));">
+						<!-- <input type="range" class="form-control slider" id="modeSwitchingThresholdAlpha" min="0.01" max="1" value="0.25" step="0.01" onchange="modeSwitchingThresholdAlphaChanged(Number(this.value));"> -->
 					</div>
 
 					<div class="col col-lg-3">
@@ -635,6 +639,7 @@
 	            	</div>
             	</div>
 
+            	<h5>Threshold generation (from cycles) parameter:</h5>
             	<div class="row">
             		<div class="col col-lg-4">
 						<label for="blockingThreshol">Blocking Threshold: <span id="blockingThresholdDisplay"></span>
@@ -644,6 +649,14 @@
 					<div class="col col-lg-8">
 						<input type="range" class="form-control slider" id="blockingThreshold" min="0" max="1000" value="100" step="0.1" onchange="blockingThresholdChanged(Number(this.value));">
 					</div>
+            	</div>
+
+            	<h5>More detailed data plots:</h5>
+            	<div class="row">
+	            	<div class="col col-lg-8">
+	            		<label for="dataPlotModeCheckBox">Generate Additional Data plots: </label>
+	            		<input type="checkbox" id="dataPlotModeCheckBox" onchange="dataPlotModeChanged();" checked>
+	            	</div>
             	</div>
 					
 				

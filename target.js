@@ -83,7 +83,7 @@ function Target(x, y, r) {
     this.updateIPA = function(){
         // update uncertainty values R_i(t) of target i
         
-        if(boostingMode==0){ // normal mode
+        if(boostingMode==0 || boostingMethod==3 || boostingMethod==4){ // normal mode
             
             var netAgentSensingRate = this.getNetAgentSensingRate(); 
             var netUncertaintyGrowthRate = this.uncertaintyRate - netAgentSensingRate;
@@ -115,7 +115,7 @@ function Target(x, y, r) {
             // since we are running one whole simulation at a time, re do not need the running-mean value
             this.meanUncertainty = this.meanUncertainty + this.uncertainty;
         
-        }else if(boostingMethod == 2 && boostingMode==1){ // neighbor boosting is used and is in boosting mode
+        }else if(boostingMethod == 2 && boostingMode==1){ // arc boosting is used and is in boosting mode
             
             var answer = this.getNetAgentSensingRateArcBoosted();
          
@@ -161,6 +161,8 @@ function Target(x, y, r) {
             this.uncertainty = this.uncertainty + netUncertaintyGrowthRate*deltaT;
             if(this.uncertainty<0){
                 this.uncertainty = 0;
+
+                if(dataPlotMode){recordSystemState();}// target uncertainty reached zero event
             }
         }
         
@@ -267,9 +269,6 @@ function Target(x, y, r) {
 
 
         // boosting part 2
-
-        
-        
         return [sumValue, agentCount, resAgent];
         
     }
@@ -279,8 +278,7 @@ function Target(x, y, r) {
         
         var q = agents[a].findProbableNextTarget(this.id);
         var p = this.id;
-        agents[a].threshold[p][q] = 0;    
-        
+        agents[a].threshold[p][q] = 0;      
         
     }
 

@@ -88,6 +88,13 @@ var numberOfKMeansIterations;
 
 var blockingThreshold = 100;
 
+// data plotting needs to be done for period [0,T] 
+var dataPlotMode = false;
+var agentStateData = []; // NxE matrix residing target label at different times 
+var targetStateData = []; // MxE target uncertainty levels at each event time
+var eventTimeData = [];
+
+
 
 function startModifyingProbConfig(){
 
@@ -408,8 +415,8 @@ function updateInterface(){
         document.getElementById("neighborhoodWidthForClusteringDisplay").innerHTML = neighborhoodWidthForClustering.toString();
     
         document.getElementById("bestCostFoundSoFar").innerHTML = bestCostFoundSoFar.toFixed(3);
-        document.getElementById("boostingCoefficientAlphaDisplay").innerHTML = boostingCoefficientAlpha.toFixed(3);
-        document.getElementById("modeSwitchingThresholdAlphaDisplay").innerHTML = modeSwitchingThresholdAlpha.toFixed(3);
+        //document.getElementById("boostingCoefficientAlphaDisplay").innerHTML = boostingCoefficientAlpha.toFixed(3);
+        //document.getElementById("modeSwitchingThresholdAlphaDisplay").innerHTML = modeSwitchingThresholdAlpha.toFixed(3);
         
         document.getElementById("blockingThresholdDisplay").innerHTML = blockingThreshold.toFixed(2);
 
@@ -418,6 +425,7 @@ function updateInterface(){
 }
 
 function readInitialInterface(){
+
     deltaT = Number(document.getElementById("deltaT").value);
     periodT = Number(document.getElementById("periodT").value);
     stepSize = Number(document.getElementById("stepSize").value)*Math.pow(10,Number(document.getElementById("stepSizeMultiplier").value));
@@ -432,6 +440,8 @@ function readInitialInterface(){
     neighborhoodWidthForClustering = Number(document.getElementById("neighborhoodWidthForClustering").value);
     numberOfKMeansIterations = Number(document.getElementById("numOfKMeansIterations").value);
     
+
+    boostingMethodChanged();
     boostingCoefficientAlpha = Number(document.getElementById("boostingCoefficientAlpha").value);
     modeSwitchingThresholdAlpha = Number(document.getElementById("modeSwitchingThresholdAlpha").value);
     boostingMethod = Number(document.getElementById("boostingMethodDropdown").value);
@@ -441,6 +451,9 @@ function readInitialInterface(){
 
     adjustNeighborhoodWidthForClusteringRange();
     targetPrioritizationPolicyChanged();
+
+    dataPlotMode = document.getElementById("dataPlotModeCheckBox").checked;
+    dataPlotModeChanged();
 
 }
 
@@ -673,23 +686,46 @@ function targetPrioritizationPolicyChanged(){
 }
 
 function  cycleGenerationMethodChanged(){
+
+    cycleGenerationMethod = document.getElementById("cycleGenerationMethod").checked;
+    
     if(cycleGenerationMethod){
-        consolePrint("Multiple visits to an any target during the cycle is not allowed!");
-        cycleGenerationMethod = false;
-    }else{
         consolePrint("Multiple visits to an any target during the cycle is allowed!");
-        cycleGenerationMethod = true;
+    }else{
+        consolePrint("Multiple visits to an any target during the cycle is not allowed!");
     }
 }
 
 
 function  thresholdGenerationMethodChanged(){
+    
+    thresholdGenerationMethod = document.getElementById("thresholdGenerationMethod").checked;
+
     if(thresholdGenerationMethod){
-        consolePrint("Thresholds will be selected from the set {0,100,10000}.");
-        thresholdGenerationMethod = false;
-    }else{
         consolePrint("Thresholds (for the cycles found) will be selected according to the steady state theoretical results!");
-        thresholdGenerationMethod = true;
+    }else{
+        consolePrint("Thresholds will be selected from the set {0, Blocking Threshold, 10000}.");
+    }
+}
+
+function  dataPlotModeChanged(){
+    dataPlotMode = document.getElementById("dataPlotModeCheckBox").checked;
+    if(dataPlotMode){
+
+        targetStateData = [];
+        for(var i = 0; i<targets.length; i++){
+            targetStateData.push([]);
+        }
+        
+        agentStateData = [];
+        for(var a = 0; a<agents.length; a++){
+            agentStateData.push([]);
+        }
+
+        eventTimeData = [];
+        consolePrint("Enabled generation of additional data plots.");
+    }else{
+        consolePrint("Disabled generation of additional data plots.");        
     }
 }
 
@@ -779,9 +815,16 @@ function boostingMethodChanged(){
     if(boostingMethod==0){
         consolePrint("No boosting method will be used.");
     }else if(boostingMethod==1){
+        document.getElementById('boostingCoefficientAlpha').value = '0.5';
         consolePrint("Neighbor boosting method will be used.");
     }else if(boostingMethod==2){
-        consolePrint("Arc-boosting method will be used.")
+        document.getElementById('boostingCoefficientAlpha').value = '0.5';
+        consolePrint("Arc-boosting method will be used.");
+    }else if(boostingMethod==3){
+        consolePrint("Random Perturbation method will be used.");
+    }else if(boostingMethod==4){
+        document.getElementById('boostingCoefficientAlpha').value = '0.3';
+        consolePrint("Split Boosting method will be used.");
     }
 
 
@@ -827,6 +870,8 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
     simulationMode = 2;
     simulationTime = 0;
     discreteTimeSteps = 0;
+
+    dataPlotModeChanged(); // to reset the data arrays
 
 
     for(var i = 0; i<targets.length; i++){// rest targets
@@ -876,11 +921,38 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
     document.getElementById("simulationTime").innerHTML = simulationTime.toFixed(2).toString();
     document.getElementById("simulationCost").innerHTML = meanUncertainty.toFixed(3).toString();
 
-
     print("Cost : "+meanUncertainty);
     simulationMode = 0;
 
+    if(dataPlotMode){
+        plotAdditionalData(meanUncertainty);
+    }
+
 }
+
+
+
+function recordSystemState(){
+
+    for(var i = 0; i<targets.length; i++){
+        targetStateData[i].push(targets[i].uncertainty);
+    }
+    
+    for(var a = 0; a<agents.length; a++){
+        agentStateData[a].push(agents[a].residingTarget[0]+1);
+        // if(agents[a].residingTarget.length==1){
+        //     agentStateData[a].push(agents[a].residingTarget[0]+1);
+        // }else{
+        //     agentStateData[a].push(NaN);
+        // }
+    }
+
+    eventTimeData.push(simulationTime);
+
+}
+
+
+
 
 
 function solveForIPAEstimators(){ // run the hybrid system for time T period (without displaying agent movements) and get the IPA estimtors
@@ -1119,23 +1191,22 @@ function optimizeThresholdsOneStep(){
     displayThresholds();
     numberOfUpdateStepsCount = numberOfUpdateStepsCount + 1;
     numberOfUpdateStepsCountTemp = numberOfUpdateStepsCountTemp + 1;
-
     var cost = Number(document.getElementById("simulationCost").innerHTML);
-    
     updateStepCountArray.push(numberOfUpdateStepsCount);
 
-    if(boostingMode==0){
+    var justSwitched = numberOfUpdateStepsCount>1 && numberOfUpdateStepsCountTemp == 1;
+
+    if(boostingMode==0 && !justSwitched){
         costArrayForPlot.push(cost);
         consolePrint("Iteration "+ numberOfUpdateStepsCount+ " completed. Cost: "+cost+".");
-    
         boostedCostArrayToPlot.push(NaN);
     }else{// in boosting mode!
         var mappedCost = cost;
-        if(cost>worstCostFoundSoFar){ // upper bound threshold so that plot wont be distorted
-            mappedCost = worstCostFoundSoFar;
-        }else if(cost<bestCostFoundSoFar){
-            mappedCost = bestCostFoundSoFar;
-        }
+        // if(cost>worstCostFoundSoFar){ // upper bound threshold so that plot wont be distorted
+        //     mappedCost = worstCostFoundSoFar;
+        // }else if(cost<bestCostFoundSoFar){
+        //     mappedCost = bestCostFoundSoFar;
+        // }
         boostedCostArrayToPlot.push(mappedCost);
         consolePrint("Iteration "+ numberOfUpdateStepsCount+ " completed (while in boosting mode). Cost: "+cost+".");                
         
@@ -1235,16 +1306,30 @@ function updateThresholdPolicy(){
     // mode switch
     if(boostingMethod==1 && boostingMode==0 && globalSensitivityMagnitude<modeSwitchingThresholdAlpha){
         initiateForcedModeSwitch();
-    }else if(boostingMethod==1 && boostingMode==1 && globalSensitivityMagnitude<8*modeSwitchingThresholdAlpha){
+    }else if(boostingMethod==1 && boostingMode==1 && globalSensitivityMagnitude<10*modeSwitchingThresholdAlpha){
         initiateForcedModeSwitch();
     }
 
     if(boostingMethod==2 && boostingMode==0 && globalSensitivityMagnitude<modeSwitchingThresholdAlpha){
         initiateForcedModeSwitch();
-    }else if(boostingMethod==2 && boostingMode==1 && (globalSensitivityMagnitude<8*modeSwitchingThresholdAlpha || numberOfUpdateStepsCountTemp>5)){
+    }else if(boostingMethod==2 && boostingMode==1 && (globalSensitivityMagnitude<10*modeSwitchingThresholdAlpha || numberOfUpdateStepsCountTemp>10)){
         initiateForcedModeSwitch();
     }
 
+    if(boostingMethod==3 && boostingMode==0 && globalSensitivityMagnitude<modeSwitchingThresholdAlpha){
+        addRandomNoiseToThresholds();
+        initiateForcedModeSwitch();
+    }else if(boostingMethod==3 && boostingMode==1 && numberOfUpdateStepsCountTemp == 1 ){
+        initiateForcedModeSwitch();
+        //addRandomNoiseToThresholds();
+    }
+
+    if(boostingMethod==4 && boostingMode==0 && globalSensitivityMagnitude<modeSwitchingThresholdAlpha){
+        initiateForcedModeSwitch();
+    }else if(boostingMethod==4 && boostingMode==1 && globalSensitivityMagnitude<modeSwitchingThresholdAlpha){
+        initiateForcedModeSwitch();
+        //addRandomNoiseToThresholds();
+    }
 
 
 
@@ -1319,8 +1404,6 @@ function resetSimulation(){
     document.getElementById("simulationCost").innerHTML = 0;
 
     consolePrint("Simulation stopped and reseted to the initial state.");
-    
-
 }
 
 
