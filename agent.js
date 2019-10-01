@@ -22,10 +22,9 @@ function Agent(x, y, r) {
     this.savedEventTimeSensitivity;
     this.sensitivityOfThreshold = []; // will be loaded later
 
-    this.previousTarget; // boosting
-
-
-    
+    this.previousTarget; // boosting - old
+    this.visitedTargetList = []; // for exploration boosting
+    this.unvisitedTargetsInfo = []; // for exploration boosting
 
     this.show = function(){
 
@@ -68,12 +67,14 @@ function Agent(x, y, r) {
         if(this.residingTarget.length==1){//residing in some target - agent in stationary mode
             
             var i = this.residingTarget[0];
+
+            // split boosting
             if(boostingMethod==4 && boostingMode==1){
                 var nextTarget = this.findNextTargetSplitBoost(i);
             }else{
                 var nextTarget = this.findNextTarget(i);
             }
-
+            // end split boosting
 
 
             // event printing
@@ -94,13 +95,36 @@ function Agent(x, y, r) {
 
 
 
-
             var j = nextTarget; 
 
             if(targets[i].uncertainty > this.threshold[i][i] || j==i){ //stay
                 // stay at i to further reduce the uncertainty
                 this.position = this.position;
                 this.residingTargetUncertainty = targets[this.residingTarget[0]].uncertainty;
+            
+                // exploration boosting
+                
+                if(boostingMethod==5 && boostingMode == 1){
+                    if(targets[i].uncertainty < this.threshold[i][i] && targets[i].uncertainty){
+                        var maxR = 0;
+                        var bestNeighbor = -1;
+                        for(var k = 0; k<targets[i].neighbors.length; k++){
+                            var neighborTarget = targets[i].neighbors[k];
+                            if(neighborTarget!=i && targets[neighborTarget].uncertainty>maxR){
+                                maxR = targets[neighborTarget].uncertainty;
+                                bestNeighbor = neighborTarget;
+                            }
+                        }
+                        if(bestNeighbor!=-1){
+                            this.threshold[i][bestNeighbor] = projectToPositiveAxis(this.threshold[i][bestNeighbor] - 1000*boostingCoefficientAlpha);
+                            //this.threshold[bestNeighbor][i] = 0;
+                        }
+                        
+                    }
+                }
+                
+                // end exploration boosting
+
             }else{ // leave
                 // need to start moving in the direction of target j
                 // rotate
@@ -135,7 +159,6 @@ function Agent(x, y, r) {
                 // end event printing
 
 
-
                 this.residingTarget = [i,j];
                 targets[i].residingAgents[this.id] = false;
                 var headingAngle = atan2P2(targets[i].position,targets[j].position);
@@ -148,6 +171,19 @@ function Agent(x, y, r) {
                 this.orientation = headingAngle;
 
                 this.residingTargetUncertainty = -1;
+
+                // exploration boosting
+                if(boostingMethod==5 && boostingMode == 1){
+                    var targetInfo = [];
+                    for(var k = 0; k<targets[i].neighbors.length; k++){
+                        var neighborTarget = targets[i].neighbors[k]; 
+                        if(neighborTarget!=i && neighborTarget !=j){// missed options
+                            targetInfo.push([i, neighborTarget, targets[neighborTarget].uncertainty]);
+                        }
+                    }
+                    this.unvisitedTargetsInfo.push(targetInfo); // as we arrived at target j
+                }
+                // end exploration boosting
             }
 
         }else{// going from T_i to T_j (as this.residingTarget = [T_i, T_j]) 
@@ -187,7 +223,15 @@ function Agent(x, y, r) {
                 this.residingTargetUncertainty = targets[j].uncertainty; 
 
 
-                // boosting
+
+                // exploration boosting
+                if(boostingMethod==5 && boostingMode == 1){
+                    this.visitedTargetList.push(j); // as we arrived at target j
+                    this.backSearchForCycles(); // search for cycle in the 'this.visitedTargetList' and once identified ---> do appropriate threshold changes and clear the this.targetList
+                }
+                // end exploration boosting
+
+                // boosting - old approach
                 // boosting - test
                 // this.previousTarget = i;
                 // if(boostingMode==1 && numberOfUpdateStepsCount>300){
@@ -450,7 +494,7 @@ function Agent(x, y, r) {
         var a = this.id;
 
         // event time sensitivity - update : eventTimeSensitivity[z][p][q]
-        eventTimeSensitivity = this.savedEventTimeSensitivity;
+        eventTimeSensitivity = [...this.savedEventTimeSensitivity];
         for(var z = 0; z<agents.length; z++){
             for(var p = 0; p < targets.length; p++){
                 for(var q = 0; q < targets.length; q++){
@@ -478,9 +522,26 @@ function Agent(x, y, r) {
                 for(var q = 0; q < targets.length; q++){
                     if ((p==i && q==j) && z==a ){
                         eventTimeSensitivity[z][p][q] = -1*(-1+targets[j].sensitivityOfUncertainty[z][p][q])/(targets[j].uncertaintyRate - targets[j].getNetAgentSensingRate());
+                        // if(abs(
+                        //     eventTimeSensitivity[z][p][q]) > 1000001){
+                        //     eventTimeSensitivity[z][p][q]=0;
+                        //     print("Error lies here 1!!!")
+                        //     print(targets[j].uncertaintyRate);
+                        //     print(targets[j].getNetAgentSensingRate());
+                        //     print(targets[j].sensitivityOfUncertainty[z][p][q]);
+                        // }
                     }else{
                         eventTimeSensitivity[z][p][q] = -1*(targets[j].sensitivityOfUncertainty[z][p][q])/(targets[j].uncertaintyRate - targets[j].getNetAgentSensingRate());
+                        // if(abs(
+                        //     eventTimeSensitivity[z][p][q]) > 1000001){
+                        //     eventTimeSensitivity[z][p][q]=0;
+                        //     print("Error lies her 2!!!")
+                        //     print(targets[j].uncertaintyRate);
+                        //     print(targets[j].getNetAgentSensingRate());
+                        //     print(targets[j].sensitivityOfUncertainty[z][p][q]);
+                        // }
                     }
+                    
                     targets[i].sensitivityOfUncertainty[z][p][q] = targets[i].sensitivityOfUncertainty[z][p][q] - this.sensingRate*eventTimeSensitivity[z][p][q];
                 }
             }
@@ -540,7 +601,7 @@ function Agent(x, y, r) {
         var a = this.id;
 
         // event time sensitivity - update : eventTimeSensitivity[z][p][q]
-        eventTimeSensitivity = this.savedEventTimeSensitivity;
+        eventTimeSensitivity = [...this.savedEventTimeSensitivity];
         for(var z = 0; z<agents.length; z++){
             for(var p = 0; p < targets.length; p++){
                 for(var q = 0; q < targets.length; q++){
@@ -785,8 +846,6 @@ function Agent(x, y, r) {
 
 
 
-
-
     this.findProbableNextTarget = function(currentTargetIndex){// to find j such that R_j(t)<theta_{ij}^a
         var i = currentTargetIndex;
         
@@ -813,12 +872,128 @@ function Agent(x, y, r) {
     }
 
 
-    this.driveToTheCycle = function(cycleID){
-        // agent thresholds should be modified such that it will be driven to the cycle 
-        // to whcih he is assigned.
+    this.backSearchForCycles = function(){
+        if(this.visitedTargetList.length<4 || this.unvisitedTargetsInfo.length<4){ // nothing to search for
+            //return -1;
+        }else{
+            var maxCycleLength = targets.length; // typically depends on B_i/A_i
+            var L = this.visitedTargetList.length;
+            var blockSizeFound = false; //redundent
+            var bestBlockSize = -1;
+            for(var blockSize = 2; blockSize<maxCycleLength; blockSize++){
+                // comparing blocks of size 2 
+                var blockSizeFailed = false;
+                for(var i = 1; i<=blockSize; i++){
+                    var val1 = this.visitedTargetList[L-i-1];
+                    var val2 = this.visitedTargetList[L-i-blockSize-1];
+                    var val3 = this.visitedTargetList[L-i-2*blockSize-1];
+                    if(val1!=val2||val1!=val3){
+                        blockSizeFailed = true;
+                        break; // need to change the block size
+                    }
+                }
+
+                if(!blockSizeFailed){// minimum block size found 
+                    blockSizeFound = true;
+                    bestBlockSize = blockSize;
+                    break;
+                }
+
+            }
+
+
+            if(blockSizeFound){
+                print("Ans:")
+                // print(this.visitedTargetList);
+                // print(this.unvisitedTargetsInfo);
+                // print(blockSize);
+
+                var cycleFound = [];
+                var cycleInfo = [];
+                var L2 = this.unvisitedTargetsInfo.length;
+                for(var i = 1; i<=bestBlockSize; i++){
+                    cycleFound.unshift(this.visitedTargetList[L-i-1]);
+                    cycleInfo.unshift(this.unvisitedTargetsInfo[L2-i]);
+                }
+                print("cycleFound: "+cycleFound);
+                print("cycleInfo: ");
+                print(cycleInfo);
+
+                if(L2>=bestBlockSize){
+                    this.explorationBoost(cycleFound,cycleInfo); // to modify theta according to seen info
+                }else{
+                    print("L2 error: L2 = "+L2+"; block="+bestBlockSize+";")
+                    print(this.unvisitedTargetsInfo)
+                }
+
+                this.visitedTargetList = []; // reset the memory
+                this.unvisitedTargetsInfo = [];
+            }else{
+                //return -1
+            }
+
+        }
+        
     }
-    
+
+
+    this.explorationBoost = function(cycleFound,cycleInfo){
+        // lets find the worst neglected neighbor during the past cycle
+        var maxUncertaintyFound = 0;
+        var bestT_i;
+        var bestT_j;
+        var bestT_k;
+
+        for(var i = 0; i<cycleFound.length; i++){
+
+            var T_i = cycleFound[i];
+            if(i==cycleFound.length-1){
+                var T_j = cycleFound[0];    
+            }else{
+                var T_j = cycleFound[i+1];
+            }
+            
+            for(var j = 0; j<cycleInfo[i].length; j++){
+                //print("T_i = "+cycleInfo[i][j][0])
+                var T_k = cycleInfo[i][j][1];
+                var R_k = cycleInfo[i][j][2];
+                if(!cycleFound.includes(T_k) && R_k>maxUncertaintyFound){
+                    maxUncertaintyFound = R_k;
+                    bestT_i = T_i;
+                    bestT_j = T_j;
+                    bestT_k = T_k;
+                }
+            }
+        }
+
+        if(maxUncertaintyFound==0){
+            // nothing to do, no external neighbor
+        }else{
+            var T_i = bestT_i;
+            var T_k = bestT_k;
+            var T_j = bestT_j;
+
+            var P_ik = getPathID(T_i,T_k); 
+            var P_kj = getPathID(T_k,T_j); 
+
+            print("Agent "+(this.id+1)+"; T_i="+(T_i+1)+"; T_k="+(T_k+1)+"; T_j="+(T_j+1)+"; R_k ="+maxUncertaintyFound.toFixed(2)+".")
+            print("cycle: "+cycleFound)
+            this.threshold[T_i][T_k] = projectToPositiveAxis(this.threshold[T_i][T_k] - 0.5*boostingCoefficientAlpha);
+            this.threshold[T_i][T_j] = projectToPositiveAxis(this.threshold[T_i][T_j] + 0.5*boostingCoefficientAlpha);
+            // if(paths[P_ik].distPath()>paths[P_kj].distPath()){                
+            //     this.threshold[T_k][T_j] = 0;
+            // }else{
+            //     this.threshold[T_k][T_i] = 0;
+            // } 
+        }
+
+
+    }
+
+
+
 }
+
 
 
 

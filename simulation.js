@@ -806,6 +806,7 @@ function stepSizeChanged(){
 
 
 function boostingMethodChanged(){
+
     boostingMethod = Number(document.getElementById('boostingMethodDropdown').value);
     
     if(boostingMode==1){// if we were inside a boosting mode, go back to normal mode
@@ -815,7 +816,7 @@ function boostingMethodChanged(){
     if(boostingMethod==0){
         consolePrint("No boosting method will be used.");
     }else if(boostingMethod==1){
-        document.getElementById('boostingCoefficientAlpha').value = '0.5';
+        document.getElementById('boostingCoefficientAlpha').value = '1';
         consolePrint("Neighbor boosting method will be used.");
     }else if(boostingMethod==2){
         document.getElementById('boostingCoefficientAlpha').value = '0.5';
@@ -825,6 +826,9 @@ function boostingMethodChanged(){
     }else if(boostingMethod==4){
         document.getElementById('boostingCoefficientAlpha').value = '0.3';
         consolePrint("Split Boosting method will be used.");
+    }else if(boostingMethod==5){
+        document.getElementById('boostingCoefficientAlpha').value = '0.8';
+        consolePrint("Exploration Boosting method will be used.");
     }
 
 
@@ -975,6 +979,9 @@ function solveForIPAEstimators(){ // run the hybrid system for time T period (wi
     for(var i = 0; i<agents.length; i++){// rest agent positions
         agents[i].residingTarget = [agents[i].initialResidingTarget];
         agents[i].position = targets[agents[i].residingTarget[0]].position;
+
+        agents[i].visitedTargetlist = []; // resetting for boosting
+        agents[i].unvisitedTargetsInfo = []; // resetting for boosting
     }
     // end reset uncertainties
 
@@ -1280,13 +1287,15 @@ function updateThresholdPolicy(){
                 var val = agents[z].threshold[p][q] - stepSizeValue*agents[z].sensitivityOfThreshold[p][q];
                 if(val<=0){
                     val = 0;
-                }else if(val>10000){
+                }else if(val>10000 && val<1000000){
                     val = 10000;
                 } 
 
-                rowAbsoluteSum = rowAbsoluteSum + Math.abs(agents[z].threshold[p][q] - val);
-                
-                agents[z].threshold[p][q] = val;
+                if(val<=10000){
+                    rowAbsoluteSum = rowAbsoluteSum + Math.abs(agents[z].threshold[p][q] - val);
+    
+                    agents[z].threshold[p][q] = val;
+                }
             }
 
             if(rowAbsoluteSum>maxRowSum){
@@ -1327,6 +1336,13 @@ function updateThresholdPolicy(){
     if(boostingMethod==4 && boostingMode==0 && globalSensitivityMagnitude<modeSwitchingThresholdAlpha){
         initiateForcedModeSwitch();
     }else if(boostingMethod==4 && boostingMode==1 && globalSensitivityMagnitude<modeSwitchingThresholdAlpha){
+        initiateForcedModeSwitch();
+        //addRandomNoiseToThresholds();
+    }
+
+    if(boostingMethod==5 && boostingMode==0 && globalSensitivityMagnitude<modeSwitchingThresholdAlpha){
+        initiateForcedModeSwitch();
+    }else if(boostingMethod==5 && boostingMode==1 && globalSensitivityMagnitude<modeSwitchingThresholdAlpha){
         initiateForcedModeSwitch();
         //addRandomNoiseToThresholds();
     }

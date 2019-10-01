@@ -234,9 +234,7 @@
 
 					<div class="col col-lg-12" id="runSimulationWizard">
 
-						<h4>Run Simulations: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-										&nbsp;
-
+						<h4>Run Simulations: 
 							<button class="btn btn-success" type="button" onclick="pauseSimulation();" id="pauseButton">
 	    						<i class="fa fa-pause" aria-hidden="true"></i>
 	    					</button>
@@ -247,6 +245,10 @@
 
 	    					<button class="btn btn-warning" type="button" onclick="resetSimulation();">
 	    						<i class="fa fa-undo" aria-hidden="true"></i>
+	    					</button>
+
+	    					<button class="btn btn-danger" type="button" onclick="updateRTThresholdValuesRandom();">&Theta;
+	    						<i class="fa fa-refresh" aria-hidden="true"></i>
 	    					</button>
 
 	    					<button class="btn btn-danger" type="button" onclick="refreshAll();">
@@ -475,6 +477,7 @@
 					    	<option value="2">Arc</option>
 					    	<option value="3">Random</option>
 					    	<option selected value="4">Split</option>
+					    	<option value="5">Exploration</option>
 						</select> 
 					</div>
 					<div class="col col-lg-6">
@@ -655,7 +658,7 @@
             	<div class="row">
 	            	<div class="col col-lg-8">
 	            		<label for="dataPlotModeCheckBox">Generate Additional Data plots: </label>
-	            		<input type="checkbox" id="dataPlotModeCheckBox" onchange="dataPlotModeChanged();">
+	            		<input type="checkbox" id="dataPlotModeCheckBox" onchange="dataPlotModeChanged();" checked>
 	            	</div>
             	</div>
 					

@@ -513,6 +513,15 @@ function applyFoundClustersToGroupTargets(clusteredPoints){ // adjust parameters
 
 }
 
+function projectToPositiveAxis(num){
+    if(num<0){
+        return 0;
+    }else{
+        return num;
+    }
+}
+
+
 
 function updateTargetClustersUsingCycles(){
 

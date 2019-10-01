@@ -83,7 +83,7 @@ function Target(x, y, r) {
     this.updateIPA = function(){
         // update uncertainty values R_i(t) of target i
         
-        if(boostingMode==0 || boostingMethod==3 || boostingMethod==4){ // normal mode
+        if(boostingMode==0 || boostingMethod==3 || boostingMethod==4 || boostingMethod==5){ // normal mode
             
             var netAgentSensingRate = this.getNetAgentSensingRate(); 
             var netUncertaintyGrowthRate = this.uncertaintyRate - netAgentSensingRate;
