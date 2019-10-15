@@ -174,7 +174,9 @@ function finishModifyingProbConfig(){
     var HTMLTag2 = "<div class='col'></div>";    
     var HTMLTag1 = "";
     for(var a = 0; a<agents.length; a++){
-
+        // print("Error")
+        // print(agents[a].sensingRate)
+        // print(agents[a].sensingRate.toFixed(1))
         var indexString = (a+1).toString();
         var HTMLTag = "<h5>Agent "+ indexString +":";
         HTMLTag += "<input type='range' min='0' max='20' step='0.1' value='"+agents[a].sensingRate.toFixed(1)+"' class='slider' id='sensingRate"+ indexString +"' onchange='sensingRateChangedRT("+indexString+",this.value)'> <span id='sensingRateDisplay"+ indexString +"'></span></h5>";
@@ -631,10 +633,10 @@ function sensingRateChanged(val){
         var val1 = Number(document.getElementById("agentSelectDropdown").value); 
         if(isNaN(val1)){
             for(var i = 0; i<agents.length; i++){// all agents reset to default
-                agents[i].sensingRate = val;
+                agents[i].sensingRate = Number(val);
             }
         }else{
-            agents[val1-1].sensingRate = val;
+            agents[val1-1].sensingRate = Number(val);
         }
     }
 }
@@ -646,10 +648,10 @@ function uncertaintyRateChanged(val){
         var val1 = Number(document.getElementById("targetSelectDropdown").value); 
         if(isNaN(val1)){
             for(var i = 0; i<targets.length; i++){// all agents reset to default
-                targets[i].uncertaintyRate = val;
+                targets[i].uncertaintyRate = Number(val);
             }
         }else{
-            targets[val1-1].uncertaintyRate = val;
+            targets[val1-1].uncertaintyRate = Number(val);
         }
     }
 }
