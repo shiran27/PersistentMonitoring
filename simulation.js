@@ -94,7 +94,7 @@ var agentStateData = []; // NxE matrix residing target label at different times
 var targetStateData = []; // MxE target uncertainty levels at each event time
 var eventTimeData = [];
 
-
+var oneStepAheadGreedyMethod;
 
 function startModifyingProbConfig(){
 
@@ -456,6 +456,8 @@ function readInitialInterface(){
 
     dataPlotMode = document.getElementById("dataPlotModeCheckBox").checked;
     dataPlotModeChanged();
+
+    oneStepAheadGreedyMethod = Number(document.getElementById("stepAheadGreedyMethodDropdown").value);
 
 }
 
@@ -836,6 +838,16 @@ function boostingMethodChanged(){
 
 }
 
+function stepAheadGreedyMethodChanged(){
+    oneStepAheadGreedyMethod = Number(document.getElementById("stepAheadGreedyMethodDropdown").value);
+    if(oneStepAheadGreedyMethod==0){
+        consolePrint("Receding horizon control: Disabled.")
+    }else if(oneStepAheadGreedyMethod==1){
+        consolePrint("Receding horizon control: Enabled (Horizon: one edge, Objective: Cost).");
+    }else if(oneStepAheadGreedyMethod==2){
+        consolePrint("Receding horizon control: Enabled (Horizon: one edge, Objective: Average Cost).");
+    }
+}
 
 function initiateForcedModeSwitch(){
     if(boostingMode == 0){
@@ -860,20 +872,35 @@ function initiateForcedModeSwitch(){
 
 function simulateHybridSystem(){ // run the hybrid system indefinitely in real-time while displaying
 
-    consolePrint("Initiated simulating the hybrid system indefinitely under the given threshold policy.");
 
-    simulationMode = 1;
-    simulationTime = 0;
-    discreteTimeSteps = 0;
+    if(oneStepAheadGreedyMethod==0){//disabled
+     
+        consolePrint("Initiated simulating the system using the threshold based controller.");
+
+        simulationMode = 1;
+        simulationTime = 0;
+        discreteTimeSteps = 0;
+    }
+    else if(oneStepAheadGreedyMethod>0){
+        consolePrint("Initiated simulating the system using 'one-edge-ahead' receding horizon controller.");
+        simulationMode = 6;
+        simulationTime = 0;
+        discreteTimeSteps = 0;
+    }
 
 }
 
 
 function simulateHybridSystemFast(){ // run the hybrid system for time T period (without displaying agent movements) and get the IPA estimtors
 
-    consolePrint("Initiated running the hybrid system for a time period T at once.");
+    if(oneStepAheadGreedyMethod==0){
+        consolePrint("Simulated the threshold based controller for a time period T.");
+        simulationMode = 2;
+    }else{
+        consolePrint("Simulated the receding horizon controller for a time period T.");
+        simulationMode = 6;
+    }
 
-    simulationMode = 2;
     simulationTime = 0;
     discreteTimeSteps = 0;
 
@@ -885,6 +912,13 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
         targets[i].meanUncertainty = targets[i].initialUncertainty;
     }
 
+    for(var i = 0; i<agents.length; i++){// rest agent positions
+        agents[i].residingTarget = [agents[i].initialResidingTarget];
+        agents[i].position = targets[agents[i].residingTarget[0]].position;
+        
+    }
+    
+
     while(simulationTime < periodT){
     
         for(var i = 0; i < targets.length; i++){
@@ -893,7 +927,11 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
 
 
         for(var i = 0; i < agents.length; i++){
-            agents[i].updateFastCT(); // update positions of the agents
+            if(oneStepAheadGreedyMethod==0){
+                agents[i].updateFastCT(); // update positions of the agents
+            }else{
+                agents[i].updateOneStepGreedyCT(); // update positions of the agents
+            }
         }
 
         simulationTime = simulationTime + deltaT;
@@ -935,7 +973,6 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
     }
 
 }
-
 
 
 function recordSystemState(){

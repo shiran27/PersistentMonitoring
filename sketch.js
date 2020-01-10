@@ -105,6 +105,35 @@ function draw() {
 
         ////print("Time: "+Math.round(simulationTime));
         ////print("Cost: "+cost);
+
+    }else if(simulationMode==6){// One-Step-Greedy simulation mode
+
+        for(var k=0; k<simulationFrameRate; k++){
+            
+            var cost = 0;
+            for(var i = 0; i < targets.length; i++){
+                targets[i].updateCT(); // update uncertainty levels
+                cost = cost + targets[i].meanUncertainty;
+            }
+
+            
+            for(var i = 0; i < agents.length; i++){
+                // the following line is the only difference compared to "SimulationMoode1" given above
+                agents[i].updateOneStepGreedyCT(); // update positions of the agents  
+            }
+
+            simulationTime = simulationTime + deltaT;
+            discreteTimeSteps = discreteTimeSteps + 1;
+
+            var t = simulationTime;
+
+        }
+
+        document.getElementById("simulationTime").innerHTML = t.toFixed(2).toString();
+        document.getElementById("simulationCost").innerHTML = cost.toFixed(3).toString();
+
+        ////print("Time: "+Math.round(simulationTime));
+        ////print("Cost: "+cost);
     }else if(simulationMode==4){
 
         if(numberOfUpdateStepsCount<numberOfUpdateSteps){        
@@ -162,8 +191,6 @@ function draw() {
     }else if(RGCComputingMode==3){
         executeABargainingStep();
     }
-
-
 
 
 

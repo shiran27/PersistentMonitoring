@@ -67,9 +67,12 @@ function plotAdditionalData(meanUncertainty){
 	window.localStorage.setItem('agentStateData', JSON.stringify(agentStateData));
 	window.localStorage.setItem('eventTimeData', JSON.stringify(eventTimeData));
 	window.localStorage.setItem('meanUncertainty', JSON.stringify(meanUncertainty));
+	//window.focus();
 
-	window.open('plot.html');
+}
 
+function openPlotsPage(){
+	var newWindow = window.open('plot.html');
 }
 
 function customizeTargetSelection(val){

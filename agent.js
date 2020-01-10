@@ -467,6 +467,47 @@ function Agent(x, y, r) {
     }
 
 
+
+    this.updateOneStepGreedyCT = function(){
+        // update the agent position s_a(t) of agent a
+        if(this.residingTarget.length==1){//residing in some target
+            var i = this.residingTarget[0];
+            // The following two lines are the only difference compared to "this.updateCT" defined above
+            var j = this.findNextTargetOneStepGreedy(i);// gives T_j according tho the threshold polcy
+            if(targets[i].uncertainty > 0 || j==i){
+                
+                // stay at i to further reduce the uncertainty till 0
+                this.position = this.position;
+            }else{
+                // need to start moving in the direction of target j
+                // rotate
+                this.residingTarget = [i,j];
+                var headingAngle = atan2P2(targets[i].position,targets[j].position);
+                var rotationRequired = headingAngle-this.orientation;
+                for(var k = 0; k<this.graphicBaseShape.length ; k++){
+                    this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
+                }
+                ////print("need to go to j; rotated");
+                this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                this.position = plusP2(this.position, this.headingDirectionStep);
+                this.orientation = headingAngle;
+            }
+        }else{// going from T_i to T_j (as this.residingTarget = [T_i, T_j]) 
+            var i = this.residingTarget[0];// where we were
+            var j = this.residingTarget[1];// where we are heading
+            var angle = this.orientation;
+            ////print("travelling i to j");
+            this.position = plusP2(this.position, this.headingDirectionStep);
+            if(distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)){
+                ////print("Stopped at j !!! ")
+                this.position = targets[j].position;
+                this.residingTarget = [j]; 
+            }
+        }
+    }
+
+
+
     this.IPAComputationEventD1 = function(targetID){
         var i = targetID;
         var a = this.id;
@@ -746,6 +787,104 @@ function Agent(x, y, r) {
             }
           
         }
+
+    }
+
+
+
+    this.findNextTargetOneStepGreedy = function(currentTargetIndex){
+
+        var i = currentTargetIndex;
+        var jArray = []; // set of candidate targets
+        var yArray = []; // travel times
+
+        for(var j = 0; j<targets.length; j++){
+            if( j != i ){
+                //print(paths[getPathID(i,j)].isPermanent)
+                var pathIDForij = getPathID(i,j); 
+                if(paths[pathIDForij].isPermenent && targets[j].residingAgents.length==0){ 
+                    
+                    // need to find out that no agent is en-route to target j
+                    var anotherAgentIsComitted = false;
+                    for(var a = 0; a<agents.length; a++){
+                        if(agents[a].residingTarget[1]==j){
+                            anotherAgentIsComitted = true;
+                            break;
+                        }
+                    }
+
+                    
+                    if(!anotherAgentIsComitted){
+                        jArray.push(j);
+                        var y_ij = paths[pathIDForij].distPath()/this.maxLinearVelocity;
+                        yArray.push(y_ij);    
+                    }
+                                  
+                }
+                
+            }
+        }
+
+        if(jArray.length==0 || targets[i].uncertainty>0){// no need to go to a neighbor
+            return i;
+        }else if(targets[i].uncertainty==0){
+            print(jArray);
+            //print(yArray);
+        }
+
+        
+        // now we need to execute the one step (ahead) greedy selection.
+        var maxGain = 0;
+        var maxGainDestinationTarget = i;
+
+        for(var k = 0; k < jArray.length; k++){
+            
+            var j = jArray[k];
+            var y_ij = yArray[k];
+            
+            var A_i = targets[i].uncertaintyRate;
+            var A_j = targets[j].uncertaintyRate;
+            var B_j = this.sensingRate; 
+            var R_j0 = targets[j].uncertainty;
+
+            var tau_jHat = (R_j0+A_j*y_ij)/(B_j-A_j);
+
+            if(y_ij>(periodT-simulationTime)){
+                // no point in going to this destination
+            }else if((periodT-simulationTime)<tau_jHat){
+                var tau_j = (periodT-simulationTime);
+                
+                var gainVal;
+                if(oneStepAheadGreedyMethod==1){
+                    gainVal = (tau_j*(B_j-A_i)-y_ij*A_i)/periodT;
+                }else{
+                    gainVal = (tau_j*(B_j-A_i)-y_ij*A_i)/(tau_j*periodT)
+                }
+
+                if(gainVal>maxGain){
+                    maxGain = gainVal;
+                    maxGainDestinationTarget = j;
+                }
+                // jkjkvbsvbsdvbioas
+            }else{
+                var tau_j = tau_jHat;
+                var delta_j = (periodT-simulationTime)-(y_ij+tau_j);
+                
+                var gainVal;
+                if(oneStepAheadGreedyMethod==1){
+                    gainVal = (tau_j*(B_j-A_i)+delta_j*(A_j-A_i)-y_ij*A_i)/periodT;
+                }else{
+                    gainVal = (tau_j*(B_j-A_i)+delta_j*(A_j-A_i)-y_ij*A_i)/((tau_j+delta_j)*periodT);
+                }
+                
+                if(gainVal>maxGain){
+                    maxGain = gainVal;
+                    maxGainDestinationTarget = j;
+                }
+            }
+        }
+
+        return maxGainDestinationTarget;
 
     }
 
