@@ -1867,5 +1867,26 @@ function sleepFor(miliseconds) {
 }
 
 
+function fullyConnectCBChanged(val){
+    if(val){
+        consolePrint("Making the graph fully connected.");
+        for(var i = 0; i<paths.length; i++){
+            if(!paths[i].isPermenent){
+                paths[i].artificiallyExtended = true;
+                paths[i].isPermenent = true;
+            }
+        }
+    }else{
+        consolePrint("Resetting the fully connected graph.");
+        for(var i = 0; i<paths.length; i++){
+            if(paths[i].artificiallyExtended){
+                 paths[i].isPermenent = false;
+                 paths[i].artificiallyExtended = false;
+            }
+        }
+    }
+}
+
+
 
 

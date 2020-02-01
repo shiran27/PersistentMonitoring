@@ -184,6 +184,9 @@
 		            	<h5>Max. Path Length: <span id="maximumPathLengthDisplay"></span>
 		            		<input type="range" min="0" max="1000" value="1000" step="10" class="form-control slider" id="maximumPathLength" onchange="maximumPathLengthChanged();">
 		            		<button class="btn btn-success" type="button" onclick="maximumPathLengthChanged();">Apply</button>
+
+		            		<label for="fullyConnectCB">Make fully connected:</label>
+		            		<input type="checkbox" id="fullyConnectCB" onchange="fullyConnectCBChanged(this.checked)"> <br>
 		            	</h5>
 
 
@@ -339,16 +342,23 @@
 			<div class="col col-lg-4">
 				<h5>Receding Horizon Control:</h5>
 				
-				<label for="stepAheadGreedyMethodDropdown">Horizon (and the objective function):</label>
+				<label for="stepAheadGreedyMethodDropdown">Horizon (Steps):</label>
 				<select class="form-control custom-select" id="stepAheadGreedyMethodDropdown" onchange="stepAheadGreedyMethodChanged()">
         				<option value="0">Disabled</option>
-				    	<option selected value="1">One edge ahead (Cost)</option>
-				    	<option value="2">One edge ahead (Time averaged cost)</option>
+				    	<option selected value="1">One step ahead</option>
+				    	<option value="2">Two steps ahead</option>
+				    	<option value="3">Two steps ahead (with loops)</option>
 				</select> 
 
 			</div>
 
-			<div class="col col-lg-6">
+			<div class="col col-lg-3">
+				<label for="timeHorizonForRHC">Horizon (Time) T<sub>h</sub> =  
+					<span id="timeHorizonForRHCDisplay"></span></label>
+					<input type="range" class="form-control slider" id="timeHorizonForRHC" min="1" max="1000" value="500" onchange="timeHorizonForRHCChanged(Number(this.value));">
+			</div>
+
+			<div class="col col-lg-3">
 				
 			</div>
 

@@ -533,7 +533,9 @@ function Cycle(agentID,targetSet){
 			var T_iprev; if(i==0){T_iprev = this.targetList[L-1];}else{T_iprev = this.targetList[i-1];}
 
 			// traveltime
-			travelTimeArray[i] = distP2(targets[T_i].position,targets[T_iprev].position)/agents[this.deployedAgent].maxLinearVelocity;
+			var pid = getPathID(T_i,T_iprev)
+			travelTimeArray[i] = paths[pid].distPath()/agents[this.deployedAgent].maxLinearVelocity;
+			////travelTimeArray[i] = distP2(targets[T_i].position,targets[T_iprev].position)/agents[this.deployedAgent].maxLinearVelocity;
 
 			// need to do a back search
 			var subCycleArray = [...math.zeros(L)._data];

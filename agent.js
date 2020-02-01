@@ -322,8 +322,6 @@ function Agent(x, y, r) {
                 
                 // end event printing
 
-
-
                 this.residingTarget = [i,j];
                 targets[i].residingAgents[this.id] = false;
                 var headingAngle = atan2P2(targets[i].position,targets[j].position);
@@ -349,18 +347,14 @@ function Agent(x, y, r) {
                 if(this.departureMode == 1){
                     if(printMode){print("Ev "+eventCount+" A 1: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(this.residingTarget[1]+1)+";");      }
                     
-                    
                 }else if(this.departureMode == 2){
                     if(printMode){print("Ev "+eventCount+" A 2: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(this.residingTarget[1]+1)+";");      }
                     
-                   
                 }else if(this.departureMode == 3.1){
                     if(printMode){print("Ev "+eventCount+" A 3_1: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(this.residingTarget[1]+1)+";");      }
                     
-                    
                 }else if(this.departureMode == 3.2){
                     if(printMode){print("Ev "+eventCount+" A 3_2: t="+simulationTime.toFixed(2)+"; A_a = "+(this.id+1)+"; T_i ="+(this.residingTarget[1]+1)+";");      }
-                    
                     
                 }
 
@@ -410,6 +404,10 @@ function Agent(x, y, r) {
                 for(var k = 0; k<this.graphicBaseShape.length ; k++){
                     this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
                 }
+                
+                // var pid = getPathID(i,j);
+                // if(paths[pid].artificiallyExtended){this.maxLinearVelocity = this.maxLinearVelocity/10;}
+                
                 this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
                 this.position = plusP2(this.position, this.headingDirectionStep);
                 this.orientation = headingAngle;
@@ -424,7 +422,10 @@ function Agent(x, y, r) {
                 this.residingTarget = [this.residingTarget[1]]; 
 
                 if(dataPlotMode){recordSystemState();}// record agent reached destination target event
-            
+                
+                // var pid = getPathID(i,j);
+                // if(paths[pid].artificiallyExtended){this.maxLinearVelocity = this.maxLinearVelocity*10;}
+                
             }
         }
     }
@@ -447,6 +448,10 @@ function Agent(x, y, r) {
                 for(var k = 0; k<this.graphicBaseShape.length ; k++){
                     this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
                 }
+
+                // var pid = getPathID(i,j);
+                // if(paths[pid].artificiallyExtended){this.maxLinearVelocity = this.maxLinearVelocity/10;}
+                
                 ////print("need to go to j; rotated");
                 this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
                 this.position = plusP2(this.position, this.headingDirectionStep);
@@ -462,6 +467,10 @@ function Agent(x, y, r) {
                 ////print("Stopped at j !!! ")
                 this.position = targets[j].position;
                 this.residingTarget = [j]; 
+
+                // var pid = getPathID(i,j);
+                // if(paths[pid].artificiallyExtended){this.maxLinearVelocity = this.maxLinearVelocity*10;}
+                
             }
         }
     }
@@ -824,6 +833,7 @@ function Agent(x, y, r) {
                 
             }
         }
+
 
         if(jArray.length==0 || targets[i].uncertainty>0){// no need to go to a neighbor
             return i;
