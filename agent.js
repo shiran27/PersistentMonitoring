@@ -395,6 +395,7 @@ function Agent(x, y, r) {
             if(targets[i].uncertainty > this.threshold[i][i] || j==i){
                 // stay at i to further reduce the uncertainty
                 this.position = this.position;
+                ////if(dataPlotMode){recordSystemState();}// might be redundent
             }else{
                 // need to start moving in the direction of target j
                 // rotate
@@ -426,6 +427,8 @@ function Agent(x, y, r) {
                 // var pid = getPathID(i,j);
                 // if(paths[pid].artificiallyExtended){this.maxLinearVelocity = this.maxLinearVelocity*10;}
                 
+            }else{
+                ////if(dataPlotMode){recordSystemState();}// might be redundent
             }
         }
     }
@@ -477,14 +480,21 @@ function Agent(x, y, r) {
 
 
 
-    this.updateOneStepGreedyCT = function(){
+    this.updateRHCCT = function(){
         // update the agent position s_a(t) of agent a
         if(this.residingTarget.length==1){//residing in some target
             var i = this.residingTarget[0];
-            // The following two lines are the only difference compared to "this.updateCT" defined above
-            var j = this.findNextTargetOneStepGreedy(i);// gives T_j according tho the threshold polcy
-            if(targets[i].uncertainty > 0 || j==i){
-                
+            // The following ten lines are the only difference compared to "this.updateCT" defined above
+            var j;
+            if(targets[i].uncertainty>0){
+                j = i;
+            }else if(RHCMethod==1){
+                j = this.findNextTargetOneStepAheadRHC(i);
+            }else if(RHCMethod==2){
+                j = this.findNextTargetTwoStepsAheadRHC(i);
+            }
+
+            if(j==i){
                 // stay at i to further reduce the uncertainty till 0
                 this.position = this.position;
             }else{
@@ -500,6 +510,8 @@ function Agent(x, y, r) {
                 this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
                 this.position = plusP2(this.position, this.headingDirectionStep);
                 this.orientation = headingAngle;
+
+                if(dataPlotMode){recordSystemState();}// agent Started Moving towards a new target
             }
         }else{// going from T_i to T_j (as this.residingTarget = [T_i, T_j]) 
             var i = this.residingTarget[0];// where we were
@@ -511,7 +523,11 @@ function Agent(x, y, r) {
                 ////print("Stopped at j !!! ")
                 this.position = targets[j].position;
                 this.residingTarget = [j]; 
+
+                if(dataPlotMode){recordSystemState();}// record agent reached destination target event
             }
+
+
         }
     }
 
@@ -801,17 +817,18 @@ function Agent(x, y, r) {
 
 
 
-    this.findNextTargetOneStepGreedy = function(currentTargetIndex){
-
+    this.findNextTargetTwoStepsAheadRHC = function(currentTargetIndex){
+        //print("here")
         var i = currentTargetIndex;
-        var jArray = []; // set of candidate targets
+        var jIndArray = []; // set of candidate targets
         var yArray = []; // travel times
 
-        for(var j = 0; j<targets.length; j++){
+        for(var l = 0; l<targets[i].neighbors.length; l++){
+
+            var j = targets[i].neighbors[l];
             if( j != i ){
-                //print(paths[getPathID(i,j)].isPermanent)
-                var pathIDForij = getPathID(i,j); 
-                if(paths[pathIDForij].isPermenent && targets[j].residingAgents.length==0){ 
+                
+                if(targets[j].residingAgents.length==0){ 
                     
                     // need to find out that no agent is en-route to target j
                     var anotherAgentIsComitted = false;
@@ -822,10 +839,9 @@ function Agent(x, y, r) {
                         }
                     }
 
-                    
                     if(!anotherAgentIsComitted){
-                        jArray.push(j);
-                        var y_ij = paths[pathIDForij].distPath()/this.maxLinearVelocity;
+                        jIndArray.push(l);
+                        var y_ij = targets[i].distancesToNeighbors[l]/this.maxLinearVelocity;
                         yArray.push(y_ij);    
                     }
                                   
@@ -835,11 +851,234 @@ function Agent(x, y, r) {
         }
 
 
-        if(jArray.length==0 || targets[i].uncertainty>0){// no need to go to a neighbor
+        if(jIndArray.length==0){// no need to go to a neighbor
             return i;
-        }else if(targets[i].uncertainty==0){
-            print(jArray);
+        }else{
+            //print("Agent "+(this.id+1)+" at Target "+(i+1)+" deciding between: "+jIndArray);
+            // print("Agent "+(this.id+1)+" deciding between: ");
+            //print(jArray);
             //print(yArray);
+        }
+
+        
+        // now we need to execute the one step (ahead) greedy selection.
+        ////var maxGain = 0;
+        var minGain = Infinity;
+        var minGainDestinationTarget = i;
+        var bestPath = [];
+
+        for(var l = 0; l < jIndArray.length; l++){
+            
+            var j = targets[i].neighbors[jIndArray[l]];
+            var y_ij = yArray[l];
+            var t_h = Math.min(periodT-simulationTime,timeHorizonForRHC);
+
+            var A_i = targets[i].uncertaintyRate;
+            var A_j = targets[j].uncertaintyRate;
+            var B_j = this.sensingRate; 
+            var B_i = B_j;
+            var R_j0 = targets[j].uncertainty;
+
+            var tau_jHat = (R_j0+A_j*y_ij)/(B_j-A_j);
+        
+            var tau_jBar = Math.min(tau_jHat,t_h-y_ij);
+            var delta_jBar = t_h-(y_ij+tau_jHat);
+
+            var tau_j; //Optimum values
+            var delta_j;
+
+
+            for(var m = 0; m < targets[i].neighbors2[jIndArray[l]].length; m++){
+                
+                var k = targets[i].neighbors2[jIndArray[l]][m];
+                var y_jk = targets[i].distancesToNeighbors2[jIndArray[l]][m]/this.maxLinearVelocity;
+
+                var A_k = targets[k].uncertaintyRate;
+                var B_k = B_i;
+                var R_k0 = targets[k].uncertainty;
+
+                var tau_kHat0 = (R_k0+A_k*(y_ij+tau_jHat+y_jk))/(B_k-A_k);
+                
+                // if the main ass does not hold or when g_4 or g_2 conditionas are activated we need to follow the one step method!
+                if(t_h>(y_ij+tau_jHat+y_jk+tau_kHat0) && R_j0 > A_i*y_jk && (B_i-A_i)*y_jk-A_i*y_ij>0 ){// can go two steps ahead on this path
+                    // above condition valid for loops as well
+                    var tau_k;
+                    var delta_k;
+                    
+                    var delta_kBarHat = t_h-(y_ij+tau_jHat+y_jk+tau_kHat0);
+                    var delta_jBarHat = (B_k-A_k)*delta_kBarHat/B_k;
+
+                    if(k!=i){// non-loops case: delta_j and delta_k
+                        // h-switch functions  
+                        var sigma_1  = B_i*y_jk/(B_i-A_i) - t_h;
+                        var tempVal1 = sq(B_i)/(A_i*(B_i-A_i));
+                        var tempVal2 = -A_i*(2*B_i-A_i)*(R_j0+B_i*y_ij)/(B_i*(B_i-A_i)) - A_i*(B_i-A_i)*sigma_1/B_i;
+                        
+                        if(sigma_1*A_i - tempVal1 < R_k0 && R_k0 < A_i*sigma_1){
+                            tau_j = tau_jHat;
+                            delta_j = delta_jBarHat;
+                            tau_k = (R_k0+A_k*(y_ij+tau_j+delta_j+y_jk))/(B_k-A_k);
+                            delta_k = 0;
+                        }else if(tempVal2 < R_k0){
+                            tau_j = tau_jHat;
+                            delta_j = 0;
+                            tau_k = tau_kHat0;
+                            delta_k = delta_kBarHat; 
+                        }else{
+                            tau_j = 0;
+                            delta_j = 0;
+                            tau_k = 0;
+                            delta_k = 0; 
+                        }
+
+                        // J_ijk
+                        var gainVal = tau_j*( (A_i-B_j)*tau_j + (2*(A_i-A_j))*delta_j + (2*(A_i-B_j))*tau_k + (2*(A_i-A_k-B_j))*delta_k + (2*(A_i*y_ij+A_i*y_jk-B_j*y_jk))) + 
+                                      delta_j*( (A_i-A_j)*delta_j + (2*(A_i-A_j))*tau_k + (2*(A_i-A_j-A_k))*delta_k + (2*(A_i*y_ij-R_j0+A_i*y_jk-A_j*y_ij-A_j*y_jk))) + 
+                                      tau_k*( (A_i-B_k)*tau_k + (2*(A_i-A_k))*delta_k + (2*A_i*(y_ij+y_jk))  )+
+                                      delta_k*( (A_i-A_k)*delta_k + (2*(A_i*y_ij-R_k0+A_i*y_jk-A_k*y_ij-A_k*y_jk))) +
+                                      (A_i*sq(y_ij+y_jk));  
+                           
+                        if(gainVal<0 && gainVal<minGain){
+                            minGain = gainVal;
+                            minGainDestinationTarget = j;
+                            bestPath = [i,j,k]
+                            ////print("Agent "+(this.id+1)+" at Target "+(i+1)+" decided: ["+(i+1)+","+(j+1)+","+(k+1)+"] path");
+                        }
+
+                    }else{// loops case: delta_j and delta_k
+                        // q-switch functions
+                        // k = i for this case
+                        var sigma_2 = A_i*B_i/(A_i*B_i+A_j*(B_i-A_i))
+                        var sigma_3 = B_i*y_ij/(B_i-A_i) - t_h;
+                        var sigma_4 = B_i*(3*B_i-2*A_i)*y_ij/(2*B_i-A_i) - sq((B_i-A_i))*t_h/(2*B_i-A_i) 
+                        
+                        if(sigma_3>0 && R_j0>sq(A_i/B_i)*(B_i-A_i)*sigma_3){
+                            tau_j = tau_jHat;
+                            delta_j = delta_jBarHat;
+                            tau_k = (R_k0+A_k*(y_ij+tau_j+delta_j+y_jk))/(B_k-A_k);
+                            delta_k = 0;
+                        }else if(sigma_3<0){
+                            tau_j = tau_jHat;
+                            delta_j = t_h-y_ij-tau_jHat-sigma_2*(t_h+y_ij);
+                            tau_k = (R_k0+A_k*(y_ij+tau_j+delta_j+y_jk))/(B_k-A_k);
+                            delta_k = t_h - sigma_2*A_j*(t_h+y_ij)/A_i
+                        }else if(R_j0<sigma_4){
+                            tau_j = tau_jHat;
+                            delta_j = 0;
+                            tau_k = tau_kHat0;
+                            delta_k = delta_kBarHat; 
+                        }else{
+                            tau_j = 0;
+                            delta_j = 0;
+                            tau_k = 0;
+                            delta_k = 0; 
+                        }
+
+                        // J_iji
+                        var gainVal = tau_j*( (A_i-B_j)*tau_j + (2*(A_i-A_j))*delta_j + (A_i-B_j)*tau_k + (-2*B_j)*delta_k + (2*y_ij*(2*A_i-B_j))) + 
+                                      delta_j*( (A_i-A_j)*delta_j + (2*(A_i-A_j))*tau_k + (-2*A_j)*delta_k + (4*(A_i-A_j)*y_ij-2*R_j0)) + 
+                                      tau_k*( (A_i-B_i)*tau_k + (4*A_i*y_ij)) + 
+                                      (4*A_i*sq(y_ij)); 
+
+                        //gainVal = gainVal + t_h*(2*R_k0+A_k*t_h);
+                           
+                        if(gainVal<0 && gainVal<minGain){
+                            minGain = gainVal;
+                            minGainDestinationTarget = j;
+                            bestPath = [i,j,k]
+                            ////print("Agent "+(this.id+1)+" at Target "+(i+1)+" decided: ["+(i+1)+","+(j+1)+","+(k+1)+"] path");
+                        }
+
+                    }
+
+                }else{// not able to go two steps on this path
+                    
+                    // no use of 'k' here.
+                    var tempCond1 = 2*A_i*y_ij/(B_i-A_i);
+                    if(tau_jBar<tempCond1){
+                        // no point in going to j !
+                        tau_j = 0;
+                        delta_j = 0;
+
+                    }else{
+                        tau_j = tau_jBar
+                        if(A_i>A_j){
+                            if(R_j0<(A_i-A_j)*(y_ij+tau_jHat)){
+                                delta_j = 0;
+                            }else if(R_j0<(A_i-A_j)*t_h){
+                                delta_j = (R_j0/(A_i-A_j))-(y_ij+tau_jHat);
+                            }else{
+                                delta_j = delta_jBar;
+                            }
+                        }else{
+                            delta_j = delta_jBar;
+                        }
+
+                        var gainVal = A_i*sq(y_ij) + 2*tau_j*y_ij*A_i - 2*delta_j*((A_j-A_i)*y_ij+R_j0) - 2*delta_j*tau_j*(A_j-A_i) - (B_j-A_i)*sq(tau_j) - (A_j-A_i)*sq(delta_j); //theoretically, this needs to be divided by (2*periodT);
+                        // Gain considering cost of k
+                        gainVal = gainVal + t_h*(2*R_k0+A_k*t_h);
+                            
+                        
+                        if(gainVal<0 && gainVal<minGain){
+                            minGain = gainVal;
+                            minGainDestinationTarget = j;
+                            bestPath = [i,j];
+                            ////print("Agent "+(this.id+1)+" at Target "+(i+1)+" decided: ["+(i+1)+","+(j+1)+"] path");
+                        }
+                    }
+
+                }
+
+            }
+            
+        }
+        //if(bestPath.length>0 && bestPath[0]!=bestPath[bestPath.length-1]){
+        if(bestPath.length>0 ){
+            print("Best Path: ["+bestPath+"], Cost increment: "+minGain/(2*periodT));
+        }
+        return minGainDestinationTarget;
+    }
+
+
+
+    this.findNextTargetOneStepAheadRHC = function(currentTargetIndex){
+
+        var i = currentTargetIndex;
+        var jArray = []; // set of candidate targets
+        var yArray = []; // travel times
+
+        for(var k = 0; k<targets[i].neighbors.length; k++){
+
+            var j = targets[i].neighbors[k];
+            if( j != i ){
+                
+                if(targets[j].residingAgents.length==0){ 
+                    
+                    // need to find out that no agent is en-route to target j
+                    var anotherAgentIsComitted = false;
+                    for(var a = 0; a<agents.length; a++){
+                        if(agents[a].residingTarget[1]==j){
+                            anotherAgentIsComitted = true;
+                            break;
+                        }
+                    }
+
+                    if(!anotherAgentIsComitted){
+                        jArray.push(j);
+                        var y_ij = targets[i].distancesToNeighbors[k]/this.maxLinearVelocity;
+                        yArray.push(y_ij);    
+                    }
+                                  
+                }
+                
+            }
+        }
+
+
+        if(jArray.length==0){// no need to go to a neighbor
+            return i;
+        }else{
+            //// print("Agent "+(this.id+1)+" at Target "+(i+1)+" deciding between: "+jArray);
         }
 
         
@@ -852,70 +1091,77 @@ function Agent(x, y, r) {
             
             var j = jArray[k];
             var y_ij = yArray[k];
-            
+            var t_h = Math.min(periodT-simulationTime,timeHorizonForRHC);
+
             var A_i = targets[i].uncertaintyRate;
             var A_j = targets[j].uncertaintyRate;
             var B_j = this.sensingRate; 
+            var B_i = B_j;
             var R_j0 = targets[j].uncertainty;
 
             var tau_jHat = (R_j0+A_j*y_ij)/(B_j-A_j);
-            var tempCond = 2*(B_j-A_j)*(A_i*y_ij)/(B_j-A_i)-A_j*y_ij;
+        
+            var tau_jBar = Math.min(tau_jHat,t_h-y_ij);
+            var delta_jBar = t_h-(y_ij+tau_jHat);
 
-            if(y_ij>(periodT-simulationTime)|| R_j0<tempCond){
-                // no point in going to this destination
-            }else if((periodT-simulationTime)<tau_jHat){
-                var tau_j = (periodT-simulationTime);
-                var gainVal;
+            var tau_j; //Optimum values
+            var delta_j;
 
-                if(oneStepAheadGreedyMethod==1){
-                    gainVal = A_i*sq(y_ij) + 2*tau_j*y_ij*A_i - (B_j-A_i)*sq(tau_j); //theoretically, this needs to be divided by (2*periodT);
-                    ////gainVal = (tau_j*(B_j-A_i)-y_ij*A_i)/periodT;
-                }else{
-                    gainVal = (A_i*sq(y_ij) + 2*tau_j*y_ij*A_i-(B_j-A_i)*sq(tau_j))/(y_ij+tau_j);
-                    ////gainVal = (tau_j*(B_j-A_i)-y_ij*A_i)/(tau_j*periodT)
-                }
-
-                if(gainVal<minGain){
-                    minGain = gainVal;
-                    minGainDestinationTarget = j;
-                }
-                // jkjkvbsvbsdvbioas
+            var tempCond1 = 2*A_i*y_ij/(B_i-A_i);
+            if(tau_jBar<tempCond1){
+                // no point in going to j !
+                //// print("Omit target "+(j))
+                tau_j = 0;
+                delta_j = 0;
             }else{
-                var tau_j = tau_jHat;
-                var delta_j = (periodT-simulationTime)-(y_ij+tau_j);
-                
-                var gainVal;
-                if(oneStepAheadGreedyMethod==1){
-                    gainVal = A_i*sq(y_ij) + 2*tau_jHat*y_ij*A_i - 2*delta_j*((A_j-A_i)*y_ij+R_j0) - 2*delta_j*tau_jHat*(A_j-A_i) - (B_j-A_i)*sq(tau_jHat) - (A_j-A_i)*sq(delta_j); //theoretically, this needs to be divided by (2*periodT);
-                    ////gainVal = (tau_j*(B_j-A_i)+delta_j*(A_j-A_i)-y_ij*A_i)/periodT;
+                tau_j = tau_jBar
+                if(A_i>A_j){
+                    if(R_j0<(A_i-A_j)*(y_ij+tau_jHat)){
+                        delta_j = 0;
+                    }else if(R_j0<(A_i-A_j)*t_h){
+                        delta_j = (R_j0/(A_i-A_j))-(y_ij+tau_jHat);
+                    }else{
+                        delta_j = delta_jBar;
+                    }
                 }else{
-                    gainVal = (A_i*sq(y_ij) + 2*tau_jHat*y_ij*A_i - 2*delta_j*((A_j-A_i)*y_ij+R_j0) - 2*delta_j*tau_jHat*(A_j-A_i) - (B_j-A_i)*sq(tau_jHat) - (A_j-A_i)*sq(delta_j))/(y_ij+tau_jHat+delta_j);
-                    ////gainVal = (tau_j*(B_j-A_i)+delta_j*(A_j-A_i)-y_ij*A_i)/((tau_j+delta_j)*periodT);
+                    delta_j = delta_jBar;
                 }
+
+                var gainVal = A_i*sq(y_ij) + 2*tau_j*y_ij*A_i - 2*delta_j*((A_j-A_i)*y_ij+R_j0) - 2*delta_j*tau_j*(A_j-A_i) - (B_j-A_i)*sq(tau_j) - (A_j-A_i)*sq(delta_j); //theoretically, this needs to be divided by (2*periodT);
                 
-                if(gainVal<minGain){
+                
+                if(gainVal<0 && gainVal<minGain){
                     minGain = gainVal;
                     minGainDestinationTarget = j;
                 }
             }
+
+                        
+            
+            
         }
 
+        if(minGainDestinationTarget!=i){
+            print("Agent "+(this.id+1)+" at Target "+(i+1)+" deciding between: "+plusOneToArray(jArray)+" decided: Target "+(minGainDestinationTarget+1));
+        }
         return minGainDestinationTarget;
 
     }
 
-    // first attempt:
+    
+    // first attamept working version
     // this.findNextTargetOneStepGreedy = function(currentTargetIndex){
 
     //     var i = currentTargetIndex;
     //     var jArray = []; // set of candidate targets
     //     var yArray = []; // travel times
 
-    //     for(var j = 0; j<targets.length; j++){
+    //     for(var k = 0; k<targets[i].neighbors.length; k++){
+
+    //         var j = targets[i].neighbors[k];
     //         if( j != i ){
-    //             //print(paths[getPathID(i,j)].isPermanent)
-    //             var pathIDForij = getPathID(i,j); 
-    //             if(paths[pathIDForij].isPermenent && targets[j].residingAgents.length==0){ 
+                
+    //             if(targets[j].residingAgents.length==0){ 
                     
     //                 // need to find out that no agent is en-route to target j
     //                 var anotherAgentIsComitted = false;
@@ -926,10 +1172,9 @@ function Agent(x, y, r) {
     //                     }
     //                 }
 
-                    
     //                 if(!anotherAgentIsComitted){
     //                     jArray.push(j);
-    //                     var y_ij = paths[pathIDForij].distPath()/this.maxLinearVelocity;
+    //                     var y_ij = targets[i].distancesToNeighbors[k]/this.maxLinearVelocity;
     //                     yArray.push(y_ij);    
     //                 }
                                   
@@ -938,17 +1183,20 @@ function Agent(x, y, r) {
     //         }
     //     }
 
+
     //     if(jArray.length==0 || targets[i].uncertainty>0){// no need to go to a neighbor
     //         return i;
-    //     }else if(targets[i].uncertainty==0){
+    //     }else if(jArray.length>0 && targets[i].uncertainty==0){
+    //         print("Agent "+(this.id+1)+" deciding between: ");
     //         print(jArray);
     //         //print(yArray);
     //     }
 
         
     //     // now we need to execute the one step (ahead) greedy selection.
-    //     var maxGain = 0;
-    //     var maxGainDestinationTarget = i;
+    //     ////var maxGain = 0;
+    //     var minGain = Infinity;
+    //     var minGainDestinationTarget = i;
 
     //     for(var k = 0; k < jArray.length; k++){
             
@@ -961,22 +1209,27 @@ function Agent(x, y, r) {
     //         var R_j0 = targets[j].uncertainty;
 
     //         var tau_jHat = (R_j0+A_j*y_ij)/(B_j-A_j);
-
-    //         if(y_ij>(periodT-simulationTime)){
+            
+    //         var tempCond = 2*(B_j-A_j)*(A_i*y_ij)/(B_j-A_i)-A_j*y_ij;
+    //         if(y_ij>(periodT-simulationTime)|| R_j0<tempCond){
     //             // no point in going to this destination
-    //         }else if((periodT-simulationTime)<tau_jHat){
+    //         }
+
+    //         else if((periodT-simulationTime)<tau_jHat){
     //             var tau_j = (periodT-simulationTime);
-                
     //             var gainVal;
-    //             if(oneStepAheadGreedyMethod==1){
-    //                 gainVal = (tau_j*(B_j-A_i)-y_ij*A_i)/periodT;
+
+    //             if(RHCMethod==1){
+    //                 gainVal = A_i*sq(y_ij) + 2*tau_j*y_ij*A_i - (B_j-A_i)*sq(tau_j); //theoretically, this needs to be divided by (2*periodT);
+    //                 ////gainVal = (tau_j*(B_j-A_i)-y_ij*A_i)/periodT;
     //             }else{
-    //                 gainVal = (tau_j*(B_j-A_i)-y_ij*A_i)/(tau_j*periodT)
+    //                 gainVal = (A_i*sq(y_ij) + 2*tau_j*y_ij*A_i-(B_j-A_i)*sq(tau_j))/(y_ij+tau_j);
+    //                 ////gainVal = (tau_j*(B_j-A_i)-y_ij*A_i)/(tau_j*periodT)
     //             }
 
-    //             if(gainVal>maxGain){
-    //                 maxGain = gainVal;
-    //                 maxGainDestinationTarget = j;
+    //             if(gainVal<minGain){
+    //                 minGain = gainVal;
+    //                 minGainDestinationTarget = j;
     //             }
     //             // jkjkvbsvbsdvbioas
     //         }else{
@@ -984,23 +1237,24 @@ function Agent(x, y, r) {
     //             var delta_j = (periodT-simulationTime)-(y_ij+tau_j);
                 
     //             var gainVal;
-    //             if(oneStepAheadGreedyMethod==1){
-    //                 gainVal = (tau_j*(B_j-A_i)+delta_j*(A_j-A_i)-y_ij*A_i)/periodT;
+    //             if(RHCMethod==1){
+    //                 gainVal = A_i*sq(y_ij) + 2*tau_jHat*y_ij*A_i - 2*delta_j*((A_j-A_i)*y_ij+R_j0) - 2*delta_j*tau_jHat*(A_j-A_i) - (B_j-A_i)*sq(tau_jHat) - (A_j-A_i)*sq(delta_j); //theoretically, this needs to be divided by (2*periodT);
+    //                 ////gainVal = (tau_j*(B_j-A_i)+delta_j*(A_j-A_i)-y_ij*A_i)/periodT;
     //             }else{
-    //                 gainVal = (tau_j*(B_j-A_i)+delta_j*(A_j-A_i)-y_ij*A_i)/((tau_j+delta_j)*periodT);
+    //                 gainVal = (A_i*sq(y_ij) + 2*tau_jHat*y_ij*A_i - 2*delta_j*((A_j-A_i)*y_ij+R_j0) - 2*delta_j*tau_jHat*(A_j-A_i) - (B_j-A_i)*sq(tau_jHat) - (A_j-A_i)*sq(delta_j))/(y_ij+tau_jHat+delta_j);
+    //                 ////gainVal = (tau_j*(B_j-A_i)+delta_j*(A_j-A_i)-y_ij*A_i)/((tau_j+delta_j)*periodT);
     //             }
                 
-    //             if(gainVal>maxGain){
-    //                 maxGain = gainVal;
-    //                 maxGainDestinationTarget = j;
+    //             if(gainVal<minGain){
+    //                 minGain = gainVal;
+    //                 minGainDestinationTarget = j;
     //             }
     //         }
     //     }
 
-    //     return maxGainDestinationTarget;
+    //     return minGainDestinationTarget;
 
     // }
-
 
 
     this.findNextTargetSplitBoost = function(currentTargetIndex){// to find j such that R_j(t)<theta_{ij}^a

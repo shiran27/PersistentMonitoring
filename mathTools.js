@@ -563,3 +563,11 @@ function updateTargetClustersUsingCycles(){
     displayClustersMode = true;
 
 }
+
+function plusOneToArray(values){// for indexes displaying purposes
+    var result = [];
+    for(var j = 0; j<values.length; j++){
+        result.push(values[j]+1);
+    }
+    return result;
+}

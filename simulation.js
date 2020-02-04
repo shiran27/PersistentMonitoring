@@ -94,7 +94,11 @@ var agentStateData = []; // NxE matrix residing target label at different times
 var targetStateData = []; // MxE target uncertainty levels at each event time
 var eventTimeData = [];
 
-var oneStepAheadGreedyMethod;
+var RHCMethod;
+var timeHorizonForRHC = periodT;
+var terminalMeanSystemUncertainty; // for plotting purposes with fast-foward
+
+
 
 function startModifyingProbConfig(){
 
@@ -148,13 +152,20 @@ function finishModifyingProbConfig(){
 
         // updating neighborlist
         targets[i].neighbors = [];
+        targets[i].distancesToNeighbors = [];
         for(var j = 0; j<targets.length; j++){
-            if(isNeighbors(i,j)){
-                targets[i].neighbors.push(j);// targets id's
+            if(i==j){
+                targets[i].neighbors.push(j);
+                targets[i].distancesToNeighbors.push(0);
+            }else{
+                var pid = getPathID(i,j);
+                if(paths[pid].isPermenent){
+                    targets[i].neighbors.push(j);
+                    targets[i].distancesToNeighbors.push(paths[pid].distPath());
+                }    
             }
         }
 
-        
         var indexString = (i+1).toString();
         var HTMLTag = "<h5>Target "+ indexString +":";
         HTMLTag += "<input type='range' min='0' max='15' step='0.2' value='"+targets[i].uncertaintyRate.toFixed(1)+"' class='slider' id='uncertaintyRate"+ indexString +"' onchange='uncertaintyRateChangedRT("+indexString+",this.value)'> <span id='uncertaintyRateDisplay"+ indexString +"'></span></h5>";
@@ -166,6 +177,30 @@ function finishModifyingProbConfig(){
 
     }
 
+    // updating second order neighbors of a target
+    for(var i = 0; i<targets.length; i++){
+        targets[i].neighbors2 = [];
+        targets[i].distancesToNeighbors2 = [];
+        for(var l = 0; l<targets[i].neighbors.length; l++){
+            var j = targets[i].neighbors[l];
+            var y_ij = targets[i].distancesToNeighbors[l];
+            targets[i].neighbors2[l] = [];
+            targets[i].distancesToNeighbors2[l] = [];
+            if(i!=j){
+                for(var m = 0; m<targets[j].neighbors.length; m++){
+                    var k = targets[j].neighbors[m];
+                    var y_jk = targets[j].distancesToNeighbors[m];
+                    if(j!=k){
+                        targets[i].neighbors2[l].push(k);
+                        targets[i].distancesToNeighbors2[l].push(y_jk);
+                    }
+                }
+            }
+        } 
+    }
+
+
+    // end updating second orderr targets
 
 
     document.getElementById('customRTSensingRates').innerHTML  = "";
@@ -421,6 +456,11 @@ function updateInterface(){
         //document.getElementById("modeSwitchingThresholdAlphaDisplay").innerHTML = modeSwitchingThresholdAlpha.toFixed(3);
         
         document.getElementById("blockingThresholdDisplay").innerHTML = blockingThreshold.toFixed(2);
+        
+        document.getElementById("timeHorizonForRHCDisplay").innerHTML = document.getElementById("timeHorizonForRHC").value;
+
+
+
 
     }
 
@@ -457,8 +497,8 @@ function readInitialInterface(){
     dataPlotMode = document.getElementById("dataPlotModeCheckBox").checked;
     dataPlotModeChanged();
 
-    oneStepAheadGreedyMethod = Number(document.getElementById("stepAheadGreedyMethodDropdown").value);
-
+    RHCMethod = Number(document.getElementById("RHCMethodDropdown").value);
+    timeHorizonForRHC = Number(document.getElementById("timeHorizonForRHC").value);
 }
 
 function displayThresholdSensitivities(){ 
@@ -613,6 +653,14 @@ function blockingThresholdChanged(val){
     generateThresholdsFromRoutes();
 }
 
+
+function timeHorizonForRHCChanged(val){
+    consolePrint("Time horizon changed to: "+val+".")
+    timeHorizonForRHC = val;
+}
+
+
+
 function stepSizeSelectionMethodChanged(){
     stepSizeSelectionMethod = Number(document.getElementById("stepSizeSelectionMethodDropdown").value);
 
@@ -727,9 +775,9 @@ function  dataPlotModeChanged(){
         }
 
         eventTimeData = [];
-        consolePrint("Enabled generation of additional data plots.");
+        //consolePrint("Enabled generation of additional data plots.");
     }else{
-        consolePrint("Disabled generation of additional data plots.");        
+        //consolePrint("Disabled generation of additional data plots.");        
     }
 }
 
@@ -838,14 +886,14 @@ function boostingMethodChanged(){
 
 }
 
-function stepAheadGreedyMethodChanged(){
-    oneStepAheadGreedyMethod = Number(document.getElementById("stepAheadGreedyMethodDropdown").value);
-    if(oneStepAheadGreedyMethod==0){
+function RHCMethodChanged(){
+    RHCMethod = Number(document.getElementById("RHCMethodDropdown").value);
+    if(RHCMethod==0){
         consolePrint("Receding horizon control: Disabled.")
-    }else if(oneStepAheadGreedyMethod==1){
-        consolePrint("Receding horizon control: Enabled (Horizon: one edge, Objective: Cost).");
-    }else if(oneStepAheadGreedyMethod==2){
-        consolePrint("Receding horizon control: Enabled (Horizon: one edge, Objective: Average Cost).");
+    }else if(RHCMethod==1){
+        consolePrint("Receding horizon control: One Steap Ahead Method Enabled.");
+    }else if(RHCMethod==2){
+        consolePrint("Receding horizon control: Two Steps Ahead Method Enabled.");
     }
 }
 
@@ -873,7 +921,7 @@ function initiateForcedModeSwitch(){
 function simulateHybridSystem(){ // run the hybrid system indefinitely in real-time while displaying
 
 
-    if(oneStepAheadGreedyMethod==0){//disabled
+    if(RHCMethod==0){//disabled
      
         consolePrint("Initiated simulating the system using the threshold based controller.");
 
@@ -881,7 +929,7 @@ function simulateHybridSystem(){ // run the hybrid system indefinitely in real-t
         simulationTime = 0;
         discreteTimeSteps = 0;
     }
-    else if(oneStepAheadGreedyMethod>0){
+    else if(RHCMethod>0){
         consolePrint("Initiated simulating the system using 'one-edge-ahead' receding horizon controller.");
         simulationMode = 6;
         simulationTime = 0;
@@ -893,7 +941,7 @@ function simulateHybridSystem(){ // run the hybrid system indefinitely in real-t
 
 function simulateHybridSystemFast(){ // run the hybrid system for time T period (without displaying agent movements) and get the IPA estimtors
 
-    if(oneStepAheadGreedyMethod==0){
+    if(RHCMethod==0){
         consolePrint("Simulated the threshold based controller for a time period T.");
         simulationMode = 2;
     }else{
@@ -927,10 +975,10 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
 
 
         for(var i = 0; i < agents.length; i++){
-            if(oneStepAheadGreedyMethod==0){
+            if(RHCMethod==0){
                 agents[i].updateFastCT(); // update positions of the agents
             }else{
-                agents[i].updateOneStepGreedyCT(); // update positions of the agents
+                agents[i].updateRHCCT();
             }
         }
 
@@ -965,7 +1013,10 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
     document.getElementById("simulationTime").innerHTML = simulationTime.toFixed(2).toString();
     document.getElementById("simulationCost").innerHTML = meanUncertainty.toFixed(3).toString();
 
-    print("Cost : "+meanUncertainty);
+    consolePrint('Cost: '+meanUncertainty.toFixed(3).toString());
+
+    terminalMeanSystemUncertainty = meanUncertainty;
+    //print("Cost : "+meanUncertainty);
     simulationMode = 0;
 
     if(dataPlotMode){
@@ -1885,6 +1936,20 @@ function fullyConnectCBChanged(val){
             }
         }
     }
+}
+
+
+
+function generateCostVsHorizonCurve(){
+    var cost = "";
+    for(var t_h=1; t_h<250; t_h++ ){
+        resetSimulation();
+        document.getElementById("timeHorizonForRHC").value = t_h;
+        timeHorizonForRHCChanged(t_h);
+        simulateHybridSystemFast();
+        cost = cost+t_h+","+terminalMeanSystemUncertainty.toFixed(3)+";";
+    }
+    return cost;
 }
 
 

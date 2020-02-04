@@ -23,6 +23,11 @@ function Target(x, y, r) {
     this.meanUncertainty = this.initialUncertainty;
 
     this.neighbors = [];
+    this.distancesToNeighbors = [];
+    this.neighbors2 = []; //[[firstNeighbor, secondNeighbor],[firstNeighbor,secondNeighbor]]
+    this.distancesToNeighbors2 = [];
+
+
     this.arcBoostingInitiated = false;
     
     this.show = function(){

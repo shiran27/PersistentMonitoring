@@ -342,12 +342,12 @@
 			<div class="col col-lg-4">
 				<h5>Receding Horizon Control:</h5>
 				
-				<label for="stepAheadGreedyMethodDropdown">Horizon (Steps):</label>
-				<select class="form-control custom-select" id="stepAheadGreedyMethodDropdown" onchange="stepAheadGreedyMethodChanged()">
+				<label for="RHCMethodDropdown">Horizon (Steps):</label>
+				<select class="form-control custom-select" id="RHCMethodDropdown" onchange="RHCMethodChanged()">
         				<option value="0">Disabled</option>
 				    	<option selected value="1">One step ahead</option>
 				    	<option value="2">Two steps ahead</option>
-				    	<option value="3">Two steps ahead (with loops)</option>
+				    	<!-- <option value="3">Two steps ahead (with loops)</option> -->
 				</select> 
 
 			</div>
@@ -355,7 +355,7 @@
 			<div class="col col-lg-3">
 				<label for="timeHorizonForRHC">Horizon (Time) T<sub>h</sub> =  
 					<span id="timeHorizonForRHCDisplay"></span></label>
-					<input type="range" class="form-control slider" id="timeHorizonForRHC" min="1" max="1000" value="500" onchange="timeHorizonForRHCChanged(Number(this.value));">
+					<input type="range" class="form-control slider" id="timeHorizonForRHC" min="1" max="250" value="250" onchange="timeHorizonForRHCChanged(Number(this.value));">
 			</div>
 
 			<div class="col col-lg-3">
