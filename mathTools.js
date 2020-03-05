@@ -571,3 +571,44 @@ function plusOneToArray(values){// for indexes displaying purposes
     }
     return result;
 }
+
+
+
+
+function solveBivariateRationalOpt(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
+
+
+    var searchL = false;
+    if(L<M){
+        searchL = true;
+    }
+
+    var searchN = false;
+    if(N<(M/Q)){
+        searchN = true;
+    }   
+
+    
+
+
+
+
+    return [Infinity, 0,0] // cost, x, y values
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

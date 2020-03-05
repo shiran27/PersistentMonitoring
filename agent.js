@@ -26,6 +26,8 @@ function Agent(x, y, r) {
     this.visitedTargetList = []; // for exploration boosting
     this.unvisitedTargetsInfo = []; // for exploration boosting
 
+    this.timeToExitMode = [3,0];//[sensing=1,t^1+u_i] , [sleeping=2,t^2+v_i], [traveling=3,t^3+rho_ij],  
+
     this.show = function(){
 
         fill(this.graphicColor);
@@ -533,6 +535,446 @@ function Agent(x, y, r) {
 
 
 
+    // Evet driven RHC update for an agent
+    this.updateEDRHCCT = function(){
+        // update the agent position s_a(t) of agent a
+
+        if(this.residingTarget.length==1){//residing in some target
+            
+            var i = this.residingTarget[0];
+            var j = i;
+
+            // only at inital soln
+            if(this.timeToExitMode[0]==3 && this.timeToExitMode[1]<simulationTime){
+                // solve OP-1 to find the u_i
+                var u_i = this.solveOP1(i);
+                this.timeToExitMode = [1,simulationTime+u_i];
+
+            }else if(this.timeToExitMode[0]==1){// in sensing mode 
+                 if(this.timeToExitMode[1]<simulationTime){//and sensing time elepased
+                    if(targets[i].uncertainty>0){// leave early?
+                        // solve OP-3 to find the next target j to visit
+                        var ans = this.solveOP3(i);
+                        j = ans[0];
+                        var rho_ij = ans[1]; 
+                        if(j!=i){this.timeToExitMode = [3,simulationTime+rho_ij]};
+                    }else{
+                        // solve OP-2 to find the sleeping time v_i
+                        var v_i = this.solveOP2(i);
+                        this.timeToExitMode = [2,simulationTime+v_i];
+                        //// if v_i = 0, jump directly to moving: Solving OP-3
+                    }
+                 }else{
+                    // waiting till the end of the predetermined sensing period
+                    // this.position = this.position; j = i;
+                 }
+
+            }else if(this.timeToExitMode[0]==2){// in sleeping mode
+                if(this.timeToExitMode[1]<simulationTime){//and sleeping time elepased
+                    // Solve OP-3 to find the next target to visit
+                    var ans = this.solveOP3(i);
+                    j = ans[0];
+                    var rho_ij = ans[1]; 
+                    if(j!=i){this.timeToExitMode = [3,simulationTime+rho_ij]};
+                }else{
+                    // waiting till the end of the predetermined sleeping period    
+                    // this.position = this.position; j = i;
+                }
+
+            }
+
+            
+            if(j==i){
+                // stay at i to further reduce the uncertainty till 0
+                this.position = this.position;
+            }else{
+                // need to start moving in the direction of target j
+                // rotate
+                this.residingTarget = [i,j];
+                var headingAngle = atan2P2(targets[i].position,targets[j].position);
+                var rotationRequired = headingAngle-this.orientation;
+                for(var k = 0; k<this.graphicBaseShape.length ; k++){
+                    this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
+                }
+                ////print("need to go to j; rotated");
+                this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                this.position = plusP2(this.position, this.headingDirectionStep);
+                this.orientation = headingAngle;
+
+                if(dataPlotMode){recordSystemState();}// agent Started Moving towards a new target
+            }
+        }else{// going from T_i to T_j (as this.residingTarget = [T_i, T_j]) 
+            var i = this.residingTarget[0];// where we were
+            var j = this.residingTarget[1];// where we are heading
+            var angle = this.orientation;
+            ////print("travelling i to j");
+            this.position = plusP2(this.position, this.headingDirectionStep);
+            if(distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)){
+                ////print("Stopped at j !!! ")
+                this.position = targets[j].position;
+                this.residingTarget = [j]; 
+
+                // event driven decision making
+                if(this.timeToExitMode[0]==3 && this.timeToExitMode[1]<simulationTime){
+                    // solve OP-1 to decide u_i
+                    var u_j = this.solveOP1(j);
+                    this.timeToExitMode = [1, simulationTime+u_j];
+                    //// if u_i = 0 solve OP-3 to find the next target j
+                }
+
+                if(dataPlotMode){recordSystemState();}// record agent reached destination target event
+            }
+
+
+        }
+    }
+
+
+    this.solveOP1 = function(i){
+
+        var t_h = Math.min(periodT-simulationTime,timeHorizonForRHC);
+
+        var A_i = targets[i].uncertaintyRate;
+        var B_i = this.sensingRate;
+        var R_i = targets[i].uncertainty;
+        var u_i = R_i/(B_i-A_i);
+
+        return u_i;
+
+    }
+
+    this.solveOP2 = function(i){
+        
+        var t_h2 = Math.min(periodT-simulationTime,timeHorizonForRHC);
+        
+        var jArray = []; // set of candidate targets
+        var yArray = []; // travel times
+        var Abar = targets[i].uncertaintyRate;  
+        var Rbar = targets[i].uncertainty;
+
+        for(var k = 0; k<targets[i].neighbors.length; k++){
+            var j = targets[i].neighbors[k];
+            if( j != i ){
+            
+                
+                // need to find out that no agent is already in or en-route to target j
+                var anotherAgentIsComitted = false;
+                for(var a = 0; a<agents.length; a++){
+                    if(agents[a].residingTarget.length==1){
+                        if(agents[a].residingTarget[0]==j){
+                            anotherAgentIsComitted = true;
+                            break;    
+                        }
+                    }else if(agents[a].residingTarget.length==2){
+                        if(agents[a].residingTarget[1]==j){
+                            anotherAgentIsComitted = true;
+                            break;
+                        }
+                    }
+                }
+
+                if(!anotherAgentIsComitted){
+                    jArray.push(j);
+                    var y_ij = targets[i].distancesToNeighbors[k]/this.maxLinearVelocity;
+                    yArray.push(y_ij);
+                    Abar = Abar + targets[j].uncertaintyRate;    
+                    Rbar = Rbar + targets[j].uncertainty;    
+                }
+                
+            }
+        }
+
+
+        var bestDestinationCost = Infinity;
+        var bestDestination = i;
+        var bestDestinationSleepTime = 0; //if no neighbors, have to wait till next iteration 
+        for(var k = 0; k < jArray.length; k++){
+            
+            var j = jArray[k];
+            var y_ij = yArray[k];
+
+            // Each coef is multiplied by 2T
+            var coefA = (Abar-targets[i].uncertaintyRate);
+            var coefB = Abar-this.sensingRate;
+            var coefC = (Abar-targets[j].uncertaintyRate);
+            var coefD = 2*(Abar-targets[i].uncertaintyRate);
+            var coefE = 2*(Abar-targets[i].uncertaintyRate-targets[j].uncertaintyRate);
+            var coefF = 2*(Abar-targets[j].uncertaintyRate);
+            var coefG = 2*((Rbar-targets[i].uncertainty)+(Abar-targets[i].uncertaintyRate)*y_ij);
+            var coefH = 2*((Rbar-targets[i].uncertainty)+Abar*y_ij);
+            var coefK = 2*((Rbar-targets[i].uncertainty-targets[j].uncertainty)+(Abar-targets[j].uncertaintyRate)*y_ij);
+            var coefL = y_ij*(2*(Rbar-targets[i].uncertainty)+Abar*y_ij);
+
+            var coefs = [coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefL];
+
+
+            sol1 = this.solveOP2C1(i,j,t_h2,y_ij,coefs);
+            sol2 = this.solveOP2C2(i,j,t_h2,y_ij,coefs);
+        
+            
+            if(sol1[0]<sol2[0]){
+                if(sol1[0]<bestDestinationCost){
+                    // print("1 dom:"+sol1+","+sol2)
+                    bestDestinationCost = sol1[0];
+                    bestDestination = j;
+                    bestDestinationSleepTime = sol1[1];
+                }
+            }else{
+                if(sol2[0]<bestDestinationCost){
+                    // print("2 dom:"+sol1+","+sol2)
+                    bestDestinationCost = sol2[0];
+                    bestDestination = j;
+                    bestDestinationSleepTime = sol2[1];
+                }
+            }
+
+        }
+
+        bestDestinationSleepTime = 0;// temp
+        return bestDestinationSleepTime;
+
+    }
+
+
+
+    this.solveOP2C1 = function(i,j,t_h2,rho_ij,coefs){
+
+        // transform coeficients
+        var coefA = coefs[0];  // A
+        var coefB = coefs[1];  // B
+        var coefC = coefs[3];  // D
+        var coefD = coefs[6];  // G
+        var coefE = coefs[7];  // H
+        var coefF = coefs[9];  // L
+
+        var coefG = 1;
+        var coefH = 1;
+        var coefK = rho_ij;
+
+        var coefP = targets[j].uncertaintyRate/(this.sensingRate-targets[j].uncertaintyRate);
+        var coefL = (targets[j].uncertainty+targets[j].uncertaintyRate*rho_ij)/(this.sensingRate-targets[j].uncertaintyRate);
+        
+        var coefQ = 1;
+        var coefM = t_h2-rho_ij;
+
+        var coefN = Infinity;
+
+        var sol = solveBivariateRationalOpt(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN)
+
+        var costVal = sol[0];
+        var timeVal = sol[1]; // v_i, u_j, v_j=0
+
+        var costVal = Infinity;
+        var timeVal = 0;
+        return [costVal, timeVal]; 
+
+    }
+
+
+    this.solveOP2C2 = function(i,j,t_h2,rho_ij,coefs){
+
+        var alpha = (targets[j].uncertainty+targets[j].uncertaintyRate*rho_ij)/(this.sensingRate-targets[j].uncertaintyRate);
+        var beta = targets[j].uncertaintyRate/(this.sensingRate-targets[j].uncertaintyRate);
+
+        // transform coeficients
+        var coefA = coefs[1]*sq(beta) + coefs[3]*beta + coefs[0];  
+        var coefB = coefs[2];  
+        var coefC = coefs[5]*beta + coefs[4];  
+        var coefD = 2*coefs[1]*alpha*beta + coefs[3]*alpha + coefs[7]*beta + coefs[6];
+        var coefE = coefs[5]*alpha + coefs[8];
+        var coefF = coefs[1]*sq(alpha) + coefs[7]*alpha + coefs[9]; 
+        
+        var coefG = 1+beta;
+        var coefH = 1;
+        var coefK = rho_ij+alpha;
+
+        var coefP = 0; 
+        var coefL = Infinity;
+        
+        var coefQ = 1+beta;
+        var coefM = t_h2-rho_ij-alpha;
+
+        var coefN = Infinity;
+
+        var sol = solveBivariateRationalOpt(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
+
+        var costVal = sol[0];
+        var timeVal = sol[1]; // v_i, u_j=\lambda_{jo}(v_i), v_j
+
+        var costVal = Infinity;
+        var timeVal = 0;
+        return [costVal, timeVal]; 
+
+    }
+
+
+
+
+
+    // OP-3 for ED-RHC
+
+    this.solveOP3 = function(i){
+
+        var t_h3 = Math.min(periodT-simulationTime,timeHorizonForRHC);
+        
+        var jArray = []; // set of candidate targets
+        var yArray = []; // travel times
+        var Abar = targets[i].uncertaintyRate;  
+        var Rbar = targets[i].uncertainty;
+
+        for(var k = 0; k<targets[i].neighbors.length; k++){
+            var j = targets[i].neighbors[k];
+            if( j != i ){
+            
+                
+                // need to find out that no agent is already in or en-route to target j
+                var anotherAgentIsComitted = false;
+                for(var a = 0; a<agents.length; a++){
+                    if(agents[a].residingTarget.length==1){
+                        if(agents[a].residingTarget[0]==j){
+                            anotherAgentIsComitted = true;
+                            break;    
+                        }
+                    }else if(agents[a].residingTarget.length==2){
+                        if(agents[a].residingTarget[1]==j){
+                            anotherAgentIsComitted = true;
+                            break;
+                        }
+                    }
+                }
+
+                if(!anotherAgentIsComitted){
+                    jArray.push(j);
+                    var y_ij = targets[i].distancesToNeighbors[k]/this.maxLinearVelocity;
+                    yArray.push(y_ij);
+                    Abar = Abar + targets[j].uncertaintyRate;    
+                    Rbar = Rbar + targets[j].uncertainty;    
+                }
+                
+            }
+        }
+
+
+        var bestDestinationCost = Infinity;
+        var bestDestination = i;
+        var bestDestinationTime = 0;
+        for(var k = 0; k < jArray.length; k++){
+            
+            var j = jArray[k];
+            var y_ij = yArray[k];
+
+            // Each coef is multiplied by 2T
+            var coefA = (Abar-this.sensingRate);
+            var coefB = Abar-targets[j].uncertaintyRate;
+            var coefC = 2*(Abar-targets[j].uncertaintyRate);
+            var coefD = 2*(Rbar+Abar*y_ij);
+            var coefE = 2*((Rbar-targets[j].uncertainty)+(Abar-targets[j].uncertaintyRate)*y_ij);
+            var coefF = y_ij*(2*Rbar+Abar*y_ij);
+            var coefs = [coefA,coefB,coefC,coefD,coefE,coefF]
+
+
+            var sol1 = this.solveOP3C1(i,j,t_h3,y_ij,Abar,coefs);
+            var sol2 = this.solveOP3C2(i,j,t_h3,y_ij,Abar,coefs);
+        
+            
+            if(sol1<sol2){
+                if(sol1<bestDestinationCost){
+                    // print("1 dom:"+sol1+","+sol2)
+                    bestDestinationCost = sol1;
+                    bestDestination = j;
+                    bestDestinationTime = y_ij;
+                }
+            }else{
+                if(sol2<bestDestinationCost){
+                    // print("2 dom:"+sol1+","+sol2)
+                    bestDestinationCost = sol2;
+                    bestDestination = j;
+                    bestDestinationTime = y_ij;
+                }
+            }
+        }
+
+        return [bestDestination, bestDestinationTime];
+    
+    }
+
+
+    this.solveOP3C1 = function(i,j,t_h3,rho_ij,Abar,coefs){// u_j = ?, v_j = 0
+        var lambda_j0 = (targets[j].uncertainty+targets[j].uncertaintyRate*rho_ij)/(this.sensingRate-targets[j].uncertaintyRate); 
+        var lambda_j = Math.min(lambda_j0,t_h3-rho_ij);    
+        
+        if(lambda_j<0){// not enough time to visit j
+            //print("Error lambda_j:"+lambda_j);
+            return Infinity;
+        }
+
+        var u_jSharp = Abar*rho_ij/(this.sensingRate-Abar);
+
+        var cost = 0;
+        if(u_jSharp <= lambda_j && Abar < this.sensingRate){
+            cost = evalCostOP3(lambda_j,0,rho_ij,coefs); //u_j = lambda_j
+            //print("testOP3C1: i="+i+", j="+j+", Cost"+cost+"<"+evalCostOP3(0,0,coefs));
+        }else{
+            cost = evalCostOP3(0,0,rho_ij,coefs); // u_j = 0
+            //print("testOP3C1: i="+i+", j="+j+", Cost"+cost+"<"+evalCostOP3(lambda_j,0,coefs));
+        }
+        
+        cost1 = evalCostOP3(lambda_j,0,rho_ij,coefs);
+        cost2 = evalCostOP3(0,0,rho_ij,coefs);     
+        ////print("testOP3C1: i="+i+", j="+j+", Cost1:"+cost1.toFixed(3)+", Cost2:"+cost2.toFixed(3)+", Cost:"+cost.toFixed(3)) 
+
+        if(min(cost1,cost2)!=cost){
+            print("Error: u_jSharp: "+u_jSharp+", lambda_j: "+lambda_j)
+            print("testOP3C1: i="+i+", j="+j+", Cost1:"+cost1.toFixed(3)+", Cost2:"+cost2.toFixed(3)+", Cost:"+cost.toFixed(3)) 
+        }
+        return cost;
+
+    }
+
+    this.solveOP3C2 = function(i,j,t_h3,rho_ij,Abar,coefs){ // u_j = \lambda_j0, v_j = ?
+        var lambda_j0 = (targets[j].uncertainty+targets[j].uncertaintyRate*rho_ij)/(this.sensingRate-targets[j].uncertaintyRate); 
+        var mu_j = t_h3-(rho_ij+lambda_j0)
+
+        if(mu_j<0){// this means it should belong to class 1
+            //print("Error: mu_j: "+mu_j)
+            return Infinity;
+        }
+        
+        var temp1 = (this.sensingRate-targets[j].uncertaintyRate)*sq(rho_ij+lambda_j0)-this.sensingRate*sq(rho_ij);
+        var v_jSharp = Math.sqrt((temp1)/(Abar-targets[j].uncertaintyRate))-(rho_ij+lambda_j0);
+
+
+        var temp2 = this.sensingRate*(1-sq(rho_ij)/sq(rho_ij+lambda_j0))
+        
+        var cost = 0;
+        if(Abar >= temp2){
+            cost = evalCostOP3(lambda_j0,0,rho_ij,coefs); //v_j = 0
+        }else if (v_jSharp >= mu_j){
+            cost = evalCostOP3(lambda_j0,mu_j,rho_ij,coefs); // v_j = mu_j
+        }else{
+            cost = evalCostOP3(lambda_j0,v_jSharp,rho_ij,coefs);
+        }
+
+
+        // no need
+        // cost1 = evalCostOP3(lambda_j0,0,rho_ij,coefs);
+        // cost2 = evalCostOP3(lambda_j0,mu_j,rho_ij,coefs);
+        // cost3 = evalCostOP3(lambda_j0,v_jSharp,rho_ij,coefs);
+        // ////print("testOP3C2: i="+i+", j="+j+", Cost1:"+cost1.toFixed(3)+", Cost2:"+cost2.toFixed(3)+", Cost3:"+cost3.toFixed(3)+", Cost:"+cost.toFixed(3)) 
+
+        // if(min(cost1,cost2,cost3)!=cost){ // this happens only when v_jShapr is negative! hens theory is correct!!!!
+        //     //print("Error: ")
+        //     print("v_jSharp: "+v_jSharp)
+        //     print("testOP3C2: i="+i+", j="+j+", Cost1:"+cost1.toFixed(3)+", Cost2:"+cost2.toFixed(3)+", Cost3:"+cost3.toFixed(3)+", Cost:"+cost.toFixed(3))
+        // }
+
+        return cost;
+    }
+
+
+
+
+
     this.IPAComputationEventD1 = function(targetID){
         var i = targetID;
         var a = this.id;
@@ -828,24 +1270,29 @@ function Agent(x, y, r) {
             var j = targets[i].neighbors[l];
             if( j != i ){
                 
-                if(targets[j].residingAgents.length==0){ 
-                    
-                    // need to find out that no agent is en-route to target j
-                    var anotherAgentIsComitted = false;
-                    for(var a = 0; a<agents.length; a++){
+                // need to find out that no agent is already in or en-route to target j
+                var anotherAgentIsComitted = false;
+                for(var a = 0; a<agents.length; a++){
+                    if(agents[a].residingTarget.length==1){
+                        if(agents[a].residingTarget[0]==j){
+                            anotherAgentIsComitted = true;
+                            break;    
+                        }
+                    }else if(agents[a].residingTarget.length==2){
                         if(agents[a].residingTarget[1]==j){
                             anotherAgentIsComitted = true;
                             break;
                         }
                     }
-
-                    if(!anotherAgentIsComitted){
-                        jIndArray.push(l);
-                        var y_ij = targets[i].distancesToNeighbors[l]/this.maxLinearVelocity;
-                        yArray.push(y_ij);    
-                    }
-                                  
                 }
+
+                if(!anotherAgentIsComitted){
+                    jIndArray.push(l);
+                    var y_ij = targets[i].distancesToNeighbors[l]/this.maxLinearVelocity;
+                    yArray.push(y_ij);    
+                }
+                                  
+                
                 
             }
         }
@@ -1052,24 +1499,28 @@ function Agent(x, y, r) {
             var j = targets[i].neighbors[k];
             if( j != i ){
                 
-                if(targets[j].residingAgents.length==0){ 
-                    
-                    // need to find out that no agent is en-route to target j
-                    var anotherAgentIsComitted = false;
-                    for(var a = 0; a<agents.length; a++){
+                
+                // need to find out that no agent is already in or en-route to target j
+                var anotherAgentIsComitted = false;
+                for(var a = 0; a<agents.length; a++){
+                    if(agents[a].residingTarget.length==1){
+                        if(agents[a].residingTarget[0]==j){
+                            anotherAgentIsComitted = true;
+                            break;    
+                        }
+                    }else if(agents[a].residingTarget.length==2){
                         if(agents[a].residingTarget[1]==j){
                             anotherAgentIsComitted = true;
                             break;
                         }
                     }
-
-                    if(!anotherAgentIsComitted){
-                        jArray.push(j);
-                        var y_ij = targets[i].distancesToNeighbors[k]/this.maxLinearVelocity;
-                        yArray.push(y_ij);    
-                    }
-                                  
                 }
+
+                if(!anotherAgentIsComitted){
+                    jArray.push(j);
+                    var y_ij = targets[i].distancesToNeighbors[k]/this.maxLinearVelocity;
+                    yArray.push(y_ij);    
+                }              
                 
             }
         }
@@ -1558,6 +2009,11 @@ function removeAnAgent(){
     document.getElementById("agentSelectDropdown").remove(agents.length+1);
     document.getElementById("agentSelectDropdown").selectedIndex = agents.length;
 
+}
+
+function evalCostOP3(u_j,v_j,rho_ij,coefs){
+    var value = (coefs[0]*sq(u_j) + coefs[1]*sq(v_j) + coefs[2]*u_j*v_j + coefs[3]*u_j + coefs[4]*v_j + coefs[5])/(u_j+v_j+rho_ij); 
+    return value;
 }
 
 

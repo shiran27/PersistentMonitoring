@@ -136,7 +136,36 @@ function draw() {
         //consolePrint('Cost: '+cost.toFixed(3).toString());
         ////print("Time: "+Math.round(simulationTime));
         ////print("Cost: "+cost);
-    }else if(simulationMode==4){
+    }else if(simulationMode==7){// Event Driven RHC methods
+
+        for(var k=0; k<simulationFrameRate; k++){
+            
+            var cost = 0;
+            for(var i = 0; i < targets.length; i++){
+                targets[i].updateCT(); // update uncertainty levels
+                cost = cost + targets[i].meanUncertainty;
+            }
+
+            
+            for(var i = 0; i < agents.length; i++){
+                // the following line is the only difference compared to "SimulationMoode1" given above
+                agents[i].updateEDRHCCT(); // update positions of the agents  
+            }
+
+            simulationTime = simulationTime + deltaT;
+            discreteTimeSteps = discreteTimeSteps + 1;
+
+            var t = simulationTime;
+
+        }
+
+        document.getElementById("simulationTime").innerHTML = t.toFixed(2).toString();
+        document.getElementById("simulationCost").innerHTML = cost.toFixed(3).toString();
+
+        //consolePrint('Cost: '+cost.toFixed(3).toString());
+        ////print("Time: "+Math.round(simulationTime));
+        ////print("Cost: "+cost);
+    }else if(simulationMode==4){// IPA iterations
 
         if(numberOfUpdateStepsCount<numberOfUpdateSteps){        
             solveForIPAEstimators();

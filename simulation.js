@@ -922,19 +922,27 @@ function simulateHybridSystem(){ // run the hybrid system indefinitely in real-t
 
 
     if(RHCMethod==0){//disabled
-     
         consolePrint("Initiated simulating the system using the threshold based controller.");
-
         simulationMode = 1;
         simulationTime = 0;
         discreteTimeSteps = 0;
     }
-    else if(RHCMethod>0){
-        consolePrint("Initiated simulating the system using 'one-edge-ahead' receding horizon controller.");
+    else if(RHCMethod<3){
+        if(RHCMethod==1){
+            consolePrint("Initiated simulating the system using 'one-step-ahead' receding horizon controller.");
+        }else if(RHCMethod==2){
+            consolePrint("Initiated simulating the system using 'two-step-ahead' receding horizon controller.");
+        }
         simulationMode = 6;
         simulationTime = 0;
         discreteTimeSteps = 0;
+    }else{ // RHCMethod =3
+        simulationMode = 7;
+        simulationTime = 0;
+        discreteTimeSteps = 0;
     }
+
+
 
 }
 
@@ -944,9 +952,12 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
     if(RHCMethod==0){
         consolePrint("Simulated the threshold based controller for a time period T.");
         simulationMode = 2;
-    }else{
-        consolePrint("Simulated the receding horizon controller for a time period T.");
+    }else if(RHCMethod<3){
+        consolePrint("Simulated the greedy receding horizon controller for a time period T.");
         simulationMode = 6;
+    }else{
+        consolePrint("Simulated the event driven receding horizon controller for a time period T.");
+        simulationMode = 7;
     }
 
     simulationTime = 0;
@@ -963,7 +974,6 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
     for(var i = 0; i<agents.length; i++){// rest agent positions
         agents[i].residingTarget = [agents[i].initialResidingTarget];
         agents[i].position = targets[agents[i].residingTarget[0]].position;
-        
     }
     
 
@@ -977,8 +987,10 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
         for(var i = 0; i < agents.length; i++){
             if(RHCMethod==0){
                 agents[i].updateFastCT(); // update positions of the agents
-            }else{
+            }else if (RHCMethod<3){
                 agents[i].updateRHCCT();
+            }else{
+                agents[i].updateEDRHCCT();
             }
         }
 
@@ -1951,6 +1963,9 @@ function generateCostVsHorizonCurve(){
     }
     return cost;
 }
+
+
+
 
 
 
