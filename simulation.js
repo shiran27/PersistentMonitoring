@@ -1516,6 +1516,7 @@ function resetSimulation(){
         agents[i].residingTarget = [agents[i].initialResidingTarget];
         agents[i].position = targets[agents[i].residingTarget[0]].position;
         
+        agents[i].timeToExitMode = [3,0]; // Event Driven RHC
     }
 
     document.getElementById("simulationTime").innerHTML = simulationTime.toFixed(2).toString();
@@ -1531,6 +1532,7 @@ function resetSimulation(){
 
 
 function pauseSimulation(){
+
     if(RGCComputingMode>0){
         RGCComputingMode = 0;
         simulationMode = 1;
@@ -1545,6 +1547,45 @@ function pauseSimulation(){
         document.getElementById("pauseButton").innerHTML = "<i class='fa fa-play' aria-hidden='true'></i>"; 
         consolePrint("Hybrid system simulation paused.");
     }
+
+
+
+    // // start simulation button
+    // if(RHCMethod==0){//disabled
+    //     // old pause button code
+    //     if(RGCComputingMode>0){
+    //         RGCComputingMode = 0;
+    //         simulationMode = 1;
+    //     }
+
+    //     if(simulationMode == 0){
+    //         simulationMode = 1;
+    //         document.getElementById("pauseButton").innerHTML = "<i class='fa fa-pause' aria-hidden='true'></i>";     
+    //         consolePrint("Hybrid system simulation started.");
+    //     }else{
+    //         simulationMode = 0;
+    //         document.getElementById("pauseButton").innerHTML = "<i class='fa fa-play' aria-hidden='true'></i>"; 
+    //         consolePrint("Hybrid system simulation paused.");
+    //     }  
+    // }
+    // else if(RHCMethod<3){
+    //     if(RHCMethod==1){
+    //         consolePrint("Initiated simulating the system using 'one-step-ahead' receding horizon controller.");
+    //     }else if(RHCMethod==2){
+    //         consolePrint("Initiated simulating the system using 'two-step-ahead' receding horizon controller.");
+    //     }
+    //     simulationMode = 6;
+    //     //////simulationTime = 0;
+    //     //////discreteTimeSteps = 0;
+    // }else{ // RHCMethod =3
+    //     simulationMode = 7;
+    //     //////simulationTime = 0;
+    //     //////discreteTimeSteps = 0;
+    // }
+
+
+
+
 
 
     
@@ -1656,6 +1697,7 @@ function refreshRandomProblemConfiguration(){
     addAnAgentAtTarget(5);
     addAnAgentAtTarget(10);
     finishModifyingProbConfig();
+    dataPlotModeChanged();
 }
 
 function numOfKMeansIterationsChanged(value){

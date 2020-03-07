@@ -708,20 +708,20 @@ function Agent(x, y, r) {
             var coefs = [coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefL];
 
 
-            sol1 = this.solveOP2C1(i,j,t_h2,y_ij,coefs);
-            sol2 = this.solveOP2C2(i,j,t_h2,y_ij,coefs);
+            var sol1 = this.solveOP2C1(i,j,t_h2,y_ij,coefs);
+            var sol2 = this.solveOP2C2(i,j,t_h2,y_ij,coefs);
         
             
             if(sol1[0]<sol2[0]){
                 if(sol1[0]<bestDestinationCost){
-                    // print("1 dom:"+sol1+","+sol2)
+                    //print("1 dom:"+sol1+","+sol2)
                     bestDestinationCost = sol1[0];
                     bestDestination = j;
                     bestDestinationSleepTime = sol1[1];
                 }
             }else{
                 if(sol2[0]<bestDestinationCost){
-                    // print("2 dom:"+sol1+","+sol2)
+                    //print("2 dom:"+sol1+","+sol2)
                     bestDestinationCost = sol2[0];
                     bestDestination = j;
                     bestDestinationSleepTime = sol2[1];
@@ -730,7 +730,7 @@ function Agent(x, y, r) {
 
         }
 
-        bestDestinationSleepTime = 0;// temp
+        // bestDestinationSleepTime = 0;// temp
         return bestDestinationSleepTime;
 
     }
@@ -738,6 +738,10 @@ function Agent(x, y, r) {
 
 
     this.solveOP2C1 = function(i,j,t_h2,rho_ij,coefs){
+
+        if(t_h2<rho_ij){// not enough time to visit j
+            return [Infinity,0];
+        }
 
         // transform coeficients
         var coefA = coefs[0];  // A
@@ -759,14 +763,20 @@ function Agent(x, y, r) {
 
         var coefN = Infinity;
 
-        var sol = solveBivariateRationalOpt(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN)
+        var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
+        var sol = rationalObjective.solveComplete(); // solve for optimum (v_i,u_j)
+
 
         var costVal = sol[0];
-        var timeVal = sol[1]; // v_i, u_j, v_j=0
+        var v_i = sol[1]; // v_i, u_j, v_j=0
+        var u_j = sol[2];
+        var v_j = 0;
 
-        var costVal = Infinity;
-        var timeVal = 0;
-        return [costVal, timeVal]; 
+        print("OP2C1: v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
+
+        // var costVal = Infinity;
+        // var timeVal = 0;
+        return [costVal, v_i]; 
 
     }
 
@@ -775,6 +785,11 @@ function Agent(x, y, r) {
 
         var alpha = (targets[j].uncertainty+targets[j].uncertaintyRate*rho_ij)/(this.sensingRate-targets[j].uncertaintyRate);
         var beta = targets[j].uncertaintyRate/(this.sensingRate-targets[j].uncertaintyRate);
+
+        if(t_h2<rho_ij+alpha){// not enough time to go according to this plan
+            return [Infinity,0];
+        }
+
 
         // transform coeficients
         var coefA = coefs[1]*sq(beta) + coefs[3]*beta + coefs[0];  
@@ -796,14 +811,20 @@ function Agent(x, y, r) {
 
         var coefN = Infinity;
 
-        var sol = solveBivariateRationalOpt(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
+        var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
+        var sol = rationalObjective.solveComplete(); // solve for v_i,v_j
 
-        var costVal = sol[0];
-        var timeVal = sol[1]; // v_i, u_j=\lambda_{jo}(v_i), v_j
+        var costVal = sol[0];// v_i, u_j=\lambda_{jo}(v_i), v_j
+        var v_i = sol[1]; 
+        var u_j = alpha + beta*v_i;
+        var v_j = sol[2];
 
-        var costVal = Infinity;
-        var timeVal = 0;
-        return [costVal, timeVal]; 
+        print("OP2C2: v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
+
+
+        // var costVal = Infinity;
+        // var timeVal = 0;
+        return [costVal, v_i]; 
 
     }
 
