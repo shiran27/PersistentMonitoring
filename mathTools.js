@@ -879,15 +879,20 @@ function solveRootsOfAQuartic(aq,bq,cq,dq,eq) {
   }
 
   if (ipart != 0) {
+    var sols = [];
     var x1  = eval((p2 + q + r - s).toFixed(10))
     var x1i = eval((p2ipart + qipart).toFixed(10))
+    if(x1i==0 && x1>=0){sols.push(x1)}
     var x2  = eval((p2 - q - r - s).toFixed(10))
     var x2i = eval((p2ipart - qipart).toFixed(10))
+    if(x2i==0 && x2>=0){sols.push(x2)}
     var x3  = eval((-p2 + q - r - s).toFixed(10))
     var x3i = eval((-p2ipart + qipart).toFixed(10))
+    if(x3i==0 && x3>=0){sols.push(x3)}
     var x4  = eval((-p2 - q + r - s).toFixed(10))
     var x4i = eval((-p2ipart - qipart).toFixed(10))
-    return [false,0,0,0,0]; // maybe some are good aout of following four
+    if(x4i==0 && x4>=0){sols.push(x4)}
+    return [true,...sols]; // maybe some are good aout of following four
   }
 
   if (perfectbiquadratic == 1) {

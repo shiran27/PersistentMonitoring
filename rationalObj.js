@@ -38,7 +38,8 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
         var y_0 = 0;
         var m = 0;
         var r_0 = 0;
-        var r_1 = Math.min(this.N,(this.M/this.Q));
+        var r_1 = Math.min(this.N, (this.M/this.Q));
+        // print("X:r_1= "+r_1)
         var sol = this.solveLinOptX(x_0,y_0,m,r_0,r_1); //cost, x,y  
         ////print("Grads X:"+[this.evalGradX(x_0,y_0,m,r_0),this.evalGrad2X(x_0,y_0,m)])  
         if(sol[0]<bestSol[0]){bestSol = [...sol]}
@@ -60,7 +61,8 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
             var y_0 = this.L;
             var m = this.P;
             var r_0 = 0;
-            var r_1 = (this.M-this.L)/(this.P+this.Q)
+            var r_1 = Math.min(((this.M-this.L)/(this.P+this.Q)),this.N);
+            // print("L:r_1= "+r_1)
             var sol = this.solveLinOptX(x_0,y_0,m,r_0,r_1); //cost, x,y
             ////print("Grads L:"+[this.evalGradX(x_0,y_0,m,r_0),this.evalGrad2X(x_0,y_0,m)])  
             if(sol[0]<bestSol[0]){bestSol = [...sol]}
@@ -74,10 +76,16 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
         var m = -this.Q;
         var r_0 = Math.max(0,(this.M-this.L)/(this.P+this.Q));
         var r_1 = Math.min(this.N, this.M/this.Q)
-        var sol = this.solveLinOptX(x_0,y_0,m,r_0,r_1); //cost, x,y  
-        ////print("Grads M:"+[this.evalGradX(x_0,y_0,m,r_0),this.evalGrad2X(x_0,y_0,m)])  
-        //// print("v_i="+sol[1]+"J="+sol[0])
-        if(sol[0]<bestSol[0]){bestSol = [...sol]}  
+        //print("M:r_1= "+r_1+", r_0= "+r_0)
+        var sol;
+        if(r_0<r_1){
+            var sol = this.solveLinOptX(x_0,y_0,m,r_0,r_1); //cost, x,y  
+            ////print("Grads M:"+[this.evalGradX(x_0,y_0,m,r_0),this.evalGrad2X(x_0,y_0,m)])  
+            //// print("v_i="+sol[1]+"J="+sol[0])
+            if(sol[0]<bestSol[0]){bestSol = [...sol]}  
+        }
+         
+        
 
 
         // Search Along N 
@@ -86,16 +94,15 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
             var y_0 = 0;
             var n = 0;
             var r_0 = 0;
-            var r_1 = Math.min(this.M-this.Q*this.N);
+            var r_1 = Math.min(this.M-this.Q*this.N, this.P*this.N+this.L);
             var sol = this.solveLinOptY(x_0,y_0,n,r_0,r_1); //cost, x,y
             if(sol[0]<bestSol[0]){bestSol = [...sol]} 
         }
         
-
-        // KKT coditions - omitted for now!
-        // this.formTheQuartic();
-        // this.solveQuartic(); // x values
-        // this.refineQuarticSolutions();
+        // Solving KKT conditions
+        // none of the answers seems to be reasoably feasible! Hense skipped
+        ////var sol = this.solveKKTConditions(); 
+        
 
 
         return bestSol // cost, x, y values,: x will be executed!
@@ -122,6 +129,7 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
 
         }else if(grad1 < 0 && grad2 > 0){
             // compute r_crit1 (r where grad=0)
+            //print("G1= "+grad1.toFixed(3)+"; G2= "+grad2.toFixed(3));
             var rCrit1 = this.evalrCrit1X(x_0,y_0,m);
             if(rCrit1 >= r_1){
                 opt_r = r_1;
@@ -140,6 +148,10 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
 
         }else{
             print("Error 1");
+            print(this)
+            print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; m= "+m.toFixed(3)+"; r_0= "+r_0.toFixed(3)+"; r_1= "+r_1.toFixed(3));
+            print("G1= "+grad1.toFixed(3)+"; G2= "+grad2.toFixed(3));
+            
         }
 
         
@@ -190,11 +202,15 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
 
         }else{
             print("Error 2");
+            print(this)
+            print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; n= "+n.toFixed(3)+"; r_0= "+r_0.toFixed(3)+"; r_1= "+r_1.toFixed(3));
+            print("G1= "+grad1.toFixed(3)+"; G2= "+grad2.toFixed(3));
+            
         }
 
 
-        var x_opt = x_0+n*opt_r;
-        var y_opt = y_0+opt_r;
+        var x_opt = x_0 + n*opt_r;
+        var y_opt = y_0 + opt_r;
         var J_opt = this.evaluateObj(x_opt,y_opt);
         return [J_opt, x_opt, y_opt]
         
@@ -210,12 +226,12 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
 
         var sumVal = (this.D*this.K - this.F*this.G) + (this.E*this.K - this.F*this.H)*m;
 
-        if(y_0!=0){
+        if(y_0 != 0){
             sumVal = sumVal + (this.B*this.H*m + this.C*this.H - this.B*this.G)*sq(y_0) + (2*this.B*this.K*m + this.D*this.H - this.E*this.G + this.C*this.K)*y_0;
         } 
         // last 6 terms complete
 
-        if(x_0!=0){
+        if(x_0 != 0){
             sumVal = sumVal + ((this.C*this.G - this.A*this.H)*m + this.A*this.G)*sq(x_0) + (2*this.B*this.G*m*y_0 + 2*this.A*this.H*y_0 + (this.E*this.G - this.D*this.H + this.C*this.K)*m + 2*this.A*this.K)*x_0; 
         }
         // last 12 terms complete
@@ -299,7 +315,23 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
         var sol = solveRootsOfAQuadratic(Aval,Bval,Cval);
 
         if(!sol[0]){
-            print("Root-X1 Error: solution: "+sol)
+            var Delta = (sq(Bval)-4*Aval*Cval);
+            if(Delta < 0){
+                // print("Delta = "+(sq(Bval)-4*Aval*Cval))
+                return Infinity;
+            }else{
+                if(abs(Delta)<0.00001){
+                    return Infinity;
+                }else{
+                    print("Root-X1 Error: solution: "+sol) 
+                    print("Delta = "+Delta)
+                    print("[A,B,C] = "+[Aval,Bval,Cval])
+                    print(this)
+                    print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; m= "+m.toFixed(3));
+                       
+                }
+            }
+            // gradient dies down though convex
 
         }else{// the positive root
             return sol[1]
@@ -416,6 +448,49 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
         }else{// the positive root
             return sol[1]
         }
+
+    }
+
+
+
+    this.solveKKTConditions = function(){
+
+        // y = (Px^2 + Qx + R)/(Lx + M)
+        // Ax^4 + Bx^3 + Cx^2 + Dx + E = 0
+
+        var sigma_1 =  4*this.K*sq(this.B)*this.D*this.G - 4*this.F*sq(this.B*this.G) - 2*this.K*this.B*this.C*this.D*this.H - 2*this.K*this.B*this.C*this.E*this.G + 4*this.F*this.B*this.C*this.G*this.H + this.B*sq(this.D*this.H) - 2*this.B*this.D*this.E*this.G*this.H + this.B*sq(this.E*this.G) + this.K*sq(this.C)*this.E*this.H - this.F*sq(this.C*this.H);
+        var sigma_2 = 8*this.A*this.G*this.K*sq(this.B) - 2*this.G*this.K*this.B*sq(this.C) - 4*this.A*this.K*this.B*this.C*this.H + 4*this.A*this.D*this.B*sq(this.H) - 4*this.A*this.E*this.G*this.B*this.H + this.K*this.C*sq(this.C)*this.H - this.D*sq(this.C*this.H) + this.E*this.G*sq(this.C)*this.H;
+        var sigma_3 = 4*this.B*sq(this.A*this.H) + 4*this.A*sq(this.B*this.G) - 4*this.A*this.B*this.C*this.G*this.H - this.A*sq(this.C*this.H) - this.B*sq(this.C*this.G) + this.C*sq(this.C)*this.G*this.H;
+        var sigma_5 = this.D*sq(this.H) + 2*this.B*this.G*this.K - this.E*this.G*this.H - this.C*this.H*this.K;
+        var sigma_6 = this.F*sq(this.H) - this.E*this.H*this.K + this.B*sq(this.K);
+        var sigma_7 = this.B*sq(this.G) - this.C*this.G*this.H + this.A*sq(this.H);
+
+        var Aval = sigma_7*sigma_3;
+        var Bval = sigma_5*sigma_3 + sigma_7*sigma_2;
+        var Cval = sigma_6*sigma_3 + sigma_7*sigma_1 + sigma_5*sigma_2;
+        var Dval = sigma_6*sigma_2 + sigma_5*sigma_1;
+        var Eval = sigma_6*sigma_1;
+
+        var solX;
+        if(Aval==0){
+            if(Bval==0){
+                ////print("Error! Implement quadratic solver!: "+[Cval,Dval,Eval]);
+                solX = solveRootsOfAQuadratic(Cval,Dval,Eval)
+            }else{
+                print("Error! Implement cubic solver!");
+                solX = [false,NaN,NaN,NaN];
+            }
+        }else{
+            solX = solveRootsOfAQuadratic(Aval,Bval,Cval,Dval,Eval);    
+        }
+
+        if(solX[0]){
+            if(solX[1]>0 && solX[1]<1000000){
+                print(solX);        
+            }
+            
+        }
+        
 
     }
 
