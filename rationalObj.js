@@ -29,6 +29,116 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
     }
 
 
+    this.solveCompleteFixedH = function(){
+
+        var bestSol = [Infinity,0,0];
+
+        // Search Along M
+        var x_0 = 0;
+        var y_0 = this.M;
+        var m = -this.Q;
+        var r_0 = Math.max(0,(this.M-this.L)/(this.P+this.Q));
+        var r_1 = Math.min(this.N, this.M/this.Q)
+        //print("M:r_1= "+r_1+", r_0= "+r_0)
+        var sol;
+        if(r_0<r_1){
+            var sol = this.solveLinOptX(x_0,y_0,m,r_0,r_1); //cost, x,y  
+            ////print("Grads M:"+[this.evalGradX(x_0,y_0,m,r_0),this.evalGrad2X(x_0,y_0,m)])  
+            //// print("v_i="+sol[1]+"J="+sol[0])
+            if(sol[0]<bestSol[0]){bestSol = [...sol]}  
+        }
+         
+        
+
+
+        return bestSol // cost, x, y values,: x will be executed!
+
+
+    }
+
+    this.solveCompleteJointFixedH = function(){
+
+        var bestSol = [Infinity,0,0];
+
+        // Search Along X
+        var x_0 = 0;
+        var y_0 = 0;
+        var m = 0;
+        var r_0 = 0;
+        var r_1 = this.N;
+
+        // print("X:r_1= "+r_1)
+        ////var sol = this.solveLinOptX(x_0,y_0,m,r_0,r_1); //cost, x,y  
+        var opt_r = r_1;
+        var x_opt = x_0+opt_r;
+        var y_opt = y_0+m*opt_r;
+        var J_opt = this.evaluateObj(x_opt,y_opt);
+        var sol = [J_opt, x_opt, y_opt]
+
+
+        ////print("Grads X:"+[this.evalGradX(x_0,y_0,m,r_0),this.evalGrad2X(x_0,y_0,m)])  
+        ////if(sol[0]<bestSol[0]){bestSol = [...sol];}        
+        bestSol = [...sol];        
+
+
+        // Search Along N 
+        if(0<this.M){// if mu_j>0 happens only if lambda_j = lambda_jo
+            var x_0 = this.N;
+            var y_0 = 0;
+            var n = 0;
+            var r_0 = 0;
+            var r_1 = this.M;
+            
+            ////var sol = this.solveLinOptY(x_0,y_0,n,r_0,r_1); //cost, x,y
+            var opt_r = r_1;
+            var x_opt = x_0 + n*opt_r;
+            var y_opt = y_0 + opt_r;
+            var J_opt = this.evaluateObj(x_opt,y_opt);
+            var sol = [J_opt, x_opt, y_opt]
+
+            ////if(sol[0]<bestSol[0]){bestSol = [...sol];}        
+            bestSol = [...sol] 
+        }
+
+        return bestSol // cost, x, y values,: x will be executed!
+
+    }
+
+
+
+    this.solveCompleteJoint = function(){
+
+        var bestSol = [Infinity,0,0];
+
+        // Search Along X
+        var x_0 = 0;
+        var y_0 = 0;
+        var m = 0;
+        var r_0 = 0;
+        var r_1 = this.N;
+        // print("X:r_1= "+r_1)
+        var sol = this.solveLinOptX(x_0,y_0,m,r_0,r_1); //cost, x,y  
+        ////print("Grads X:"+[this.evalGradX(x_0,y_0,m,r_0),this.evalGrad2X(x_0,y_0,m)])  
+        if(sol[0]<bestSol[0]){bestSol = [...sol];}        
+
+
+        // Search Along N 
+        if(0<this.M){// if mu_j>0 happens only if lambda_j = lambda_jo
+            var x_0 = this.N;
+            var y_0 = 0;
+            var n = 0;
+            var r_0 = 0;
+            var r_1 = this.M;
+            var sol = this.solveLinOptY(x_0,y_0,n,r_0,r_1); //cost, x,y
+            if(sol[0]<bestSol[0]){bestSol = [...sol]} 
+        }
+
+        return bestSol // cost, x, y values,: x will be executed!
+
+    }
+
+
+
     this.solveComplete = function(){
 
         var bestSol = [Infinity,0,0];
@@ -185,6 +295,13 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
         }else if(grad1 < 0 && grad2 > 0){
             // compute r_crit1 (r where grad=0)
             var rCrit1 = this.evalrCrit1Y(x_0,y_0,n);
+            if(rCrit1==-1){//Root-Y1 Error
+                rCrit1 = 0;
+                print(this)
+                print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; n= "+n.toFixed(3)+"; r_0= "+r_0.toFixed(3)+"; r_1= "+r_1.toFixed(3));
+                print("G1= "+grad1.toFixed(3)+"; G2= "+grad2.toFixed(3));
+            }
+
             if(rCrit1 >= r_1){
                 opt_r = r_1;
             }else{
@@ -194,6 +311,13 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
         }else if(grad1 > 0 && grad2 < 0){
             // compute r_crit2 (r where grad=0)
             var rCrit2 = this.evalrCrit2Y(x_0,y_0,n,r_0);
+            if(rCrit2==-1){//Root-Y2 Error
+                rCrit2 = 0;
+                print(this)
+                print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; n= "+n.toFixed(3)+"; r_0= "+r_0.toFixed(3)+"; r_1= "+r_1.toFixed(3));
+                print("G1= "+grad1.toFixed(3)+"; G2= "+grad2.toFixed(3));
+            }
+
             if(rCrit2 >= r_1){
                 opt_r = r_0;
             }else{
@@ -419,7 +543,8 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
 
         var sol = solveRootsOfAQuadratic(Aval,Bval,Cval);
         if(!sol[0]){
-            print("Root-Y1 Error: solution: "+sol)
+            print("Root-Y1 Error: solution: "+sol);
+            return -1;
         }else{// the positive root
             return sol[1]
         }
@@ -445,8 +570,9 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
 
         if(!sol[0]){
             print("Root-Y2 Error: solution: "+sol)
+            return -1;
         }else{// the positive root
-            return sol[1]
+            return sol[1];
         }
 
     }

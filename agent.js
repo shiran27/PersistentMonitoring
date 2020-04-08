@@ -27,6 +27,7 @@ function Agent(x, y, r) {
     this.unvisitedTargetsInfo = []; // for exploration boosting
 
     this.timeToExitMode = [3,0];//[sensing=1,t^1+u_i] , [sleeping=2,t^2+v_i], [traveling=3,t^3+rho_ij],  
+    this.coverednessEventTriggered = false;
 
     this.show = function(){
 
@@ -554,7 +555,12 @@ function Agent(x, y, r) {
                  if(this.timeToExitMode[1]<simulationTime){//and sensing time elepased
                     if(targets[i].uncertainty>0){// leave early?
                         // solve OP-3 to find the next target j to visit
-                        var ans = this.solveOP3(i);
+                        var ans;
+                        if(RHCMethod==6){
+                            ans = this.solveOP3Extended(i);
+                        }else{
+                            ans = this.solveOP3(i);
+                        }
                         j = ans[0];
                         var rho_ij = ans[1]; 
                         if(j!=i){this.timeToExitMode = [3,simulationTime+rho_ij]};
@@ -564,21 +570,47 @@ function Agent(x, y, r) {
                         this.timeToExitMode = [2,simulationTime+v_i];
                         //// if v_i = 0, jump directly to moving: Solving OP-3
                     }
+                 
                  }else{
                     // waiting till the end of the predetermined sensing period
                     // this.position = this.position; j = i;
+                    if(this.coverednessEventTriggered){
+                        ////print("Recompute1 Agent "+this.id);
+                        this.coverednessEventTriggered = false;
+
+                        // solve OP-1 to find the u_i 
+                        var u_i = this.solveOP1(i);
+                        this.timeToExitMode = [1,simulationTime+u_i];
+                    
+                    }
+                 
                  }
 
             }else if(this.timeToExitMode[0]==2){// in sleeping mode
                 if(this.timeToExitMode[1]<simulationTime){//and sleeping time elepased
                     // Solve OP-3 to find the next target to visit
-                    var ans = this.solveOP3(i);
+                    var ans;
+                    if(RHCMethod==6){
+                        ans = this.solveOP3Extended(i);
+                    }else{
+                        ans = this.solveOP3(i);
+                    }
                     j = ans[0];
                     var rho_ij = ans[1]; 
                     if(j!=i){this.timeToExitMode = [3,simulationTime+rho_ij]};
+                
                 }else{
                     // waiting till the end of the predetermined sleeping period    
                     // this.position = this.position; j = i;
+                    if(this.coverednessEventTriggered){
+                        ////print("Recompute2 Agent "+this.id);
+                        this.coverednessEventTriggered = false;
+
+                        // solve OP-2 to find the sleeping time v_i
+                        var v_i = this.solveOP2(i);
+                        this.timeToExitMode = [2,simulationTime+v_i];
+                    }
+
                 }
 
             }
@@ -602,6 +634,10 @@ function Agent(x, y, r) {
                 this.orientation = headingAngle;
 
                 if(dataPlotMode){recordSystemState();}// agent Started Moving towards a new target
+            
+                // trigger an event at neighbor targets of i telling i is now uncovered!
+                // also trigger an event telling at neighbors of j telling it is now covered!
+                this.triggerCoverednessEvent(i,j);
             }
         }else{// going from T_i to T_j (as this.residingTarget = [T_i, T_j]) 
             var i = this.residingTarget[0];// where we were
@@ -693,7 +729,7 @@ function Agent(x, y, r) {
             var y_ij = yArray[k];
 
             // Each coef is multiplied by 2T
-            var coefA = Abar - this.sensingRate;
+            var coefA = (Abar - this.sensingRate);
             var coefB = Abar - targets[i].uncertaintyRate;
             var coefC = Abar - this.sensingRate;
             var coefD = Abar - targets[j].uncertaintyRate;
@@ -748,8 +784,10 @@ function Agent(x, y, r) {
         }
 
         // print(bestDestinationSolution)
-        print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(bestDestination+1))
-        print("Best OP1:Case "+bestDestinationSolutionType+"; J= "+bestDestinationSolution[0].toFixed(3)+"; u_i= "+bestDestinationSolution[1].toFixed(3)+", v_i= "+bestDestinationSolution[2].toFixed(3)+"; u_j= "+bestDestinationSolution[3].toFixed(3)+", v_j= "+bestDestinationSolution[4].toFixed(3));
+        if(printMode){
+            print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(bestDestination+1))
+            print("Best OP1:Case "+bestDestinationSolutionType+"; J= "+bestDestinationSolution[0].toFixed(3)+"; u_i= "+bestDestinationSolution[1].toFixed(3)+", v_i= "+bestDestinationSolution[2].toFixed(3)+"; u_j= "+bestDestinationSolution[3].toFixed(3)+", v_j= "+bestDestinationSolution[4].toFixed(3));
+        }
 
         return bestDestinationSolution[1];
 
@@ -787,8 +825,13 @@ function Agent(x, y, r) {
         var coefN = lambda_i0;
 
         var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
-        var sol = rationalObjective.solveComplete(); // solve for optimum (v_i,u_j)
-
+        
+        var sol;
+        if(RHCMethod==5){
+            sol = rationalObjective.solveCompleteFixedH(); // solve for u_i,u_j
+        }else{
+            sol = rationalObjective.solveComplete(); // solve for u_i,u_j
+        }
 
         var costVal = sol[0];
         var u_i = sol[1]; // u_i, v_i = 0, u_j, v_j=0
@@ -796,7 +839,7 @@ function Agent(x, y, r) {
         var u_j = sol[2];
         var v_j = 0;
 
-        print("OP1C1A: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
+        if(printMode){print("OP1C1A: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));}
 
         if(costVal<0){
             print("Error J (OP1C1A): "+costVal)
@@ -841,8 +884,13 @@ function Agent(x, y, r) {
         var coefN = lambda_i0;
 
         var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
-        var sol = rationalObjective.solveComplete(); // solve for optimum (v_i,u_j)
-
+        
+        var sol;
+        if(RHCMethod==5){
+            sol = rationalObjective.solveCompleteFixedH(); // solve for u_i,v_j
+        }else{
+            sol = rationalObjective.solveComplete(); // solve for u_i,v_j
+        }
 
         var costVal = sol[0];
         var u_i = sol[1]; // u_i, v_i = 0, u_j = lambda_j0(u_i,0), v_j
@@ -850,7 +898,7 @@ function Agent(x, y, r) {
         var u_j = alpha + beta*(u_i+v_i);
         var v_j = sol[2];
 
-        print("OP1C1B: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
+        if(printMode){print("OP1C1B: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));}
 
 
         if(costVal<0){
@@ -897,8 +945,13 @@ function Agent(x, y, r) {
         var coefN = Infinity;
 
         var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
-        var sol = rationalObjective.solveComplete(); // solve for optimum (v_i,u_j)
-
+        
+        var sol;
+        if(RHCMethod==5){
+            sol = rationalObjective.solveCompleteFixedH(); // solve for v_i,u_j
+        }else{
+            sol = rationalObjective.solveComplete(); // solve for v_i,u_j
+        }
 
         var costVal = sol[0];
         var u_i = lambda_i0; // u_i=lambda_i0, v_i, u_j, v_j = 0
@@ -906,11 +959,12 @@ function Agent(x, y, r) {
         var u_j = sol[2]
         var v_j = 0;
 
-        print("OP1C2A: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
+        if(printMode){print("OP1C2A: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));}
 
         if(costVal<0){
             print("Error J (OP1C2A): "+costVal)
             print(rationalObjective);
+            print("OP1C2A: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; r_ij="+rho_ij.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
         }
         // var costVal = Infinity;
         // var timeVal = 0;
@@ -952,21 +1006,28 @@ function Agent(x, y, r) {
         var coefN = Infinity;
 
         var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
-        var sol = rationalObjective.solveComplete(); // solve for optimum (v_i,u_j)
+        
+        var sol;
+        if(RHCMethod==5){
+            sol = rationalObjective.solveCompleteFixedH(); // solve for v_i,v_j
+        }else{
+            sol = rationalObjective.solveComplete(); // solve for v_i,v_j
+        }
 
 
         var costVal = sol[0];
-        var u_i = lambda_i0; // u_i=lambda_i0, v_i, u_j, v_j = 0
+        var u_i = lambda_i0; // u_i=lambda_i0, v_i, u_j=..., v_j 
         var v_i = sol[1];
         var u_j = alpha + beta*(u_i+v_i);
         var v_j = sol[2];
 
-        print("OP1C2B: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
+        if(printMode){print("OP1C2B: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));}
 
 
         if(costVal<0){
             print("Error J (OP1C2B): "+costVal)
             print(rationalObjective);
+            print("OP1C2B: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; r_ij="+rho_ij.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
         }
         // var costVal = Infinity;
         // var timeVal = 0;
@@ -1031,7 +1092,7 @@ function Agent(x, y, r) {
 
             // Each coef is multiplied by 2T
             var coefA = (Abar-targets[i].uncertaintyRate);
-            var coefB = Abar-this.sensingRate;
+            var coefB = (Abar-this.sensingRate);
             var coefC = (Abar-targets[j].uncertaintyRate);
             var coefD = 2*(Abar-targets[i].uncertaintyRate);
             var coefE = 2*(Abar-targets[i].uncertaintyRate-targets[j].uncertaintyRate);
@@ -1063,8 +1124,10 @@ function Agent(x, y, r) {
         }
 
         // print(bestDestinationSolution)
-        print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(bestDestination+1))
-        print("Best OP2:Case "+bestDestinationSolutionType+"; J= "+bestDestinationSolution[0].toFixed(3)+", v_i= "+bestDestinationSolution[1].toFixed(3)+"; u_j= "+bestDestinationSolution[2].toFixed(3)+", v_j= "+bestDestinationSolution[3].toFixed(3));
+        if(printMode){
+            print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(bestDestination+1))
+            print("Best OP2:Case "+bestDestinationSolutionType+"; J= "+bestDestinationSolution[0].toFixed(3)+", v_i= "+bestDestinationSolution[1].toFixed(3)+"; u_j= "+bestDestinationSolution[2].toFixed(3)+", v_j= "+bestDestinationSolution[3].toFixed(3));
+        }
         return bestDestinationSolution[1];
 
     }
@@ -1098,19 +1161,25 @@ function Agent(x, y, r) {
         var coefN = Infinity;
 
         var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
-        var sol = rationalObjective.solveComplete(); // solve for optimum (v_i,u_j)
-
+        
+        var sol;
+        if(RHCMethod==5){
+            sol = rationalObjective.solveCompleteFixedH(); // solve for v_i,u_j
+        }else{
+            sol = rationalObjective.solveComplete(); // solve for v_i,u_j
+        }
 
         var costVal = sol[0];
         var v_i = sol[1]; // v_i, u_j, v_j=0
         var u_j = sol[2];
         var v_j = 0;
 
-        print("OP2C1: v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
+        if(printMode){print("OP2C1: v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));}
 
         if(costVal<0){
             print("Error J (OP2C1): "+costVal)
             print(rationalObjective);
+            print("OP2C1: v_i="+v_i.toFixed(3)+"; r_ij="+rho_ij.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
         }
         // var costVal = Infinity;
         // var timeVal = 0;
@@ -1130,7 +1199,7 @@ function Agent(x, y, r) {
 
 
         // transform coeficients
-        var coefA = coefs[1]*sq(beta) + coefs[3]*beta + coefs[0];  
+        var coefA = (coefs[1]*sq(beta) + coefs[3]*beta + coefs[0]);  
         var coefB = coefs[2];  
         var coefC = coefs[5]*beta + coefs[4];  
         var coefD = 2*coefs[1]*alpha*beta + coefs[3]*alpha + coefs[7]*beta + coefs[6];
@@ -1150,18 +1219,25 @@ function Agent(x, y, r) {
         var coefN = Infinity;
 
         var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
-        var sol = rationalObjective.solveComplete(); // solve for v_i,v_j
-
+        
+        var sol;
+        if(RHCMethod==5){
+            sol = rationalObjective.solveCompleteFixedH(); // solve for v_i,v_j
+        }else{
+            sol = rationalObjective.solveComplete(); // solve for v_i,v_j
+        }
+        
         var costVal = sol[0];// v_i, u_j=\lambda_{jo}(v_i), v_j
         var v_i = sol[1]; 
         var u_j = alpha + beta*v_i;
         var v_j = sol[2];
 
-        print("OP2C2: v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
+        if(printMode){print("OP2C2: v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));}
 
         if(costVal<0){
             print("Error J (OP2C2): "+costVal)
             print(rationalObjective);
+            print("OP2C2: v_i="+v_i.toFixed(3)+"; r_ij="+rho_ij.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
         }
         // var costVal = Infinity;
         // var timeVal = 0;
@@ -1227,17 +1303,59 @@ function Agent(x, y, r) {
             var j = jArray[k];
             var y_ij = yArray[k];
 
+            //// Before revision
             // Each coef is multiplied by 2T
-            var coefA = (Abar-this.sensingRate);
-            var coefB = Abar-targets[j].uncertaintyRate;
-            var coefC = 2*(Abar-targets[j].uncertaintyRate);
-            var coefD = 2*(Rbar+Abar*y_ij);
-            var coefE = 2*((Rbar-targets[j].uncertainty)+(Abar-targets[j].uncertaintyRate)*y_ij);
-            var coefF = y_ij*(2*Rbar+Abar*y_ij);
+            // var coefA = Abar-this.sensingRate;
+            // var coefB = (Abar-targets[j].uncertaintyRate);
+            // var coefC = 2*(Abar-targets[j].uncertaintyRate);
+            // var coefD = 2*(Rbar+Abar*y_ij);
+            // var coefE = 2*((Rbar-targets[j].uncertainty)+(Abar-targets[j].uncertaintyRate)*y_ij);
+            // var coefF = y_ij*(2*Rbar+Abar*y_ij);
+            // var coefs = [coefA,coefB,coefC,coefD,coefE,coefF]
+
+            // var sol1 = this.solveOP3C1(i,j,t_h3,y_ij,Abar,coefs);
+            // if(sol1[0]<bestDestinationCost){
+            //     bestDestinationCost = sol1[0];
+            //     bestDestination = j;
+            //     bestDestinationTime = y_ij;
+            //     bestDestinationSolution = [...sol1];
+            //     bestDestinationSolutionType = 1; 
+            // }
+
+            // var sol2 = this.solveOP3C2(i,j,t_h3,y_ij,Abar,coefs);
+            // if(sol2[0]<bestDestinationCost){
+            //     bestDestinationCost = sol2[0];
+            //     bestDestination = j;
+            //     bestDestinationTime = y_ij;
+            //     bestDestinationSolution = [...sol1];
+            //     bestDestinationSolutionType = 2; 
+            // }
+            //// end-Before revision
+
+            // revised coeficients 
+            // alpha can be a function of the degree at target i (currently residing)
+            var alpha;
+            if(RHCMethod==3){
+                alpha = 0.5;
+            }else{
+                alpha = targets[i].neighbors.length/(10+targets[i].neighbors.length)
+                alpha = 1/sq(targets[i].neighbors.length)
+                ////alpha = 0.005;
+            }
+            var Ajbar = (Abar-targets[j].uncertaintyRate);
+            var Rjbar = (Rbar-targets[j].uncertainty);
+
+            var coefA = alpha*(targets[j].uncertaintyRate-this.sensingRate) + Ajbar*(1-alpha);
+            var coefB = (1-alpha)*Ajbar;
+            var coefC = 2*(1-alpha)*Ajbar;
+            var coefD = 2*alpha*(targets[j].uncertainty + targets[j].uncertaintyRate*y_ij) + 2*(1-alpha)*(Rjbar + y_ij*Ajbar)
+            var coefE = 2*(1-alpha)*(Rjbar+Ajbar*y_ij);
+            var coefF = alpha*y_ij*(2*targets[j].uncertainty + targets[j].uncertaintyRate*y_ij) + (1-alpha)*y_ij*(2*Rjbar+Ajbar*y_ij);
+            
             var coefs = [coefA,coefB,coefC,coefD,coefE,coefF]
+            var sol1 = this.solveOP3Quick(i,j,t_h3,y_ij,Abar,coefs);
+            // end revise coefs
 
-
-            var sol1 = this.solveOP3C1(i,j,t_h3,y_ij,Abar,coefs);
             if(sol1[0]<bestDestinationCost){
                 bestDestinationCost = sol1[0];
                 bestDestination = j;
@@ -1246,18 +1364,10 @@ function Agent(x, y, r) {
                 bestDestinationSolutionType = 1; 
             }
 
-            var sol2 = this.solveOP3C2(i,j,t_h3,y_ij,Abar,coefs);
-            if(sol2[0]<bestDestinationCost){
-                bestDestinationCost = sol2[0];
-                bestDestination = j;
-                bestDestinationTime = y_ij;
-                bestDestinationSolution = [...sol1];
-                bestDestinationSolutionType = 2; 
-            }
             
         }
 
-        if(bestDestinationCost<100000){
+        if(bestDestinationCost<100000 && printMode){
             print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(bestDestination+1))
             print("Best OP3:Case ("+bestDestinationSolutionType+","+bestDestinationSolution[3]+"); J= "+bestDestinationSolution[0].toFixed(3)+"; u_j= "+bestDestinationSolution[1].toFixed(3)+", v_j= "+bestDestinationSolution[2].toFixed(3));
         }
@@ -1265,6 +1375,56 @@ function Agent(x, y, r) {
         return [bestDestination, bestDestinationTime];
     
     }
+
+
+    this.solveOP3Quick = function(i,j,t_h3,rho_ij,Abar,coefs){
+
+        var lambda_j0 = (targets[j].uncertainty+targets[j].uncertaintyRate*rho_ij)/(this.sensingRate-targets[j].uncertaintyRate); 
+        var lambda_j = Math.min(lambda_j0,t_h3-rho_ij);
+        var mu_j = t_h3-(rho_ij+lambda_j0);
+        if(lambda_j != lambda_j0){mu_j = 0;}// no reason to search for opt v_j
+
+        // transform coeficients
+        var coefA = coefs[0]; 
+        var coefB = coefs[1]; 
+        var coefC = coefs[2]; 
+        var coefD = coefs[3]; 
+        var coefE = coefs[4]; 
+        var coefF = coefs[5]; 
+
+        var coefG = 1;
+        var coefH = 1;
+        var coefK = rho_ij;
+
+        var coefP = 0;
+        var coefL = Infinity;
+        
+        var coefQ = 0;
+        var coefM = mu_j;
+
+        var coefN = lambda_j;
+
+        var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
+        // solve for limited feasible space
+
+        var sol;
+        if(RHCMethod==5){
+            sol = rationalObjective.solveCompleteJointFixedH(); // solve for optimum (v_i,u_j)
+            if(Math.abs((sol[1]+sol[2]+rho_ij)-t_h3)>0.001){
+                print('Error !- RHCP3-FixedH')
+            }
+
+        }else{
+            sol = rationalObjective.solveCompleteJoint(); // solve for optimum (v_i,u_j)
+        }
+     
+
+        var cost = sol[0];
+        var u_j  = sol[1];
+        var v_j = sol[2];
+        return [cost,u_j,v_j];
+    }
+
 
 
     this.solveOP3C1 = function(i,j,t_h3,rho_ij,Abar,coefs){// u_j = ?, v_j = 0
@@ -1294,11 +1454,11 @@ function Agent(x, y, r) {
             //print("testOP3C1: i="+i+", j="+j+", Cost"+cost+"<"+evalCostOP3(lambda_j,0,coefs));
         }
         
-        cost1 = evalCostOP3(lambda_j,0,rho_ij,coefs);
-        cost2 = evalCostOP3(0,0,rho_ij,coefs);     
+        var cost1 = evalCostOP3(lambda_j,0,rho_ij,coefs);
+        var cost2 = evalCostOP3(0,0,rho_ij,coefs);     
         ////print("testOP3C1: i="+i+", j="+j+", Cost1:"+cost1.toFixed(3)+", Cost2:"+cost2.toFixed(3)+", Cost:"+cost.toFixed(3)) 
 
-        if(min(cost1,cost2)!=cost){
+        if(Math.min(cost1,cost2)!=cost){
             print("Error: u_jSharp: "+u_jSharp+", lambda_j: "+lambda_j)
             print("testOP3C1: i="+i+", j="+j+", Cost1:"+cost1.toFixed(3)+", Cost2:"+cost2.toFixed(3)+", Cost:"+cost.toFixed(3)) 
         }
@@ -1365,6 +1525,470 @@ function Agent(x, y, r) {
     }
 
 
+
+    this.solveOP3Extended = function(i){
+
+        var H = Math.min(periodT-simulationTime,timeHorizonForRHC);
+
+        var uncoveredNeighborhood = [];
+
+        var jkArray = []; // set of candidate target sequences 
+        var y_jkArray = []; // corresponding travel times
+        
+        var AbarArray = [];  
+        var RbarArray = []; 
+
+        for(var jInd = 0; jInd<targets[i].neighbors.length; jInd++){
+            
+            var j = targets[i].neighbors[jInd];
+            if( j != i ){
+
+                var Abar = targets[j].uncertaintyRate;  
+                var Rbar = targets[j].uncertainty;  
+                var pathsThroughj = 0;
+
+                for(var kInd = 0; kInd<targets[j].neighbors.length; kInd++){
+            
+                    var k = targets[j].neighbors[kInd];
+                    if( k != j ){
+
+                        // need to find out that no agent is already in or en-route to targets j and k
+                        var anotherAgentIsComitted = false;
+                        for(var a = 0; a<agents.length; a++){
+                            if(agents[a].residingTarget.length==1){
+                                if(agents[a].residingTarget[0] == j || (k!=i && agents[a].residingTarget[0]==k)){
+                                    anotherAgentIsComitted = true;
+                                    break;    
+                                }
+                            }else if(agents[a].residingTarget.length==2){
+                                if(agents[a].residingTarget[1]==j){
+                                    anotherAgentIsComitted = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if(!anotherAgentIsComitted){
+
+                            pathsThroughj++;
+                            jkArray.push([j,k]);
+                            var y_ij = targets[i].distancesToNeighbors[jInd]/this.maxLinearVelocity;
+                            var y_jk = targets[j].distancesToNeighbors[kInd]/this.maxLinearVelocity;
+                            y_jkArray.push([y_ij,y_jk]);
+
+                            Abar = Abar + targets[k].uncertaintyRate;    
+                            Rbar = Rbar + targets[k].uncertainty;    
+
+                            if(!uncoveredNeighborhood.includes(j)){uncoveredNeighborhood.push(j)}
+                            if(!uncoveredNeighborhood.includes(k)){uncoveredNeighborhood.push(k)}
+
+                        }
+
+                    }
+                }
+
+                for(pathInd = 0; pathInd<pathsThroughj; pathInd++){
+                    AbarArray.push(Abar);
+                    RbarArray.push(Rbar);
+                }
+
+            }
+
+        }
+
+
+
+
+        for(var jkInd = 0; jkInd < jkArray.length; jkInd++){
+            var j = jkArray[jkInd][0];
+            var Abar = AbarArray[jkInd]; // sum over the neighbors of j including j
+            var Rbar = RbarArray[jkInd]; // sum over the neighbors of j including j
+
+            for(var mInd = 0; mInd<uncoveredNeighborhood.length; mInd++){
+                var m = uncoveredNeighborhood[mInd];
+                if(!targets[j].neighbors.includes(m)){// as neighbors of j have already been considered
+                    
+                    Abar = Abar + targets[m].uncertaintyRate;
+                    Rbar = Rbar + targets[m].uncertainty;
+                    ////AbarArray[jkInd] = AbarArray[jkInd] + targets[m].uncertaintyRate;
+                    ////RbarArray[jkInd] = RbarArray[jkInd] + targets[m].uncertainty;
+                }
+            }
+
+            AbarArray[jkInd] = Abar;
+            RbarArray[jkInd] = Rbar;
+
+        }
+
+
+        // list of feasible [j,k] pairs:
+        // print("i: "+i+", uncovered: "+uncoveredNeighborhood)
+        // print("jk: "+jkArray)
+        // print("y_jk: "+y_jkArray)
+        // print("Abar: "+AbarArray)
+        // print("Rbar: "+RbarArray)
+        // list of corresponding Abar and Rbar values
+
+
+
+        var bestDestinationCost = Infinity;
+        var bestDestination = i;
+        var bestDestination2 = i;
+        var bestDestinationTime = 0;
+        var bestDestinationSolution = [Infinity,NaN,NaN,NaN,NaN];
+        var bestDestinationSolutionType;
+
+        for(var jkInd = 0; jkInd < jkArray.length; jkInd++){
+            
+            var j = jkArray[jkInd][0];
+            var k = jkArray[jkInd][1];
+            var y_ij = y_jkArray[jkInd][0];
+            var y_jk = y_jkArray[jkInd][1];
+            var Abar = AbarArray[jkInd]
+            var Rbar = RbarArray[jkInd]
+
+
+            // Each coef is multiplied by 2T
+            var coefA = (Abar - this.sensingRate);
+            var coefB = Abar - targets[j].uncertaintyRate;
+            var coefC = Abar - this.sensingRate;
+            var coefD = Abar - targets[k].uncertaintyRate;
+            var coefE = 2*(Abar - targets[j].uncertaintyRate);
+            var coefF = 2*(Abar - this.sensingRate);
+            var coefG = 2*(Abar - targets[k].uncertaintyRate - this.sensingRate);
+            var coefH = 2*(Abar - targets[j].uncertaintyRate);
+            var coefK = 2*(Abar - targets[j].uncertaintyRate - targets[k].uncertaintyRate);
+            var coefL = 2*(Abar - targets[k].uncertaintyRate);
+
+            var coefM = 2*(Rbar - this.sensingRate*y_jk + Abar*(y_ij+y_jk) );
+            var coefN = 2*((Rbar-targets[j].uncertainty) + (Abar - targets[j].uncertaintyRate)*(y_ij+y_jk));
+            var coefP = 2*(Rbar + Abar*(y_ij+y_jk));
+            var coefQ = 2*((Rbar-targets[k].uncertainty) + (Abar - targets[k].uncertaintyRate)*(y_ij+y_jk));
+            var coefS = (y_ij+y_jk)*(2*Rbar + Abar*(y_ij+y_jk));
+            
+            var coefs = [coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefL,coefM,coefN,coefP,coefQ,coefS];
+
+
+            if(printMode){print("OP3Ext: i="+(i+1)+", j="+(j+1)+", k="+(k+1));}
+
+            var sol1 = this.solveOP3ExtendedC1A(i,j,k,H,y_ij,y_jk,coefs);
+            if(sol1[0]<bestDestinationCost){
+                bestDestinationCost = sol1[0];
+                bestDestination = j;
+                bestDestination2 = k;
+                bestDestinationTime = y_ij;
+                bestDestinationSolution = [...sol1];
+                bestDestinationSolutionType = 1; 
+            }
+
+            var sol2 = this.solveOP3ExtendedC1B(i,j,k,H,y_ij,y_jk,coefs);
+            if(sol2[0]<bestDestinationCost){
+                bestDestinationCost = sol2[0];
+                bestDestination = j;
+                bestDestination2 = k;
+                bestDestinationTime = y_ij;
+                bestDestinationSolution = [...sol2];
+                bestDestinationSolutionType = 2; 
+            }
+
+            var sol3 = this.solveOP3ExtendedC2A(i,j,k,H,y_ij,y_jk,coefs);
+            if(sol3[0]<bestDestinationCost){
+                bestDestinationCost = sol3[0];
+                bestDestination = j;
+                bestDestination2 = k;
+                bestDestinationTime = y_ij;
+                bestDestinationSolution = [...sol3];
+                bestDestinationSolutionType = 3; 
+            }
+
+            var sol4 = this.solveOP3ExtendedC2B(i,j,k,H,y_ij,y_jk,coefs);
+            if(sol4[0]<bestDestinationCost){
+                bestDestinationCost = sol4[0];
+                bestDestination = j;
+                bestDestination2 = k;
+                bestDestinationTime = y_ij;
+                bestDestinationSolution = [...sol4];
+                bestDestinationSolutionType = 4; 
+            }
+            
+
+        }
+
+        // print(bestDestinationSolution)
+        if(printMode){
+            print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(bestDestination+1)+" then to target "+(bestDestination2+1)+".")
+            print("Best OP3Extended:Case "+bestDestinationSolutionType+"; J= "+bestDestinationSolution[0].toFixed(3)+"; u_j= "+bestDestinationSolution[1].toFixed(3)+", v_j= "+bestDestinationSolution[2].toFixed(3)+"; u_k= "+bestDestinationSolution[3].toFixed(3)+", v_k= "+bestDestinationSolution[4].toFixed(3));
+        }
+
+        if(bestDestinationTime==0 && bestDestination==i){
+            return this.solveOP3(i);
+        }else{
+            return [bestDestination,bestDestinationTime];
+        }
+
+    }
+
+
+
+    this.solveOP3ExtendedC1A = function(i,j,k,H,rho_ij,rho_jk,coefs){
+
+        if(H<(rho_ij+rho_jk)){// not enough time to visit j
+            return [Infinity,0];
+        }
+
+        var alpha = (targets[k].uncertainty + targets[k].uncertaintyRate*(rho_ij+rho_jk))/(this.sensingRate-targets[k].uncertaintyRate);
+        var beta = targets[k].uncertaintyRate/(this.sensingRate - targets[k].uncertaintyRate);
+        var lambda_j0 = (targets[j].uncertainty+targets[j].uncertaintyRate*rho_ij)/(this.sensingRate - targets[j].uncertaintyRate);
+
+        // transform coeficients
+        var coefA = coefs[0]; 
+        var coefB = coefs[2]; 
+        var coefC = coefs[5]; 
+        var coefD = coefs[10]; 
+        var coefE = coefs[12]; 
+        var coefF = coefs[14]; 
+
+        var coefG = 1;
+        var coefH = 1;
+        var coefK = rho_ij+rho_jk;
+
+        var coefP = beta;
+        var coefL = alpha;
+        
+        var coefQ = 1;
+        var coefM = H-(rho_ij+rho_jk);
+
+        var coefN = lambda_j0;
+
+        var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
+        
+        var sol;
+        if(RHCMethod==5){// this wont be the case !
+            sol = rationalObjective.solveCompleteFixedH(); // solve for u_i,u_j
+        }else{
+            sol = rationalObjective.solveComplete(); // solve for u_i,u_j
+        }
+
+        var costVal = sol[0];
+        var u_j = sol[1]; // u_j, v_j = 0, u_k, v_k=0
+        var v_j = 0;
+        var u_k = sol[2];
+        var v_k = 0;
+
+        if(printMode){print("OP3ExC1A: u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; u_k="+u_k.toFixed(3)+"; v_k="+v_k.toFixed(3)+"; J="+costVal.toFixed(3));}
+
+        if(costVal<0){
+            print("Error J (OP3ExC1A): "+costVal)
+            print(rationalObjective);
+        }
+        // var costVal = Infinity;
+        // var timeVal = 0;
+        return [costVal, u_j, v_j, u_k, v_k]; 
+
+    }
+
+
+    this.solveOP3ExtendedC1B = function(i,j,k,H,rho_ij,rho_jk,coefs){
+
+        var alpha = (targets[k].uncertainty + targets[k].uncertaintyRate*(rho_ij+rho_jk))/(this.sensingRate-targets[k].uncertaintyRate);
+        
+        if( H < (rho_ij+rho_jk+alpha)){// not enough time to visit j under this class
+            return [Infinity,0];
+        }
+
+        var beta = targets[k].uncertaintyRate/(this.sensingRate - targets[k].uncertaintyRate);
+        var lambda_j0 = (targets[j].uncertainty+targets[j].uncertaintyRate*rho_ij)/(this.sensingRate - targets[j].uncertaintyRate);
+
+        // transform coeficients
+        var coefA = coefs[0] + coefs[5]*beta + coefs[2]*sq(beta); 
+        var coefB = coefs[3]; 
+        var coefC = coefs[6] + coefs[9]*beta; 
+        var coefD = coefs[10] + coefs[5]*alpha + coefs[12]*beta + 2*coefs[2]*alpha*beta; 
+        var coefE = coefs[13] + coefs[9]*alpha;
+        var coefF = coefs[14] + coefs[12]*alpha + coefs[2]*sq(alpha); 
+
+        var coefG = beta + 1;
+        var coefH = 1;
+        var coefK = alpha + (rho_ij + rho_jk);
+
+        var coefP = 0;
+        var coefL = Infinity;
+        
+        var coefQ = 1 + beta;
+        var coefM = H-(rho_ij+rho_jk+alpha);
+
+        var coefN = lambda_j0;
+
+        var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
+        
+        var sol;
+        if(RHCMethod==5){
+            sol = rationalObjective.solveCompleteFixedH(); // solve for u_j,v_k
+        }else{
+            sol = rationalObjective.solveComplete(); // solve for u_j,v_k
+        }
+
+        var costVal = sol[0];
+        var u_j = sol[1]; // u_j, v_j = 0, u_k = lambda_k0(u_j,0), v_k
+        var v_j = 0;
+        var u_k = alpha + beta*(u_j+v_j);
+        var v_k = sol[2];
+
+        if(printMode){print("OP3ExC1B: u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; u_k="+u_k.toFixed(3)+"; v_k="+v_k.toFixed(3)+"; J="+costVal.toFixed(3));}
+
+
+        if(costVal<0){
+            print("Error J (OP3ExC1B): "+costVal)
+            print(rationalObjective);
+        }
+
+        // var costVal = Infinity;
+        // var timeVal = 0;
+        return [costVal, u_j, v_j, u_k, v_k]; 
+
+    }
+
+    this.solveOP3ExtendedC2A = function(i,j,k,H,rho_ij,rho_jk,coefs){
+
+        var lambda_j0 = (targets[j].uncertainty+targets[j].uncertaintyRate*rho_ij)/(this.sensingRate - targets[j].uncertaintyRate);
+
+        if(H < (rho_ij+rho_jk+lambda_j0)){// not enough time to visit j
+            return [Infinity,0];
+        }
+
+        var alpha = (targets[k].uncertainty + targets[k].uncertaintyRate*(rho_ij+rho_jk))/(this.sensingRate-targets[k].uncertaintyRate);
+        var beta = targets[k].uncertaintyRate/(this.sensingRate - targets[k].uncertaintyRate);
+        
+
+        // transform coeficients
+        var coefA = coefs[1]; 
+        var coefB = coefs[2]; 
+        var coefC = coefs[7];
+        var coefD = coefs[11] + coefs[4]*lambda_j0;
+        var coefE = coefs[12] + coefs[5]*lambda_j0;
+        var coefF = coefs[14] + coefs[10]*lambda_j0 + coefs[0]*sq(lambda_j0); 
+
+        var coefG = 1;
+        var coefH = 1;
+        var coefK = lambda_j0 + rho_ij +rho_jk;
+
+        var coefP = beta;
+        var coefL = alpha + beta*lambda_j0;
+        
+        var coefQ = 1;
+        var coefM = H - rho_ij - rho_jk - lambda_j0;
+
+        var coefN = Infinity;
+
+        var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
+        
+        var sol;
+        if(RHCMethod==5){
+            sol = rationalObjective.solveCompleteFixedH(); // solve for v_i,u_j
+        }else{
+            sol = rationalObjective.solveComplete(); // solve for v_i,u_j
+        }
+
+        var costVal = sol[0];
+        var u_j = lambda_j0; // u_j=lambda_j0, v_j, u_k, v_k = 0
+        var v_j = sol[1];
+        var u_k = sol[2];
+        var v_k = 0;
+
+        if(printMode){print("OP3ExtC2A: u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; u_k="+u_k.toFixed(3)+"; v_k="+v_k.toFixed(3)+"; J="+costVal.toFixed(3));}
+
+        if(costVal<0){
+            print("Error J (OP3ExtC2A): "+costVal)
+            print(rationalObjective);
+            print("OP3ExtC2A: y_ij="+rho_ij.toFixed(3)+"u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; y_jk="+rho_jk.toFixed(3)+"; u_k="+u_k.toFixed(3)+"; v_k="+v_k.toFixed(3)+"; J="+costVal.toFixed(3));
+        }
+        // var costVal = Infinity;
+        // var timeVal = 0;
+        return [costVal, u_j, v_j, u_k, v_k];
+
+    }
+
+
+    this.solveOP3ExtendedC2B = function(i,j,k,H,rho_ij,rho_jk,coefs){
+
+        var lambda_j0 = (targets[j].uncertainty+targets[j].uncertaintyRate*rho_ij)/(this.sensingRate - targets[j].uncertaintyRate);
+        var alpha = (targets[k].uncertainty + targets[k].uncertaintyRate*(rho_ij+rho_jk))/(this.sensingRate-targets[k].uncertaintyRate);
+        var beta = targets[k].uncertaintyRate/(this.sensingRate - targets[k].uncertaintyRate);
+        
+        if(H < (rho_ij + rho_jk + alpha + lambda_j0*(1+beta))){// not enough time to visit j
+            return [Infinity,0];
+        }
+
+        
+
+        // transform coeficients
+        var coefA = coefs[1] + coefs[7]*beta + coefs[2]*sq(beta);  
+        var coefB = coefs[3]; 
+        var coefC = coefs[8] + coefs[9]*beta;
+        var coefD = coefs[11] + coefs[4]*lambda_j0 + coefs[12]*beta + (coefs[5]+coefs[7])*beta*lambda_j0 + 2*coefs[2]*sq(beta)*lambda_j0 + coefs[7]*alpha + 2*coefs[2]*alpha*beta;
+        var coefE = coefs[13] + coefs[6]*lambda_j0 + coefs[9]*beta*lambda_j0 + coefs[9]*alpha;
+        var coefF = coefs[14] + coefs[10]*lambda_j0 + coefs[0]*sq(lambda_j0) + coefs[12]*beta*lambda_j0 + coefs[5]*beta*sq(lambda_j0) + coefs[2]*sq(beta*lambda_j0) + coefs[12]*alpha + coefs[5]*alpha*lambda_j0 + 2*coefs[2]*alpha*beta*lambda_j0 + coefs[2]*sq(alpha); 
+
+        var coefG = 1 + beta;
+        var coefH = 1;
+        var coefK = alpha + lambda_j0*(1+beta) + rho_ij + rho_jk;
+
+        var coefP = 0;
+        var coefL = Infinity;
+        
+        var coefQ = 1 + beta;
+        var coefM = H - rho_ij - rho_jk - lambda_j0*(1+beta) - alpha;
+
+        var coefN = Infinity;
+
+        var rationalObjective = new RationalObj(coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefP,coefL,coefQ,coefM,coefN);
+        
+        var sol;
+        if(RHCMethod==5){
+            sol = rationalObjective.solveCompleteFixedH(); // solve for v_i,v_j
+        }else{
+            sol = rationalObjective.solveComplete(); // solve for v_i,v_j
+        }
+
+
+        var costVal = sol[0];
+        var u_j = lambda_j0; // u_j=lambda_j0, v_j, u_k=..., v_k 
+        var v_j = sol[1];
+        var u_k = alpha + beta*(u_j+v_j);
+        var v_k = sol[2];
+
+        if(printMode){print("OP3ExtC2B: u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; u_k="+u_k.toFixed(3)+"; v_k="+v_k.toFixed(3)+"; J="+costVal.toFixed(3));}
+
+
+        if(costVal<0){
+            print("Error J (OP3ExtC2B): "+costVal)
+            print(rationalObjective);
+            print("OP3ExtC2A: y_ij="+rho_ij.toFixed(3)+"u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; y_jk="+rho_jk.toFixed(3)+"; u_k="+u_k.toFixed(3)+"; v_k="+v_k.toFixed(3)+"; J="+costVal.toFixed(3));
+        }
+        // var costVal = Infinity;
+        // var timeVal = 0;
+        return [costVal, u_j, v_j, u_k, v_k]; 
+
+    }
+
+
+
+    this.triggerCoverednessEvent = function(i,j){
+        // trigger an event at neighbor targets of i telling i is now uncovered!
+        // also trigger an event telling at neighbors of j telling it is now covered!
+        for(var a = 0; a<agents.length; a++){
+            if(agents[a].residingTarget.length==1 && a != this.id){
+                // some other agent (i.e., a) resides in target n
+                var n = agents[a].residingTarget[0];
+                if(targets[i].neighbors.includes(n) || targets[j].neighbors.includes(n)){
+                    agents[a].coverednessEventTriggered = true;
+                }
+
+            }
+            
+        }         
+        
+    }
 
 
 

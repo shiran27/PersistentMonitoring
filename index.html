@@ -71,10 +71,27 @@
 
 	<div class="container">
 		
-		<div class="jumbotron">
+		<div class="jumbotron" id="jumbo">
 	        
 	        <h2 align="center">Persistent Monitoring on Graphs</h2>
-
+	        <div class="row"></div>
+	        <div class="row">
+	        	<div class="col col-lg-4 col-md-12">
+	        		<img src="QSS1Web.png" style="max-width: 100%;">
+	        	</div>
+	        	<div class="col col-lg-4 col-md-12">
+	        		<img src="QSS2Web.png" style="max-width: 100%;">
+	        	</div>
+	        	<div class="col col-lg-4 col-md-12">
+	        		<h6 align="right"> 
+	        			<a href="PMGWebSimReport.pdf">Click here!</a> to read the technical manual.
+	        		</h6>
+	        		<h6 align="right"> (Developped by <a href="https://www.researchgate.net/profile/Shirantha_Welikala">Shirantha Welikala</a>)
+	        		</h6>		
+	        	</div>
+	        </div>
+	        
+	        
 		</div>
 	
 	</div>
@@ -277,7 +294,7 @@
 
 							<div class="col col-xs-4 border-right border-success">
 							    <label for="deltaT">&Delta;t=
-							    	<button class="btn btn-success" type="button" onclick="simulateHybridSystem();">
+							    	<button class="btn btn-success" id="simulateHybridSystemButton" type="button" onclick="simulateHybridSystem();">
 		    							<i class="fa fa-play" aria-hidden="true"></i>
 		    						</button>
 		    						<button class="btn btn-success" type="button" onclick="simulateHybridSystemFast();">
@@ -345,20 +362,24 @@
 			<div class="col col-lg-4">
 				<h5>Receding Horizon Control:</h5>
 				
-				<label for="RHCMethodDropdown">Horizon (Steps):</label>
+				<label for="RHCMethodDropdown">RHC Method:</label>
 				<select class="form-control custom-select" id="RHCMethodDropdown" onchange="RHCMethodChanged()">
         				<option value="0">Disabled</option>
 				    	<option value="1">One step ahead (Greedy RHC)</option>
 				    	<option value="2">Two steps ahead (Greedy RHC)</option>
-				    	<option selected value="3">Event Driven RHC</option>
+				    	<option value="3">Event Driven RHC</option>
+				    	<option value="5">Event Driven RHC-Fixed H</option>
+				    	<option value="4">Event Driven RHC-&alpha;</option>
+				    	<option selected value="6">Event Driven RHC-Two-Step</option>
 				</select> 
 
 			</div>
 
 			<div class="col col-lg-3">
-				<label for="timeHorizonForRHC">Horizon (Time) T<sub>h</sub> =  
+				<label for="timeHorizonForRHC">Planning Horizon H =  
 					<span id="timeHorizonForRHCDisplay"></span></label>
 					<input type="range" class="form-control slider" id="timeHorizonForRHC" min="1" max="250" value="250" onchange="timeHorizonForRHCChanged(Number(this.value));">
+					<button class="btn btn-success" type="button" onclick="generateCostVsHorizonCurve(50);">Auto-Tune</button>
 			</div>
 
 			<div class="col col-lg-3">
@@ -439,7 +460,7 @@
 
 			<div class="col col-lg-4 border-right border-success">
 				
-				<h5>Construct A Periodic Policy:</h5>
+				<h5>Greedy TCP Construction:</h5>
 
 				<div class="row">
 					<div class="col col-lg-12">
@@ -493,7 +514,7 @@
 					
 					<div class="col col-lg-9">
 						<label for="thresholdButton">4. Compute Thresholds:</label>
-						<button class="btn btn-success" id="thresholdButton" type="button" onclick="generateThresholdsFromRoutes();">Apply
+						<button class="btn btn-success" id="thresholdButton" type="button" onclick="generateThresholdsFromRoutes();">Apply !
 						</button> 
 					</div>
 

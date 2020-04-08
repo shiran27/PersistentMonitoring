@@ -181,11 +181,13 @@ function finishModifyingProbConfig(){
     for(var i = 0; i<targets.length; i++){
         targets[i].neighbors2 = [];
         targets[i].distancesToNeighbors2 = [];
+        targets[i].neighborhood = [];
         for(var l = 0; l<targets[i].neighbors.length; l++){
             var j = targets[i].neighbors[l];
             var y_ij = targets[i].distancesToNeighbors[l];
             targets[i].neighbors2[l] = [];
             targets[i].distancesToNeighbors2[l] = [];
+            targets[i].neighborhood.push(j); 
             if(i!=j){
                 for(var m = 0; m<targets[j].neighbors.length; m++){
                     var k = targets[j].neighbors[m];
@@ -193,6 +195,9 @@ function finishModifyingProbConfig(){
                     if(j!=k){
                         targets[i].neighbors2[l].push(k);
                         targets[i].distancesToNeighbors2[l].push(y_jk);
+                        if(!targets[i].neighbors.includes(k)&&!targets[i].neighborhood.includes(k)){
+                            targets[i].neighborhood.push(k);
+                        }
                     }
                 }
             }
@@ -894,6 +899,14 @@ function RHCMethodChanged(){
         consolePrint("Receding horizon control: One Steap Ahead Method Enabled.");
     }else if(RHCMethod==2){
         consolePrint("Receding horizon control: Two Steps Ahead Method Enabled.");
+    }else if(RHCMethod==3){
+        consolePrint("Event Driven Receding Horizon Control.");
+    }else if(RHCMethod==4){
+        consolePrint("Event Driven Receding Horizon Control-Alpha.");
+    }else if(RHCMethod==5){
+        consolePrint("Event Driven Receding Horizon Control with a Fixed Horizon.");
+    }else if(RHCMethod==6){
+        consolePrint("Event Driven Receding Horizon Control with Two Steps Ahead.");
     }
 }
 
@@ -920,26 +933,33 @@ function initiateForcedModeSwitch(){
 
 function simulateHybridSystem(){ // run the hybrid system indefinitely in real-time while displaying
 
-
-    if(RHCMethod==0){//disabled
-        consolePrint("Initiated simulating the system using the threshold based controller.");
-        simulationMode = 1;
-        simulationTime = 0;
-        discreteTimeSteps = 0;
-    }
-    else if(RHCMethod<3){
-        if(RHCMethod==1){
-            consolePrint("Initiated simulating the system using 'one-step-ahead' receding horizon controller.");
-        }else if(RHCMethod==2){
-            consolePrint("Initiated simulating the system using 'two-step-ahead' receding horizon controller.");
+    if(simulationMode>0){
+        simulationMode = 0;
+        document.getElementById("simulateHybridSystemButton").innerHTML = "<i class='fa fa-play' aria-hidden='true'></i>"; 
+        consolePrint("Hybrid system simulation paused.");
+    }else{
+        if(RHCMethod==0){//disabled
+            consolePrint("Initiated simulating the system using the threshold based controller.");
+            simulationMode = 1;
+            simulationTime = 0;
+            discreteTimeSteps = 0;
         }
-        simulationMode = 6;
-        simulationTime = 0;
-        discreteTimeSteps = 0;
-    }else{ // RHCMethod =3
-        simulationMode = 7;
-        simulationTime = 0;
-        discreteTimeSteps = 0;
+        else if(RHCMethod<3){
+            if(RHCMethod==1){
+                consolePrint("Initiated simulating the system using 'one-step-ahead' receding horizon controller.");
+            }else if(RHCMethod==2){
+                consolePrint("Initiated simulating the system using 'two-step-ahead' receding horizon controller.");
+            }
+            simulationMode = 6;
+            simulationTime = 0;
+            discreteTimeSteps = 0;
+        }else{ // RHCMethod =3,4,5,6: ED-RHC, ED-RHC-alpha, ED-RHC-Fixed, ED-RHC-Extended
+            simulationMode = 7;
+            simulationTime = 0;
+            discreteTimeSteps = 0;
+        }
+        document.getElementById("simulateHybridSystemButton").innerHTML = "<i class='fa fa-pause' aria-hidden='true'></i>";     
+        consolePrint("Hybrid system simulation started.");
     }
 
 
@@ -1521,7 +1541,7 @@ function resetSimulation(){
 
     document.getElementById("simulationTime").innerHTML = simulationTime.toFixed(2).toString();
     document.getElementById("simulationCost").innerHTML = 0;
-
+    document.getElementById("simulateHybridSystemButton").innerHTML = "<i class='fa fa-play' aria-hidden='true'></i>"; 
     consolePrint("Simulation stopped and reseted to the initial state.");
 }
 
@@ -1603,6 +1623,8 @@ function stopSimulation(){
     discreteTimeSteps = 0;
 
     resetAgentsAndTargets();
+
+    document.getElementById("simulateHybridSystemButton").innerHTML = "<i class='fa fa-play' aria-hidden='true'></i>"; 
 
     consolePrint("Simulation stopped and reseted to the initial state.");
 
@@ -1994,16 +2016,38 @@ function fullyConnectCBChanged(val){
 
 
 
-function generateCostVsHorizonCurve(){
+function generateCostVsHorizonCurve(resVal){
+    var minCostTh = 1;
+    var minCost = Infinity;
     var cost = "";
-    for(var t_h=1; t_h<250; t_h++ ){
+
+    var T_hNow = Number(document.getElementById("timeHorizonForRHC").value);
+    var res = T_hNow/resVal;
+    var T_hLow = 1;
+    var T_hHigh = 1.2*T_hNow;//1.5*T_hNow;
+
+    for(var t_h=T_hLow; t_h<T_hHigh; t_h=t_h+res){
         resetSimulation();
         document.getElementById("timeHorizonForRHC").value = t_h;
         timeHorizonForRHCChanged(t_h);
         simulateHybridSystemFast();
-        cost = cost+t_h+","+terminalMeanSystemUncertainty.toFixed(3)+";";
+        cost = cost+t_h.toFixed(3)+","+terminalMeanSystemUncertainty.toFixed(3)+";";
+
+        if(terminalMeanSystemUncertainty<minCost){
+            minCostTh = t_h;
+            minCost = terminalMeanSystemUncertainty;
+        }
+
     }
-    return cost;
+
+    resetSimulation();
+    document.getElementById("timeHorizonForRHC").value = minCostTh;
+    timeHorizonForRHCChanged(minCostTh);
+    simulateHybridSystemFast();
+
+    consolePrint("Best T_h = "+minCostTh.toFixed(3)+", which gives J = "+minCost.toFixed(3)+".")
+    print(cost);
+
 }
 
 

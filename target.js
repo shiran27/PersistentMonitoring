@@ -26,6 +26,7 @@ function Target(x, y, r) {
     this.distancesToNeighbors = [];
     this.neighbors2 = []; //[[firstNeighbor, secondNeighbor],[firstNeighbor,secondNeighbor]]
     this.distancesToNeighbors2 = [];
+    this.neighborhood = [];
 
 
     this.arcBoostingInitiated = false;
