@@ -556,7 +556,7 @@ function Agent(x, y, r) {
                     if(targets[i].uncertainty>0){// leave early?
                         // solve OP-3 to find the next target j to visit
                         var ans;
-                        if(RHCMethod==6){
+                        if(RHCMethod==6 || RHCMethod==7){
                             ans = this.solveOP3Extended(i);
                         }else{
                             ans = this.solveOP3(i);
@@ -590,7 +590,7 @@ function Agent(x, y, r) {
                 if(this.timeToExitMode[1]<simulationTime){//and sleeping time elepased
                     // Solve OP-3 to find the next target to visit
                     var ans;
-                    if(RHCMethod==6){
+                    if(RHCMethod==6 || RHCMethod==7){
                         ans = this.solveOP3Extended(i);
                     }else{
                         ans = this.solveOP3(i);
@@ -842,8 +842,8 @@ function Agent(x, y, r) {
         if(printMode){print("OP1C1A: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));}
 
         if(costVal<0){
-            print("Error J (OP1C1A): "+costVal)
-            print(rationalObjective);
+            print("E! J (OP1C1A): "+costVal)
+            // print(rationalObjective);
         }
         // var costVal = Infinity;
         // var timeVal = 0;
@@ -902,8 +902,8 @@ function Agent(x, y, r) {
 
 
         if(costVal<0){
-            print("Error J (OP1C1B): "+costVal)
-            print(rationalObjective);
+            print("E! J (OP1C1B): "+costVal)
+            // print(rationalObjective);
         }
 
         // var costVal = Infinity;
@@ -962,9 +962,9 @@ function Agent(x, y, r) {
         if(printMode){print("OP1C2A: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));}
 
         if(costVal<0){
-            print("Error J (OP1C2A): "+costVal)
-            print(rationalObjective);
-            print("OP1C2A: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; r_ij="+rho_ij.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
+            print("E! J (OP1C2A): "+costVal)
+            // print(rationalObjective);
+            // print("OP1C2A: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; r_ij="+rho_ij.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
         }
         // var costVal = Infinity;
         // var timeVal = 0;
@@ -1025,9 +1025,9 @@ function Agent(x, y, r) {
 
 
         if(costVal<0){
-            print("Error J (OP1C2B): "+costVal)
-            print(rationalObjective);
-            print("OP1C2B: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; r_ij="+rho_ij.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
+            print("E! J (OP1C2B): "+costVal)
+            // print(rationalObjective);
+            // print("OP1C2B: u_i="+u_i.toFixed(3)+"; v_i="+v_i.toFixed(3)+"; r_ij="+rho_ij.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
         }
         // var costVal = Infinity;
         // var timeVal = 0;
@@ -1177,9 +1177,9 @@ function Agent(x, y, r) {
         if(printMode){print("OP2C1: v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));}
 
         if(costVal<0){
-            print("Error J (OP2C1): "+costVal)
-            print(rationalObjective);
-            print("OP2C1: v_i="+v_i.toFixed(3)+"; r_ij="+rho_ij.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
+            print("E! J (OP2C1): "+costVal)
+            // print(rationalObjective);
+            // print("OP2C1: v_i="+v_i.toFixed(3)+"; r_ij="+rho_ij.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
         }
         // var costVal = Infinity;
         // var timeVal = 0;
@@ -1235,9 +1235,9 @@ function Agent(x, y, r) {
         if(printMode){print("OP2C2: v_i="+v_i.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));}
 
         if(costVal<0){
-            print("Error J (OP2C2): "+costVal)
-            print(rationalObjective);
-            print("OP2C2: v_i="+v_i.toFixed(3)+"; r_ij="+rho_ij.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
+            print("E! J (OP2C2): "+costVal)
+            // print(rationalObjective);
+            // print("OP2C2: v_i="+v_i.toFixed(3)+"; r_ij="+rho_ij.toFixed(3)+"; u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; J="+costVal.toFixed(3));
         }
         // var costVal = Infinity;
         // var timeVal = 0;
@@ -1335,12 +1335,19 @@ function Agent(x, y, r) {
             // revised coeficients 
             // alpha can be a function of the degree at target i (currently residing)
             var alpha;
-            if(RHCMethod==3){
-                alpha = 0.5;
+            if(RHCMethod==4 || RHCMethod==7){
+                
+                if(RHCParameterOverride){
+                    alpha = RHCalpha;
+                }else{
+                    alpha = 1/sq(targets[i].neighbors.length); 
+                    //alpha = 1/(15-targets[j].neighbors.length); 
+                    //alpha = targets[i].neighbors.length/(10+targets[i].neighbors.length)
+                    //alpha = 0; ////alpha = 0.005;   
+                }
+                
             }else{
-                alpha = targets[i].neighbors.length/(10+targets[i].neighbors.length)
-                alpha = 1/sq(targets[i].neighbors.length)
-                ////alpha = 0.005;
+                alpha = 0.5;
             }
             var Ajbar = (Abar-targets[j].uncertaintyRate);
             var Rjbar = (Rbar-targets[j].uncertainty);
@@ -1464,7 +1471,7 @@ function Agent(x, y, r) {
         }
 
         if(cost<0){
-            print("Error J (OP3C1): "+cost)   
+            print("E! J (OP3C1): "+cost)   
         }
 
         return [cost,u_j,v_j,solType];
@@ -1507,7 +1514,7 @@ function Agent(x, y, r) {
 
 
         if(cost<0){
-            print("Error J (OP3C2): "+cost)   
+            print("E! J (OP3C2): "+cost)   
         }
         // no need
         // cost1 = evalCostOP3(lambda_j0,0,rho_ij,coefs);
@@ -1597,21 +1604,20 @@ function Agent(x, y, r) {
         }
 
 
-
-
+        ////var addedLater = [];
         for(var jkInd = 0; jkInd < jkArray.length; jkInd++){
             var j = jkArray[jkInd][0];
             var Abar = AbarArray[jkInd]; // sum over the neighbors of j including j
             var Rbar = RbarArray[jkInd]; // sum over the neighbors of j including j
-
+            ////addedLater.push([]);
             for(var mInd = 0; mInd<uncoveredNeighborhood.length; mInd++){
                 var m = uncoveredNeighborhood[mInd];
                 if(!targets[j].neighbors.includes(m)){// as neighbors of j have already been considered
                     
+                    ////addedLater[addedLater.length-1].push(m);
                     Abar = Abar + targets[m].uncertaintyRate;
                     Rbar = Rbar + targets[m].uncertainty;
-                    ////AbarArray[jkInd] = AbarArray[jkInd] + targets[m].uncertaintyRate;
-                    ////RbarArray[jkInd] = RbarArray[jkInd] + targets[m].uncertainty;
+    
                 }
             }
 
@@ -1620,14 +1626,41 @@ function Agent(x, y, r) {
 
         }
 
+        if(printMode){// works!
+            // print("i: "+i+", uncovered: "+uncoveredNeighborhood)
+            // print("jk Array:")
+            // print(jkArray)
+            // print("addedLater:")
+            // print(addedLater)
+        }
 
-        // list of feasible [j,k] pairs:
-        // print("i: "+i+", uncovered: "+uncoveredNeighborhood)
-        // print("jk: "+jkArray)
-        // print("y_jk: "+y_jkArray)
-        // print("Abar: "+AbarArray)
-        // print("Rbar: "+RbarArray)
-        // list of corresponding Abar and Rbar values
+        //// quick way : alpha = 0, beta = 0
+        // var minCost = Infinity;
+        // var minCostTarget = i;
+        // var minCostTime = 0;
+        // for(var jkInd = 0; jkInd < jkArray.length; jkInd++){
+        //     var j = jkArray[jkInd][0];
+        //     var k = jkArray[jkInd][1];
+
+        //     var y_ij = y_jkArray[jkInd][0];
+        //     var y_jk = y_jkArray[jkInd][1];
+            
+        //     var R_jkbar = RbarArray[jkInd]-targets[j].uncertainty-targets[k].uncertainty;
+        //     var A_jkbar = AbarArray[jkInd]-targets[j].uncertaintyRate-targets[k].uncertaintyRate;
+
+        //     var alpha = (targets[k].uncertainty + targets[k].uncertaintyRate*(y_ij+y_jk))/(this.sensingRate-targets[k].uncertaintyRate);
+        //     var beta = targets[k].uncertaintyRate/(this.sensingRate - targets[k].uncertaintyRate);
+        //     var lambda_j0 = (targets[j].uncertainty+targets[j].uncertaintyRate*y_ij)/(this.sensingRate - targets[j].uncertaintyRate);
+
+        //     var cost = R_jkbar + 0.5*A_jkbar*(y_jk+y_ij+lambda_j0+alpha+beta*lambda_j0);
+        //     if(cost<minCost){
+        //         minCost = cost;
+        //         minCostTarget = j;
+        //         minCostTime = y_ij;
+        //     } 
+        // }
+        // return [minCostTarget,minCostTime]
+        //// end quick way
 
 
 
@@ -1649,25 +1682,72 @@ function Agent(x, y, r) {
 
 
             // Each coef is multiplied by 2T
-            var coefA = (Abar - this.sensingRate);
-            var coefB = Abar - targets[j].uncertaintyRate;
-            var coefC = Abar - this.sensingRate;
-            var coefD = Abar - targets[k].uncertaintyRate;
-            var coefE = 2*(Abar - targets[j].uncertaintyRate);
-            var coefF = 2*(Abar - this.sensingRate);
-            var coefG = 2*(Abar - targets[k].uncertaintyRate - this.sensingRate);
-            var coefH = 2*(Abar - targets[j].uncertaintyRate);
-            var coefK = 2*(Abar - targets[j].uncertaintyRate - targets[k].uncertaintyRate);
-            var coefL = 2*(Abar - targets[k].uncertaintyRate);
+            var coefs;
+            if(RHCMethod==7){
 
-            var coefM = 2*(Rbar - this.sensingRate*y_jk + Abar*(y_ij+y_jk) );
-            var coefN = 2*((Rbar-targets[j].uncertainty) + (Abar - targets[j].uncertaintyRate)*(y_ij+y_jk));
-            var coefP = 2*(Rbar + Abar*(y_ij+y_jk));
-            var coefQ = 2*((Rbar-targets[k].uncertainty) + (Abar - targets[k].uncertaintyRate)*(y_ij+y_jk));
-            var coefS = (y_ij+y_jk)*(2*Rbar + Abar*(y_ij+y_jk));
+                //// alpha beta mode
+                var alpha;
+                var beta;
+                if(RHCParameterOverride){
+                    alpha = RHCalpha;//0.1;
+                    beta = RHCbeta;//0.2;
+                }else{
+                    alpha = 1/sq(uncoveredNeighborhood.length);
+                    beta = 1/uncoveredNeighborhood.length;
+                }
+                var B_j = this.sensingRate;
+                var B_k = this.sensingRate;
+                var A_j = targets[j].uncertaintyRate;
+                var A_k = targets[k].uncertaintyRate;
+                var R_j = targets[j].uncertainty;
+                var R_k = targets[k].uncertainty;
+                var A_jk = Abar-A_j-A_k;
+                var R_jk = Rbar-R_j-R_k;
+
+                // multiplied by 2
+                var coefA = A_k*beta + alpha*(A_j-B_j)-A_jk*(alpha+beta-1);
+                var coefB = A_k*beta - A_jk*(alpha+beta-1);
+                var coefC = A_j*alpha + beta*(A_k-B_k)-A_jk*(alpha+beta-1);
+                var coefD = A_j*alpha - A_jk*(alpha+beta-1);
+                var coefE = 2*(A_k*beta - A_jk*(alpha+beta-1));
+                var coefF = 2*(A_k*beta + alpha*(A_j-B_j)-A_jk*(alpha+beta-1));
+                var coefG = 2*(alpha*(A_j-B_j)-A_jk*(alpha+beta-1));
+                var coefH = 2*(A_k*beta - A_jk*(alpha+beta-1));
+                var coefK = 2*(-A_jk*(alpha+beta-1));
+                var coefL = 2*(A_j*alpha - A_jk*(alpha+beta-1));
+
+                var coefM = 2*(beta*(R_k+A_k*(y_ij+y_jk))+alpha*(R_j+A_j*(y_ij+y_jk)-B_j*y_jk)+(1-alpha-beta)*(R_jk+A_jk*(y_ij+y_jk)));
+                var coefN = 2*(beta*(R_k+A_k*(y_ij+y_jk))+(1-alpha-beta)*(R_jk+A_jk*(y_ij+y_jk)));
+                var coefP = 2*(beta*(R_k+A_k*(y_ij+y_jk))+alpha*(R_j+A_j*(y_ij+y_jk))+(1-alpha-beta)*(R_jk+A_jk*(y_ij+y_jk)));
+                var coefQ = 2*(alpha*(R_j+A_j*(y_ij+y_jk))+(1-alpha-beta)*(R_jk+A_jk*(y_ij+y_jk)));
+                var coefS = (y_ij+y_jk)*(alpha*(2*R_j+A_j*(y_ij+y_jk))+beta*(2*R_k+A_k*(y_ij+y_jk))+(1-alpha-beta)*(2*R_jk+A_jk*(y_ij+y_jk)))
+                //// end alpha beta mode
+
+                coefs = [coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefL,coefM,coefN,coefP,coefQ,coefS];
+
+            }else{
+                
+                var coefA = (Abar - this.sensingRate);
+                var coefB = Abar - targets[j].uncertaintyRate;
+                var coefC = Abar - this.sensingRate;
+                var coefD = Abar - targets[k].uncertaintyRate;
+                var coefE = 2*(Abar - targets[j].uncertaintyRate);
+                var coefF = 2*(Abar - this.sensingRate);
+                var coefG = 2*(Abar - targets[k].uncertaintyRate - this.sensingRate);
+                var coefH = 2*(Abar - targets[j].uncertaintyRate);
+                var coefK = 2*(Abar - targets[j].uncertaintyRate - targets[k].uncertaintyRate);
+                var coefL = 2*(Abar - targets[k].uncertaintyRate);
+
+                var coefM = 2*(Rbar - this.sensingRate*y_jk + Abar*(y_ij+y_jk) );
+                var coefN = 2*((Rbar-targets[j].uncertainty) + (Abar - targets[j].uncertaintyRate)*(y_ij+y_jk));
+                var coefP = 2*(Rbar + Abar*(y_ij+y_jk));
+                var coefQ = 2*((Rbar-targets[k].uncertainty) + (Abar - targets[k].uncertaintyRate)*(y_ij+y_jk));
+                var coefS = (y_ij+y_jk)*(2*Rbar + Abar*(y_ij+y_jk));
+                
+                coefs = [coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefL,coefM,coefN,coefP,coefQ,coefS];
             
-            var coefs = [coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefL,coefM,coefN,coefP,coefQ,coefS];
-
+            }
+            
 
             if(printMode){print("OP3Ext: i="+(i+1)+", j="+(j+1)+", k="+(k+1));}
 
@@ -1778,8 +1858,8 @@ function Agent(x, y, r) {
         if(printMode){print("OP3ExC1A: u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; u_k="+u_k.toFixed(3)+"; v_k="+v_k.toFixed(3)+"; J="+costVal.toFixed(3));}
 
         if(costVal<0){
-            print("Error J (OP3ExC1A): "+costVal)
-            print(rationalObjective);
+            print("E! J (OP3ExC1A): "+costVal)
+            // print(rationalObjective);
         }
         // var costVal = Infinity;
         // var timeVal = 0;
@@ -1838,8 +1918,8 @@ function Agent(x, y, r) {
 
 
         if(costVal<0){
-            print("Error J (OP3ExC1B): "+costVal)
-            print(rationalObjective);
+            print("E! J (OP3ExC1B): "+costVal)
+            // print(rationalObjective);
         }
 
         // var costVal = Infinity;
@@ -1898,9 +1978,9 @@ function Agent(x, y, r) {
         if(printMode){print("OP3ExtC2A: u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; u_k="+u_k.toFixed(3)+"; v_k="+v_k.toFixed(3)+"; J="+costVal.toFixed(3));}
 
         if(costVal<0){
-            print("Error J (OP3ExtC2A): "+costVal)
-            print(rationalObjective);
-            print("OP3ExtC2A: y_ij="+rho_ij.toFixed(3)+"u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; y_jk="+rho_jk.toFixed(3)+"; u_k="+u_k.toFixed(3)+"; v_k="+v_k.toFixed(3)+"; J="+costVal.toFixed(3));
+            print("E! J (OP3ExtC2A): "+costVal)
+            // print(rationalObjective);
+            // print("OP3ExtC2A: y_ij="+rho_ij.toFixed(3)+"u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; y_jk="+rho_jk.toFixed(3)+"; u_k="+u_k.toFixed(3)+"; v_k="+v_k.toFixed(3)+"; J="+costVal.toFixed(3));
         }
         // var costVal = Infinity;
         // var timeVal = 0;
@@ -1961,9 +2041,9 @@ function Agent(x, y, r) {
 
 
         if(costVal<0){
-            print("Error J (OP3ExtC2B): "+costVal)
-            print(rationalObjective);
-            print("OP3ExtC2A: y_ij="+rho_ij.toFixed(3)+"u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; y_jk="+rho_jk.toFixed(3)+"; u_k="+u_k.toFixed(3)+"; v_k="+v_k.toFixed(3)+"; J="+costVal.toFixed(3));
+            print("E! J (OP3ExtC2B): "+costVal)
+            // print(rationalObjective);
+            // print("OP3ExtC2A: y_ij="+rho_ij.toFixed(3)+"u_j="+u_j.toFixed(3)+"; v_j="+v_j.toFixed(3)+"; y_jk="+rho_jk.toFixed(3)+"; u_k="+u_k.toFixed(3)+"; v_k="+v_k.toFixed(3)+"; J="+costVal.toFixed(3));
         }
         // var costVal = Infinity;
         // var timeVal = 0;

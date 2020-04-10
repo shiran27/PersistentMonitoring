@@ -98,6 +98,9 @@ var RHCMethod;
 var timeHorizonForRHC = periodT;
 var terminalMeanSystemUncertainty; // for plotting purposes with fast-foward
 
+var RHCalpha;
+var RHCbeta;
+var RHCParameterOverride;
 
 
 function startModifyingProbConfig(){
@@ -463,10 +466,7 @@ function updateInterface(){
         document.getElementById("blockingThresholdDisplay").innerHTML = blockingThreshold.toFixed(2);
         
         document.getElementById("timeHorizonForRHCDisplay").innerHTML = document.getElementById("timeHorizonForRHC").value;
-
-
-
-
+        
     }
 
 }
@@ -504,6 +504,8 @@ function readInitialInterface(){
 
     RHCMethod = Number(document.getElementById("RHCMethodDropdown").value);
     timeHorizonForRHC = Number(document.getElementById("timeHorizonForRHC").value);
+
+    RHCMethodChanged();
 }
 
 function displayThresholdSensitivities(){ 
@@ -662,6 +664,38 @@ function blockingThresholdChanged(val){
 function timeHorizonForRHCChanged(val){
     consolePrint("Time horizon changed to: "+val+".")
     timeHorizonForRHC = val;
+}
+
+function RHCParametersChanged(){
+    RHCParameterOverride = document.getElementById("RHCParamterOverrideCB").checked;
+    if(RHCParameterOverride){
+        document.getElementById("RHCalpha").disabled = false;
+        document.getElementById("RHCbeta").disabled = false;                
+    }else{
+        document.getElementById("RHCalpha").disabled = true;        
+        document.getElementById("RHCbeta").disabled = true;        
+    }    
+
+    RHCalpha = Number(document.getElementById("RHCalpha").value);
+    RHCbeta = Number(document.getElementById("RHCbeta").value);
+    
+    consolePrint("RHC parameters: Alpha = "+RHCalpha+", Beta = "+RHCbeta+".");
+
+    if(RHCMethod==4){
+        document.getElementById("RHCalphaDisplay").innerHTML = RHCalpha;
+        if(!RHCParameterOverride){
+            document.getElementById("RHCalphaDisplay").innerHTML = "N/A";
+        }
+    }else if(RHCMethod==7){
+        document.getElementById("RHCalphaDisplay").innerHTML = RHCalpha;
+        document.getElementById("RHCbetaDisplay").innerHTML = RHCbeta;
+        if(!RHCParameterOverride){
+            document.getElementById("RHCalphaDisplay").innerHTML = "N/A";
+            document.getElementById("RHCbetaDisplay").innerHTML = "N/A";
+        }
+    }
+    
+
 }
 
 
@@ -904,10 +938,93 @@ function RHCMethodChanged(){
     }else if(RHCMethod==4){
         consolePrint("Event Driven Receding Horizon Control-Alpha.");
     }else if(RHCMethod==5){
-        consolePrint("Event Driven Receding Horizon Control with a Fixed Horizon.");
+        consolePrint("Event Driven Receding Horizon Control with a Fixed Horizon.");      
     }else if(RHCMethod==6){
         consolePrint("Event Driven Receding Horizon Control with Two Steps Ahead.");
+    }else if(RHCMethod==7){
+        consolePrint("Event Driven Receding Horizon Control with Two Steps Ahead-Alpha,Beta.");
+        
+
     }
+
+
+    if(RHCMethod==4){
+        var x = document.getElementById("RHCalphaDiv");
+        x.style.display = "block";
+        
+        var x = document.getElementById("RHCbetaDiv");
+        x.style.display = "none";
+        RHCParametersChanged();
+
+        var x = document.getElementById("plotCostVsParameterDropDown");
+        if(Number(x.value)==3){
+            x.value = 0;
+        }
+        x.options[1].disabled = false;  
+        x.options[2].disabled = false;
+        x.options[3].disabled = true;
+        
+
+    }else if(RHCMethod==7){
+        var x = document.getElementById("RHCalphaDiv");
+        x.style.display = "block";
+        
+        var x = document.getElementById("RHCbetaDiv");
+        x.style.display = "block";
+        RHCParametersChanged();
+        
+        var x = document.getElementById("plotCostVsParameterDropDown");
+        x.options[1].disabled = false;  
+        x.options[2].disabled = false;
+        x.options[3].disabled = false;
+
+    }else{
+        var x = document.getElementById("RHCalphaDiv");
+        x.style.display = "none";
+        
+        var x = document.getElementById("RHCbetaDiv");
+        x.style.display = "none";
+
+        var x = document.getElementById("plotCostVsParameterDropDown");
+        if(Number(x.value)==3 || Number(x.value)==2){
+            x.value = 0;
+        }
+        x.options[2].disabled = true;
+        x.options[3].disabled = true;
+
+        if(RHCMethod==0){
+            x.options[1].disabled = true;
+            x.value = 0;            
+        }else{
+            x.options[1].disabled = false;            
+        }
+
+    }
+
+
+
+    plotCostVsParameterDropDownChanged();
+}
+
+
+function plotCostVsParameterDropDownChanged(){
+    var x = Number(document.getElementById("plotCostVsParameterDropDown").value);
+    if(x==0){
+        document.getElementById("plotCostVsParameterStart").value = 100;
+        document.getElementById("plotCostVsParameterRes").value = 100;
+        document.getElementById("plotCostVsParameterEnd").value = 5000;
+    }else if(x==1){
+        document.getElementById("plotCostVsParameterStart").value = 5;
+        document.getElementById("plotCostVsParameterRes").value = 5;
+        document.getElementById("plotCostVsParameterEnd").value = 250;
+    }else if(x==2 || x==3){
+        document.getElementById("plotCostVsParameterStart").value = 0;
+        document.getElementById("plotCostVsParameterRes").value = 0.05;
+        document.getElementById("plotCostVsParameterEnd").value = 1;
+    }
+
+
+
 }
 
 function initiateForcedModeSwitch(){
@@ -1013,6 +1130,15 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
                 agents[i].updateEDRHCCT();
             }
         }
+
+        // random uncertainty perturbation
+        // var val=Math.round(discreteTimeSteps)%10000
+        // if(val==0){
+        //     print('here :'+simulationTime)
+        //     updateRTUncertaintyValuesRandom();
+        //     if(dataPlotMode){recordSystemState();}
+        // }
+        // random uncertainty perturbation end
 
         simulationTime = simulationTime + deltaT;
         discreteTimeSteps = discreteTimeSteps + 1;
@@ -2047,6 +2173,108 @@ function generateCostVsHorizonCurve(resVal){
 
     consolePrint("Best T_h = "+minCostTh.toFixed(3)+", which gives J = "+minCost.toFixed(3)+".")
     print(cost);
+
+}
+
+function plotCostVsParameter(){
+
+    var paraType = Number(document.getElementById("plotCostVsParameterDropDown").value)
+    var startingValue;
+    if(paraType==2||paraType==3){
+        document.getElementById("RHCParamterOverrideCB").checked = true;
+        RHCParametersChanged();
+    }else if(paraType==0){
+        startingValue = periodT;
+    }
+
+    var startVal = Number(document.getElementById("plotCostVsParameterStart").value);
+    var resVal = Number(document.getElementById("plotCostVsParameterRes").value);
+    var endVal = Number(document.getElementById("plotCostVsParameterEnd").value);
+
+    var minCostPara = startVal;
+    var minCost = Infinity;
+    var costArray = [];
+    var paraArray = [];
+
+    var oldDataPlotMode = document.getElementById("dataPlotModeCheckBox").checked;
+    document.getElementById("dataPlotModeCheckBox").checked = false; 
+    dataPlotModeChanged();
+    
+    for(var para=startVal; para<=endVal; para=para+resVal){
+        resetSimulation();
+        
+        if(paraType==0){// T changed
+            
+            document.getElementById("periodT").value = para;
+            periodTChanged(para);
+
+        }else if(paraType==1){// H changed
+            
+            document.getElementById("timeHorizonForRHC").value = para;
+            timeHorizonForRHCChanged(para);
+        
+        }else if(paraType==2){// alpha changed
+
+            document.getElementById("RHCalpha").value = para;
+            RHCParametersChanged();
+
+        }else if(paraType==3){// beta changed
+
+            document.getElementById("RHCbeta").value = para;
+            RHCParametersChanged();
+
+        }
+        
+        simulateHybridSystemFast();
+        
+        costArray.push(terminalMeanSystemUncertainty);
+        paraArray.push(para);
+
+        if(terminalMeanSystemUncertainty<minCost){
+            minCostPara = para;
+            minCost = terminalMeanSystemUncertainty;
+        }
+
+    }
+
+
+    // getting things back to normal
+    resetSimulation();
+    
+    if(paraType==0){// T changed
+            
+        document.getElementById("periodT").value = startingValue;
+        periodTChanged(startingValue);
+
+    }else if(paraType==1){// H changed
+        
+        document.getElementById("timeHorizonForRHC").value = minCostPara;
+        timeHorizonForRHCChanged(minCostPara);
+    
+    }else if(paraType==2){// alpha changed
+
+        document.getElementById("RHCalpha").value = minCostPara;
+        RHCParametersChanged();
+
+    }else if(paraType==3){// beta changed
+
+        document.getElementById("RHCbeta").value = minCostPara;
+        RHCParametersChanged();
+
+    }
+    
+    
+
+    simulateHybridSystemFast();
+
+    document.getElementById("dataPlotModeCheckBox").checked = oldDataPlotMode; 
+    dataPlotModeChanged();
+    
+
+    consolePrint("Best parameter value = "+minCostPara.toFixed(3)+", which gives J = "+minCost.toFixed(3)+".")
+    print("Best para = "+minCostPara.toFixed(3)+", which gives J = "+minCost.toFixed(3)+".")
+    
+    plotCostVsParameterData(paraType,paraArray,costArray)
 
 }
 

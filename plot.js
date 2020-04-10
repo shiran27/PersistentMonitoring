@@ -59,6 +59,62 @@ function plotData(){
 
 }
 
+function plotCostVsParameterData(paraType,dataX,dataY){
+
+   	//constructSpaceForPlots();
+	var xLabel;
+	if(paraType==0){
+		xLabel = 'Simulation Period: T'
+	}else if(paraType==1){
+		xLabel = 'Planning Horizon: H'
+	}else if(paraType==2){
+		xLabel = 'RHC Parameter: Alpha'
+	}else if(paraType==3){
+		xLabel = 'RHC Parameter: Beta'
+	}
+
+	var trace1 = {x:dataX, y:dataY,type: 'scatter', name:'Normal'};
+	   	
+	var plotLayout1 = 
+	{
+		title: 'Objective Function Value Vs Paramter Value', 
+		////autosize: true,
+	    //width: 100,
+	    //height: 400,
+	    automargin: true,
+	    // margin: {
+	    // 	l:10,
+	    // 	r:10,
+	    // 	t:10,
+	    // 	b:10,
+	    // 	pad:10,
+	    // },
+	    xaxis: {
+			title: xLabel, 
+			showline: true,
+			showgrid: true, 
+			zeroline: true,
+			////automargin: true,
+		}, 
+		yaxis: {
+			title: 'Objective - J', 
+		    showline: true,
+		    showgrid: true,
+		    zeroline: true,
+		    ////automargin: true,
+		},
+	}
+	
+	var myPlot1 = document.getElementById('myPlot1');
+				
+	Plotly.newPlot(myPlot1, [trace1], plotLayout1);
+	
+}
+
+
+
+
+
 
 
 function plotAdditionalData(meanUncertainty){

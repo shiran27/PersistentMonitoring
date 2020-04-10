@@ -160,6 +160,7 @@ function Target(x, y, r) {
     this.updateFastCT = function(){
         // update uncertainty values R_i(t) of target i
         var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
+        // var netUncertaintyGrowthRate = this.uncertaintyRate + 0.1*(Math.random()-1) - this.getNetAgentSensingRate();
         
         if(this.uncertainty==0 && netUncertaintyGrowthRate<=0){
             this.uncertainty = 0;

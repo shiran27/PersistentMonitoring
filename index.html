@@ -367,28 +367,77 @@
         				<option value="0">Disabled</option>
 				    	<option value="1">One step ahead (Greedy RHC)</option>
 				    	<option value="2">Two steps ahead (Greedy RHC)</option>
-				    	<option value="3">Event Driven RHC</option>
 				    	<option value="5">Event Driven RHC-Fixed H</option>
-				    	<option value="4">Event Driven RHC-&alpha;</option>
-				    	<option selected value="6">Event Driven RHC-Two-Step</option>
+				    	<option value="3">Event Driven RHC</option>
+				    	<option selected value="4">Event Driven RHC-&alpha;</option>
+				    	<option value="6">Event Driven RHC-Two-Step</option>
+				    	<option value="7">Event Driven RHC-Two-Step-&alpha;-&beta;</option>
 				</select> 
-
 			</div>
 
-			<div class="col col-lg-3">
-				<label for="timeHorizonForRHC">Planning Horizon H =  
-					<span id="timeHorizonForRHCDisplay"></span></label>
-					<input type="range" class="form-control slider" id="timeHorizonForRHC" min="1" max="250" value="250" onchange="timeHorizonForRHCChanged(Number(this.value));">
-					<button class="btn btn-success" type="button" onclick="generateCostVsHorizonCurve(50);">Auto-Tune</button>
+			<div class="col col-lg-2" id="RHCParametersPanel">
+				<div id="RHCalphaDiv">
+					<label for="RHCalpha">&alpha; =  <span id="RHCalphaDisplay"></span><span>;(<label for="RHCParamterOverrideCB">Override:</label>
+	            		<input type="checkbox" id="RHCParamterOverrideCB" onchange="RHCParametersChanged();">)</span>
+					</label> 
+				<input type="range" class="form-control slider" id="RHCalpha" min="0" max="1" value="0.1" step="0.01" onchange="RHCParametersChanged();">	
+				</div>
+				<div id="RHCbetaDiv">
+					<label for="RHCbeta">&beta; =  <span id="RHCbetaDisplay"></span>
+				<input type="range" class="form-control slider" id="RHCbeta" min="0" max="1" value="0.2" step="0.01" onchange="RHCParametersChanged();">
+				</div>
 			</div>
 
-			<div class="col col-lg-3">
+			<div class="col col-lg-2">
+				<label for="timeHorizonForRHC">Plan. Horizon H =  
+					<span id="timeHorizonForRHCDisplay"></span>
+				</label>
+				<input type="range" class="form-control slider" id="timeHorizonForRHC" min="1" max="250" value="250" onchange="timeHorizonForRHCChanged(Number(this.value));">
+				<button class="btn btn-success" type="button" onclick="generateCostVsHorizonCurve(50);">Auto-Tune</button>
+			</div>
+
+			<div class="col col-lg-4 border-left border-success">
+				<div class="row">
+					<div class="col col-lg-6">
+						<button class="btn btn-success" type="button" onclick="openPlotsPage();">Open Trajectory Plots</button>	
+					</div>
+					
+					<div class="col col-lg-6">
+						<button class="btn btn-success" type="button" onclick="plotCostVsParameter();">Plot Cost Vs Paramter</button>
+					</div>	
+	
+				</div>
 				
-			</div>
+				<div class="form-row align-items-center">
+					<div class="col col-lg-3">
+						<label for="plotCostVsParameterDropDown">Parameter:</label>			
+						<select class="form-control custom-select" id="plotCostVsParameterDropDown" onchange="plotCostVsParameterDropDownChanged()">
+		        				<option selected value="0">T</option>
+						    	<option value="1">H</option>
+						    	<option value="2">&alpha;</option>
+						    	<option value="3">&beta;</option>
+						</select>	
+					</div>
+					 
 
-			<div class="col col-lg-2 border-left border-success">
-				
-				<button class="btn btn-success" type="button" onclick="openPlotsPage();">Open Trajectory Plots</button>
+					<div class="col col-lg-3">
+						<label for="plotCostVsParameterStart">Start:</label>
+						<input class="form-control" id="plotCostVsParameterStart" type="text" value="0">
+					</div>
+
+					<div class="col col-lg-3">
+						<label for="plotCostVsParameterRes">Resol.:</label>
+						<input class="form-control" id="plotCostVsParameterRes" type="text" value="0">
+					</div>
+
+					<div class="col col-lg-3">
+						<label for="plotCostVsParameterEnd">End:</label>
+						<input class="form-control" id="plotCostVsParameterEnd" type="text" value="0">
+					</div>
+
+					
+				</div>
+					
 			</div>
 
 		</div>

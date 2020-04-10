@@ -297,9 +297,10 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
             var rCrit1 = this.evalrCrit1Y(x_0,y_0,n);
             if(rCrit1==-1){//Root-Y1 Error
                 rCrit1 = 0;
-                print(this)
-                print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; n= "+n.toFixed(3)+"; r_0= "+r_0.toFixed(3)+"; r_1= "+r_1.toFixed(3));
-                print("G1= "+grad1.toFixed(3)+"; G2= "+grad2.toFixed(3));
+                if(printMode){print("E!-Root-Y1");}
+                // print(this)
+                // print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; n= "+n.toFixed(3)+"; r_0= "+r_0.toFixed(3)+"; r_1= "+r_1.toFixed(3));
+                // print("G1= "+grad1.toFixed(3)+"; G2= "+grad2.toFixed(3));
             }
 
             if(rCrit1 >= r_1){
@@ -313,9 +314,10 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
             var rCrit2 = this.evalrCrit2Y(x_0,y_0,n,r_0);
             if(rCrit2==-1){//Root-Y2 Error
                 rCrit2 = 0;
-                print(this)
-                print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; n= "+n.toFixed(3)+"; r_0= "+r_0.toFixed(3)+"; r_1= "+r_1.toFixed(3));
-                print("G1= "+grad1.toFixed(3)+"; G2= "+grad2.toFixed(3));
+                if(printMode){print("E!-Root-Y2");}
+                // print(this)
+                // print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; n= "+n.toFixed(3)+"; r_0= "+r_0.toFixed(3)+"; r_1= "+r_1.toFixed(3));
+                // print("G1= "+grad1.toFixed(3)+"; G2= "+grad2.toFixed(3));
             }
 
             if(rCrit2 >= r_1){
@@ -326,9 +328,9 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
 
         }else{
             print("Error 2");
-            print(this)
-            print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; n= "+n.toFixed(3)+"; r_0= "+r_0.toFixed(3)+"; r_1= "+r_1.toFixed(3));
-            print("G1= "+grad1.toFixed(3)+"; G2= "+grad2.toFixed(3));
+            // print(this)
+            // print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; n= "+n.toFixed(3)+"; r_0= "+r_0.toFixed(3)+"; r_1= "+r_1.toFixed(3));
+            // print("G1= "+grad1.toFixed(3)+"; G2= "+grad2.toFixed(3));
             
         }
 
@@ -447,11 +449,11 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
                 if(abs(Delta)<0.00001){
                     return Infinity;
                 }else{
-                    print("Root-X1 Error: solution: "+sol) 
-                    print("Delta = "+Delta)
-                    print("[A,B,C] = "+[Aval,Bval,Cval])
-                    print(this)
-                    print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; m= "+m.toFixed(3));
+                    if(printMode){print("Root-X1 E!: solution: "+sol)}
+                    // print("Delta = "+Delta)
+                    // print("[A,B,C] = "+[Aval,Bval,Cval])
+                    // print(this)
+                    // print("x_0= "+x_0.toFixed(3)+"; y_0= "+y_0.toFixed(3)+"; m= "+m.toFixed(3));
                        
                 }
             }
@@ -489,7 +491,8 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
 
             // print(Aval,Bval,Cval)
             if(Math.abs(sol[1])>0.0000001){
-                print("Root-X2 Error: solution: "+sol+", J_0:"+J_0+", grad1:"+this.evalGradX(x_0,y_0,m,r_0)+", grad2:"+this.evalGrad2X(x_0,y_0,m))
+                if(printMode){print("Root-X2 E!");}
+                // print("Root-X2 E!: solution: "+sol+", J_0:"+J_0+", grad1:"+this.evalGradX(x_0,y_0,m,r_0)+", grad2:"+this.evalGrad2X(x_0,y_0,m))
             }else{
                 return 0;
             }
@@ -543,7 +546,7 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
 
         var sol = solveRootsOfAQuadratic(Aval,Bval,Cval);
         if(!sol[0]){
-            print("Root-Y1 Error: solution: "+sol);
+            if(printMode){print("Root-Y1 E!: solution: "+sol);}
             return -1;
         }else{// the positive root
             return sol[1]
@@ -569,7 +572,8 @@ function RationalObj(A,B,C,D,E,F,G,H,K,P,L,Q,M,N){
         var sol = solveRootsOfAQuadratic(Aval,Bval,Cval);
 
         if(!sol[0]){
-            print("Root-Y2 Error: solution: "+sol)
+            if(printMode){print("Root-Y2 E!");}
+            // print("Root-Y2 E!: solution: "+sol)
             return -1;
         }else{// the positive root
             return sol[1];
