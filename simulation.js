@@ -101,6 +101,8 @@ var terminalMeanSystemUncertainty; // for plotting purposes with fast-foward
 var RHCalpha;
 var RHCbeta;
 var RHCParameterOverride;
+var repeatedRandomTestMode = 0;
+var repeatedRandomTestData = "";
 
 
 function startModifyingProbConfig(){
@@ -1832,18 +1834,19 @@ function resetGraphClusters(){
 
 }
 
-function refreshRandomProblemConfiguration(){
+function refreshRandomProblemConfiguration(nT,nA,maxLinkmLength){
     removeAll();
     startModifyingProbConfig();
-    for(var i = 0; i<15; i++){
+    for(var i = 0; i<nT; i++){
         addATargetAt(500*Math.random(),500*Math.random());
     }
     disconnectAllPaths();
-    document.getElementById('maximumPathLength').value = 200;
+    document.getElementById('maximumPathLength').value = maxLinkmLength;
     maximumPathLengthChanged();
     addAnAgentAtTarget(0);
-    addAnAgentAtTarget(5);
-    addAnAgentAtTarget(10);
+    for(var k=1;k<nA;k++){
+        addAnAgentAtTarget(k*Math.round(nT/nA));
+    }
     finishModifyingProbConfig();
     dataPlotModeChanged();
 }
@@ -2279,6 +2282,72 @@ function plotCostVsParameter(){
 }
 
 
+
+
+function runARandomTest(repeatedRandomTestMode){
+
+    var cost = "";
+       
+
+    document.getElementById("RHCMethodDropdown").value = 3;
+    RHCMethodChanged();
+    simulateHybridSystemFast();
+    cost = cost+terminalMeanSystemUncertainty.toFixed(3);
+    resetSimulation();
+
+    document.getElementById("RHCMethodDropdown").value = 4;
+    RHCMethodChanged();
+    simulateHybridSystemFast();
+    cost = cost+","+terminalMeanSystemUncertainty.toFixed(3);
+    resetSimulation();
+
+    document.getElementById("RHCMethodDropdown").value = 6;
+    RHCMethodChanged();
+    simulateHybridSystemFast();
+    cost = cost+","+terminalMeanSystemUncertainty.toFixed(3);
+    resetSimulation();
+
+    document.getElementById("RHCMethodDropdown").value = 7;
+    RHCMethodChanged();
+    simulateHybridSystemFast();
+    cost = cost+","+terminalMeanSystemUncertainty.toFixed(3)+";";
+    resetSimulation();
+
+    return cost
+
+}
+
+
+function doSave(value, type, name) {
+  var blob;
+  if (typeof window.Blob == "function") {
+    blob = new Blob([value], {
+      type: type
+    });
+  } else {
+    var BlobBuilder = window.BlobBuilder || window.MozBlobBuilder || window.WebKitBlobBuilder || window.MSBlobBuilder;
+    var bb = new BlobBuilder();
+    bb.append(value);
+    blob = bb.getBlob(type);
+  }
+  var URL = window.URL || window.webkitURL;
+  var bloburl = URL.createObjectURL(blob);
+  var anchor = document.createElement("a");
+  if ('download' in anchor) {
+    anchor.style.visibility = "hidden";
+    anchor.href = bloburl;
+    anchor.download = name;
+    document.body.appendChild(anchor);
+    var evt = document.createEvent("MouseEvents");
+    evt.initEvent("click", true, true);
+    anchor.dispatchEvent(evt);
+    document.body.removeChild(anchor);
+  } else if (navigator.msSaveBlob) {
+    navigator.msSaveBlob(blob, name);
+  } else {
+    location.href = bloburl;
+  }
+}
 
 
 

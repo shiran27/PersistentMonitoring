@@ -264,6 +264,33 @@ function draw() {
     }
 
 
+    // RHC random tests
+    if(repeatedRandomTestMode>0){
+        save("Test"+repeatedRandomTestMode); 
+        var ans = runARandomTest(repeatedRandomTestMode);
+        repeatedRandomTestData = repeatedRandomTestData + ans;
+        repeatedRandomTestMode--;
+
+
+        if(repeatedRandomTestMode==0){
+            doSave(repeatedRandomTestData, "text", "Test"+repeatedRandomTestMode+"Data.txt");
+        }else{
+            // refreshRandomProblemConfiguration(5,1,300);
+            refreshRandomProblemConfiguration(7,2,150);
+            // refreshRandomProblemConfiguration(15,3,300);
+            var count = 0;
+            while(!isFullyConnected()){
+                refreshRandomProblemConfiguration(7,2,150);
+                if(count>10000){
+                    print("Error")
+                    break
+
+                }
+            }
+        }
+
+
+    }
 
     
     // if(justInitialized<10){

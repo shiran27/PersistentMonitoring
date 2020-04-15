@@ -1,6 +1,7 @@
 function Target(x, y, r) {
 
     this.position = new Point2(x,y);
+    this.initialPosition = new Point2(x,y);
     this.id = targets.length;
 
     this.paths = []; 
@@ -158,10 +159,19 @@ function Target(x, y, r) {
 
 
     this.updateFastCT = function(){
+
+        //// randomization3:
+        //this.position = avoidEscapeP2(plusP2(this.position,new Point2(5*(Math.random()-0.5),5*(Math.random()-0.5))));
+        // this.position = avoidEscapeP2(plusP2(this.initialPosition,new Point2(5*(Math.random()-0.5),5*(Math.random()-0.5))));
+        // updateNeighborDistances();
+        //// end randomization3
+
         // update uncertainty values R_i(t) of target i
         var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
-        // var netUncertaintyGrowthRate = this.uncertaintyRate + 0.1*(Math.random()-1) - this.getNetAgentSensingRate();
-        
+        //// randomization1:
+        //// var netUncertaintyGrowthRate = this.uncertaintyRate + 0.1*(Math.random()-1) - this.getNetAgentSensingRate();
+        //// end randomization1
+
         if(this.uncertainty==0 && netUncertaintyGrowthRate<=0){
             this.uncertainty = 0;
         }else{
@@ -182,6 +192,12 @@ function Target(x, y, r) {
 
     this.updateCT = function(){
         // update uncertainty values R_i(t) of target i
+        ////randomization3
+        // this.position = avoidEscapeP2(plusP2(this.initialPosition,new Point2(5*(Math.random()-0.5),5*(Math.random()-0.5))));
+        // updateNeighborDistances();
+        ////end randomization3
+
+
         var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
         var oldUncertainty = this.uncertainty;
         if(this.uncertainty==0 && netUncertaintyGrowthRate<=0){
@@ -363,4 +379,21 @@ function isNeighbors(id1,id2){
 //         particleShadows[i].isBoostingActivated = modes[i];
 //     }
 // }
+
+function updateNeighborDistances(){
+    for(var i = 0; i<targets.length; i++){
+
+        targets[i].distancesToNeighbors = [];
+        for(var jInd = 0; jInd<targets[i].neighbors.length; jInd++){
+            var j = targets[i].neighbors[jInd];
+            if(i==j){
+                targets[i].distancesToNeighbors.push(0);
+            }else{
+                var distij = distP2(targets[i].position,targets[j].position)
+                targets[i].distancesToNeighbors.push(distij);
+            }
+        }
+
+    }
+}
 

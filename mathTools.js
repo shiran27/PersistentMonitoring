@@ -3,6 +3,18 @@ function sq(val){
     return Math.pow(val,2);
 }
 
+function isFullyConnected(){
+    
+    // lets check whether every other target is reachable from target 0
+    var ans = findMinimumDistancesFrom(0);
+    if(ans[0].includes(Infinity)){
+        return false    
+    }else{
+        return true
+    }
+    
+}
+
 
 function findMinimumDistancesFrom(startTarget){
 

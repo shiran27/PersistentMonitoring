@@ -545,6 +545,10 @@ function Agent(x, y, r) {
             var i = this.residingTarget[0];
             var j = i;
 
+            //// randomization3:
+            // this.position = targets[i].position;
+            //// end randomization3
+
             // only at inital soln
             if(this.timeToExitMode[0]==3 && this.timeToExitMode[1]<simulationTime){
                 // solve OP-1 to find the u_i
@@ -630,6 +634,11 @@ function Agent(x, y, r) {
                 }
                 ////print("need to go to j; rotated");
                 this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                
+                ////Randomization2:
+                ////this.headingDirectionStep = rotateP2(new Point2((this.maxLinearVelocity+80*(math.random()-0.5))*deltaT,0),headingAngle);
+                //// End randomization2
+
                 this.position = plusP2(this.position, this.headingDirectionStep);
                 this.orientation = headingAngle;
 
@@ -644,6 +653,21 @@ function Agent(x, y, r) {
             var j = this.residingTarget[1];// where we are heading
             var angle = this.orientation;
             ////print("travelling i to j");
+            
+
+            ////randomization3
+            // var headingAngle = atan2P2(this.position,targets[j].position);
+            // var rotationRequired = headingAngle-this.orientation;
+            // for(var k = 0; k<this.graphicBaseShape.length ; k++){
+            //     this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
+            // }
+            // ////print("need to go to j; rotated");
+            // this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+            // this.orientation = headingAngle;
+            // this.position = plusP2(this.position, this.headingDirectionStep);
+            // if(distP2(this.position,targets[j].position)<1){
+            //// end randomization3
+
             this.position = plusP2(this.position, this.headingDirectionStep);
             if(distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)){
                 ////print("Stopped at j !!! ")
