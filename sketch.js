@@ -98,6 +98,15 @@ function draw() {
 
             var t = simulationTime;
 
+            // Randomization 4: random uncertainty perturbation
+            if(RHCNoiseEnabled&&RHCNoiseR_iMagnitude>0){
+                for(var i = 0; i < targets.length; i++){
+                    targets[i].updateRHCNoiseR_i(); // update uncertainty levels
+                }
+            }
+            // Randomization 4: random uncertainty perturbation end
+
+
         }
 
         document.getElementById("simulationTime").innerHTML = t.toFixed(2).toString();
@@ -128,6 +137,15 @@ function draw() {
 
             var t = simulationTime;
 
+            // Randomization 4: random uncertainty perturbation
+            if(RHCNoiseEnabled&&RHCNoiseR_iMagnitude>0){
+                for(var i = 0; i < targets.length; i++){
+                    targets[i].updateRHCNoiseR_i(); // update uncertainty levels
+                }
+            }
+            // Randomization 4: random uncertainty perturbation end
+
+
         }
 
         document.getElementById("simulationTime").innerHTML = t.toFixed(2).toString();
@@ -156,6 +174,14 @@ function draw() {
             discreteTimeSteps = discreteTimeSteps + 1;
 
             var t = simulationTime;
+
+            // Randomization 4: random uncertainty perturbation
+            if(RHCNoiseEnabled&&RHCNoiseR_iMagnitude>0){
+                for(var i = 0; i < targets.length; i++){
+                    targets[i].updateRHCNoiseR_i(); // update uncertainty levels
+                }
+            }
+            // Randomization 4: random uncertainty perturbation end
 
         }
 

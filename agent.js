@@ -412,7 +412,15 @@ function Agent(x, y, r) {
                 // var pid = getPathID(i,j);
                 // if(paths[pid].artificiallyExtended){this.maxLinearVelocity = this.maxLinearVelocity/10;}
                 
-                this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                ////this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                //// Randomization 2
+                if(RHCNoiseEnabled&&RHCNoisev_Max>0){
+                    this.headingDirectionStep = rotateP2(new Point2((this.maxLinearVelocity+this.maxLinearVelocity*RHCNoisev_Max*2*(math.random()-0.5)/100)*deltaT,0),headingAngle);    
+                }else{
+                    this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                }
+                //// end Randomization 2
+
                 this.position = plusP2(this.position, this.headingDirectionStep);
                 this.orientation = headingAngle;
 
@@ -442,10 +450,18 @@ function Agent(x, y, r) {
         if(this.residingTarget.length==1){//residing in some target
             var i = this.residingTarget[0];
             var j = this.findNextTarget(i);// gives T_j according tho the threshold polcy
+            
+            //// Randomization 3:
+            if(RHCNoiseEnabled && RHCNoiseY_iMagnitude>0){
+                this.position = targets[i].position;
+            }
+            //// end Randomization 3
+
             if(targets[i].uncertainty > this.threshold[i][i] || j==i){
                 // stay at i to further reduce the uncertainty
                 this.position = this.position;
             }else{
+
                 // need to start moving in the direction of target j
                 // rotate
                 this.residingTarget = [i,j];
@@ -459,7 +475,15 @@ function Agent(x, y, r) {
                 // if(paths[pid].artificiallyExtended){this.maxLinearVelocity = this.maxLinearVelocity/10;}
                 
                 ////print("need to go to j; rotated");
-                this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                ////Randomization 2
+                ////this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                if(RHCNoiseEnabled&&RHCNoisev_Max>0){
+                    this.headingDirectionStep = rotateP2(new Point2((this.maxLinearVelocity+this.maxLinearVelocity*RHCNoisev_Max*2*(math.random()-0.5)/100)*deltaT,0),headingAngle);    
+                }else{
+                    this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                }
+                ////end Randomization 2
+
                 this.position = plusP2(this.position, this.headingDirectionStep);
                 this.orientation = headingAngle;
             }
@@ -468,8 +492,29 @@ function Agent(x, y, r) {
             var j = this.residingTarget[1];// where we are heading
             var angle = this.orientation;
             ////print("travelling i to j");
-            this.position = plusP2(this.position, this.headingDirectionStep);
-            if(distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)){
+            
+
+            ////Randomization 3
+            var conditionTemp;
+            if(RHCNoiseEnabled && RHCNoiseY_iMagnitude>0){
+                var headingAngle = atan2P2(this.position,targets[j].position);
+                var rotationRequired = headingAngle-this.orientation;
+                for(var k = 0; k<this.graphicBaseShape.length ; k++){
+                    this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
+                }
+                ////print("need to go to j; rotated");
+                this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                this.orientation = headingAngle;
+                this.position = plusP2(this.position, this.headingDirectionStep);
+                conditionTemp = distP2(this.position,targets[j].position)<1
+                //// end Randomization 3
+            }else{
+                this.position = plusP2(this.position, this.headingDirectionStep);
+                conditionTemp = distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)
+            }
+            ////this.position = plusP2(this.position, this.headingDirectionStep);
+            ////if(distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)){
+            if(conditionTemp){    
                 ////print("Stopped at j !!! ")
                 this.position = targets[j].position;
                 this.residingTarget = [j]; 
@@ -545,9 +590,11 @@ function Agent(x, y, r) {
             var i = this.residingTarget[0];
             var j = i;
 
-            //// randomization3:
-            // this.position = targets[i].position;
-            //// end randomization3
+            //// Randomization 3:
+            if(RHCNoiseEnabled && RHCNoiseY_iMagnitude>0){
+                this.position = targets[i].position;
+            }
+            //// end Randomization 3
 
             // only at inital soln
             if(this.timeToExitMode[0]==3 && this.timeToExitMode[1]<simulationTime){
@@ -633,11 +680,15 @@ function Agent(x, y, r) {
                     this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
                 }
                 ////print("need to go to j; rotated");
-                this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
                 
-                ////Randomization2:
-                ////this.headingDirectionStep = rotateP2(new Point2((this.maxLinearVelocity+80*(math.random()-0.5))*deltaT,0),headingAngle);
-                //// End randomization2
+                ////this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                ////Randomization 2:
+                if(RHCNoiseEnabled&&RHCNoisev_Max>0){
+                    this.headingDirectionStep = rotateP2(new Point2((this.maxLinearVelocity+this.maxLinearVelocity*RHCNoisev_Max*2*(math.random()-0.5)/100)*deltaT,0),headingAngle);    
+                }else{
+                    this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                }
+                //// End Randomization 2
 
                 this.position = plusP2(this.position, this.headingDirectionStep);
                 this.orientation = headingAngle;
@@ -655,22 +706,28 @@ function Agent(x, y, r) {
             ////print("travelling i to j");
             
 
-            ////randomization3
-            // var headingAngle = atan2P2(this.position,targets[j].position);
-            // var rotationRequired = headingAngle-this.orientation;
-            // for(var k = 0; k<this.graphicBaseShape.length ; k++){
-            //     this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
-            // }
-            // ////print("need to go to j; rotated");
-            // this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
-            // this.orientation = headingAngle;
-            // this.position = plusP2(this.position, this.headingDirectionStep);
-            // if(distP2(this.position,targets[j].position)<1){
-            //// end randomization3
-
-            this.position = plusP2(this.position, this.headingDirectionStep);
-            if(distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)){
-                ////print("Stopped at j !!! ")
+            ////Randomization 3
+            var conditionTemp;
+            if(RHCNoiseEnabled && RHCNoiseY_iMagnitude>0){
+                var headingAngle = atan2P2(this.position,targets[j].position);
+                var rotationRequired = headingAngle-this.orientation;
+                for(var k = 0; k<this.graphicBaseShape.length ; k++){
+                    this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
+                }
+                ////print("need to go to j; rotated");
+                this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                this.orientation = headingAngle;
+                this.position = plusP2(this.position, this.headingDirectionStep);
+                conditionTemp = distP2(this.position,targets[j].position)<1
+                //// end Randomization 3
+            }else{
+                this.position = plusP2(this.position, this.headingDirectionStep);
+                conditionTemp = distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)
+            }
+            ////this.position = plusP2(this.position, this.headingDirectionStep);
+            ////if(distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)){
+            if(conditionTemp){
+                //print("Stopped at j !!! ")
                 this.position = targets[j].position;
                 this.residingTarget = [j]; 
 

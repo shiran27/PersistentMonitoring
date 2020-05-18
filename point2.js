@@ -36,9 +36,25 @@ function Point2(x,y) {
 		var offset = (Math.round(this.y)*width + Math.round(this.x)) * 4; 
 		//print(pixelMap.length)
 		return [ pixelMap[offset], pixelMap[offset + 1], pixelMap[offset + 2], pixelMap[offset + 3] ]; 
-	}	
+	}
+
+	this.randomPerturbP2 = function(magnitude){
+		this.x += magnitude*2*(Math.random()-0.5)
+		this.y += magnitude*2*(Math.random()-0.5);
+	}
 
 }
+
+
+function boundWithinRadius(x,x_0,R){
+	if(distP2(x,x_0)>R){
+		var unitVector = normalizeP2(minusP2(x,x_0));
+		return plusP2(x_0,productP2(unitVector,R))
+	}else{
+		return x;
+	}
+}
+
 
 //print points
 

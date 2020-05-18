@@ -2,6 +2,8 @@ function Target(x, y, r) {
 
     this.position = new Point2(x,y);
     this.initialPosition = new Point2(x,y);
+    this.oldPosition = new Point2(x,y);
+
     this.id = targets.length;
 
     this.paths = []; 
@@ -29,9 +31,11 @@ function Target(x, y, r) {
     this.distancesToNeighbors2 = [];
     this.neighborhood = [];
 
-
     this.arcBoostingInitiated = false;
-    
+
+    this.RHCNoiseR_iEventTimes = []; // time values where random insertion/removal occurs
+    this.RHCNoiseR_iEventIndex = 0;
+
     this.show = function(){
 
         fill(this.graphicColor);
@@ -160,17 +164,31 @@ function Target(x, y, r) {
 
     this.updateFastCT = function(){
 
-        //// randomization3:
-        //this.position = avoidEscapeP2(plusP2(this.position,new Point2(5*(Math.random()-0.5),5*(Math.random()-0.5))));
-        // this.position = avoidEscapeP2(plusP2(this.initialPosition,new Point2(5*(Math.random()-0.5),5*(Math.random()-0.5))));
-        // updateNeighborDistances();
-        //// end randomization3
+        //// Randomization 3:
+        if(RHCNoiseEnabled && RHCNoiseY_iMagnitude>0){
+            ////first order
+            ////this.position.randomPerturbP2(RHCNoiseY_iMagnitude);
+            
+            ////second order
+            var temp = minusP2(productP2(this.position,2),this.oldPosition)
+            temp.randomPerturbP2(sq(deltaT)*RHCNoiseY_iMagnitude);
+            this.oldPosition = this.position;
+            this.position = temp;
+
+            this.position = avoidEscapeP2(boundWithinRadius(this.position,this.initialPosition,RHCNoiseY_iBoundary));
+            updateNeighborDistances();
+        }
+        //// end Randomization 3
 
         // update uncertainty values R_i(t) of target i
-        var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
-        //// randomization1:
-        //// var netUncertaintyGrowthRate = this.uncertaintyRate + 0.1*(Math.random()-1) - this.getNetAgentSensingRate();
-        //// end randomization1
+        ////var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
+        //// Randomization 1:
+        if(RHCNoiseEnabled && RHCNoiseA_i>0){
+            var netUncertaintyGrowthRate = this.uncertaintyRate + this.uncertaintyRate*RHCNoiseA_i*2*(Math.random()-0.5)/100 - this.getNetAgentSensingRate();
+        }else{
+            var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
+        }
+        //// end Randomization 1
 
         if(this.uncertainty==0 && netUncertaintyGrowthRate<=0){
             this.uncertainty = 0;
@@ -187,18 +205,39 @@ function Target(x, y, r) {
         // in the middle of the simulation (at the end of the simulation run, we have to divide it)
         this.meanUncertainty = this.meanUncertainty + this.uncertainty;
 
-
     }
+
 
     this.updateCT = function(){
         // update uncertainty values R_i(t) of target i
-        ////randomization3
-        // this.position = avoidEscapeP2(plusP2(this.initialPosition,new Point2(5*(Math.random()-0.5),5*(Math.random()-0.5))));
-        // updateNeighborDistances();
-        ////end randomization3
+        
+        ////Randomization 3
+        //this.position = avoidEscapeP2(plusP2(this.initialPosition,new Point2(5*(Math.random()-0.5),5*(Math.random()-0.5))));
+        if(RHCNoiseEnabled && RHCNoiseY_iMagnitude>0){
+            ////first order
+            ////this.position.randomPerturbP2(RHCNoiseY_iMagnitude);
+            
+            ////second order
+            var temp = minusP2(productP2(this.position,2),this.oldPosition)
+            temp.randomPerturbP2(sq(deltaT)*RHCNoiseY_iMagnitude);
+            this.oldPosition = this.position;
+            this.position = temp;
+
+            this.position = avoidEscapeP2(boundWithinRadius(this.position,this.initialPosition,RHCNoiseY_iBoundary));
+            updateNeighborDistances();
+        }
+        ////end Randomization 3
 
 
-        var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
+        ////var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
+        //// Randomization 1:
+        if(RHCNoiseEnabled && RHCNoiseA_i>0){
+            var netUncertaintyGrowthRate = this.uncertaintyRate + this.uncertaintyRate*RHCNoiseA_i*2*(Math.random()-0.5)/100 - this.getNetAgentSensingRate();
+        }else{
+            var netUncertaintyGrowthRate = this.uncertaintyRate - this.getNetAgentSensingRate();
+        }
+        //// end Randomization 1
+
         var oldUncertainty = this.uncertainty;
         if(this.uncertainty==0 && netUncertaintyGrowthRate<=0){
             this.uncertainty = 0;
@@ -210,6 +249,32 @@ function Target(x, y, r) {
         }
         this.meanUncertainty = (1/(discreteTimeSteps+1))*(discreteTimeSteps*this.meanUncertainty + (oldUncertainty+this.uncertainty)/2);
 
+    }
+
+
+    this.updateRHCNoiseR_i = function(){
+        var nextEventIndex = this.RHCNoiseR_iEventIndex;
+        if(this.RHCNoiseR_iEventTimes.length > nextEventIndex){
+            var nextEventTIme = this.RHCNoiseR_iEventTimes[nextEventIndex];
+            if(simulationTime>=nextEventTIme){
+                this.RHCNoiseR_iEventIndex = nextEventIndex + 1;
+                this.uncertainty = this.uncertainty + RHCNoiseR_iMagnitude*2*(Math.random()-0.5);
+                if(this.uncertainty<0){
+                    this.uncertainty = 0;
+                }
+
+                for(var a=0; a<agents.length; a++){
+                    if(agents[a].residingTarget.length==1){
+                        if(this.neighbors.includes(agents[a].residingTarget[0])){
+                            agents[a].coverednessEventTriggered = true;
+                        }
+                    }
+                }
+
+                recordSystemState(); 
+            }    
+        }
+        
     }
 
 

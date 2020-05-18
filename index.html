@@ -357,12 +357,13 @@
 
 
 
-		<div class="row border-bottom border-top border-success" id="BoostingMenu">
+		<div class="row border-bottom border-top border-success">
 
 			<div class="col col-lg-4">
 				<h5>Receding Horizon Control:</h5>
 				
-				<label for="RHCMethodDropdown">RHC Method:</label>
+				<label for="RHCMethodDropdown">RHC Method: (Add noise: <input type="checkbox" id="RHCNoiseEnableCB" checked onchange="RHCNoiseEnable();">)
+				</label>
 				<select class="form-control custom-select" id="RHCMethodDropdown" onchange="RHCMethodChanged()">
         				<option value="0">Disabled</option>
 				    	<option value="1">One step ahead (Greedy RHC)</option>
@@ -416,6 +417,7 @@
 						    	<option value="1">H</option>
 						    	<option value="2">&alpha;</option>
 						    	<option value="3">&beta;</option>
+						    	<option value="4">&zeta;</option>
 						</select>	
 					</div>
 					 
@@ -442,6 +444,55 @@
 
 		</div>
 
+		<div class="row border-bottom border-top border-success">
+			<div class="col col-lg-2 border-right border-success"  id="RHCNoiseA_iMenu">
+				<h6>Noise in A_i(t):</h6>
+				<label for="RHCNoiseA_i">Max. % Devia.: <span id="RHCNoiseA_iDisplay"></span>%
+				</label>
+				<input type="range" class="form-control slider" id="RHCNoiseA_i" min="0" max="500" value="0" onchange="RHCNoiseEnable()">
+			</div>
+
+			<div class="col col-lg-2 border-right border-success" id="RHCNoisev_MaxMenu">
+				<h6>Noise in V_ij:</h6>
+				<label for="RHCNoisev_Max">Max. % Devia.: <span id="RHCNoisev_MaxDisplay"></span>%
+				</label>
+				<input type="range" class="form-control slider" id="RHCNoisev_Max" min="0" max="100" value="0" onchange="RHCNoiseEnable()">
+			</div>
+
+			<div class="col col-lg-4 border-right border-success" id="RHCNoiseY_iMenu">
+
+				<h6>Noise in Y_i(t):</h6>
+				<div class="form-row">
+					<div class="col col-lg-6">
+						<label for="RHCNoiseY_iBoundary">Boundary: <span id="RHCNoiseY_iBoundaryDisplay"></span>
+						</label>
+						<input type="range" class="form-control slider" id="RHCNoiseY_iBoundary" min="0" max="250" value="20" onchange="RHCNoiseEnable()">
+					</div>
+					<div class="col col-lg-6">
+						<label for="RHCNoiseY_iMagnitude">Magnitude: <span id="RHCNoiseY_iMagnitudeDisplay"></span>
+						</label>
+						<input type="range" class="form-control slider" id="RHCNoiseY_iMagnitude" min="0" max="100" value="0" onchange="RHCNoiseEnable()">
+					</div>
+				</div>
+			</div>
+
+			<div class="col col-lg-4" id="RHCNoiseR_iMenu">
+				<h6>Noise in R_i(t_event):</h6>
+				<div class="form-row">
+					<div class="col col-lg-6">
+						<label for="RHCNoiseR_iInterval">Mean Interval: <span id="RHCNoiseR_iIntervalDisplay"></span>
+						</label>
+						<input type="range" class="form-control slider" id="RHCNoiseR_iInterval" min="10" max="250" value="100" onchange="RHCNoiseR_iIntervalChanged()">
+					</div>
+					<div class="col col-lg-6">
+						<label for="RHCNoiseR_iMagnitude">Magnitude: <span id="RHCNoiseR_iMagnitudeDisplay"></span>
+						</label>
+						<input type="range" class="form-control slider" id="RHCNoiseR_iMagnitude" min="0" max="100" value="0" onchange="RHCNoiseEnable()">
+					</div>
+				</div>
+			</div>
+
+		</div>
 
 		<div class="row">
 			<hr>

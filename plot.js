@@ -71,6 +71,8 @@ function plotCostVsParameterData(paraType,dataX,dataY){
 		xLabel = 'RHC Parameter: Alpha'
 	}else if(paraType==3){
 		xLabel = 'RHC Parameter: Beta'
+	}else if(paraType==4){
+		xLabel = 'Realization No.'
 	}
 
 	var trace1 = {x:dataX, y:dataY,type: 'scatter', name:'Normal'};

@@ -104,6 +104,14 @@ var RHCParameterOverride;
 var repeatedRandomTestMode = 0;
 var repeatedRandomTestData = "";
 
+var RHCNoiseEnabled = false;
+var RHCNoiseA_i;
+var RHCNoisevMax;
+var RHCNoiseR_iInterval;
+var RHCNoiseR_iMagnitude;
+var RHCNoiseY_iBoundary;
+var RHCNoiseY_iMagnitude;
+
 
 function startModifyingProbConfig(){
 
@@ -468,7 +476,7 @@ function updateInterface(){
         document.getElementById("blockingThresholdDisplay").innerHTML = blockingThreshold.toFixed(2);
         
         document.getElementById("timeHorizonForRHCDisplay").innerHTML = document.getElementById("timeHorizonForRHC").value;
-        
+    
     }
 
 }
@@ -508,6 +516,8 @@ function readInitialInterface(){
     timeHorizonForRHC = Number(document.getElementById("timeHorizonForRHC").value);
 
     RHCMethodChanged();
+    RHCNoiseEnable();
+    RHCNoiseR_iIntervalChanged();
 }
 
 function displayThresholdSensitivities(){ 
@@ -924,7 +934,6 @@ function boostingMethodChanged(){
         consolePrint("Exploration Boosting method will be used.");
     }
 
-
 }
 
 function RHCMethodChanged(){
@@ -1003,8 +1012,6 @@ function RHCMethodChanged(){
 
     }
 
-
-
     plotCostVsParameterDropDownChanged();
 }
 
@@ -1025,9 +1032,83 @@ function plotCostVsParameterDropDownChanged(){
         document.getElementById("plotCostVsParameterEnd").value = 1;
     }
 
+    if(x==4){
+        document.getElementById("plotCostVsParameterStart").value = 1;
+        document.getElementById("plotCostVsParameterStart").disabled = true;
+        document.getElementById("plotCostVsParameterRes").value = 1;
+        document.getElementById("plotCostVsParameterRes").disabled = true;
+        document.getElementById("plotCostVsParameterEnd").value = 50;
+    }else{
+        document.getElementById("plotCostVsParameterStart").disabled = false;
+        document.getElementById("plotCostVsParameterRes").disabled = false;   
+    }
+
 
 
 }
+
+
+function RHCNoiseEnable(){
+
+    RHCNoiseEnabled = document.getElementById("RHCNoiseEnableCB").checked;
+    if(RHCNoiseEnabled){
+        document.getElementById("RHCNoiseA_iMenu").style.display = "block";
+        RHCNoiseA_i = Number(document.getElementById("RHCNoiseA_i").value);
+        document.getElementById("RHCNoiseA_iDisplay").innerHTML = RHCNoiseA_i;
+
+        document.getElementById("RHCNoisev_MaxMenu").style.display = "block";
+        RHCNoisev_Max = Number(document.getElementById("RHCNoisev_Max").value);
+        document.getElementById("RHCNoisev_MaxDisplay").innerHTML = RHCNoisev_Max;
+        
+        document.getElementById("RHCNoiseR_iMenu").style.display = "block";
+        RHCNoiseR_iInterval = Number(document.getElementById("RHCNoiseR_iInterval").value);
+        document.getElementById("RHCNoiseR_iIntervalDisplay").innerHTML = RHCNoiseR_iInterval;
+        RHCNoiseR_iMagnitude = Number(document.getElementById("RHCNoiseR_iMagnitude").value);
+        document.getElementById("RHCNoiseR_iMagnitudeDisplay").innerHTML = RHCNoiseR_iMagnitude;
+    
+        document.getElementById("RHCNoiseY_iMenu").style.display = "block";
+        RHCNoiseY_iBoundary = Number(document.getElementById("RHCNoiseY_iBoundary").value);
+        document.getElementById("RHCNoiseY_iBoundaryDisplay").innerHTML = RHCNoiseY_iBoundary;
+        RHCNoiseY_iMagnitude = Number(document.getElementById("RHCNoiseY_iMagnitude").value);
+        document.getElementById("RHCNoiseY_iMagnitudeDisplay").innerHTML = RHCNoiseY_iMagnitude;
+    }else{
+        document.getElementById("RHCNoiseA_iMenu").style.display = "none";
+        document.getElementById("RHCNoisev_MaxMenu").style.display = "none";
+        document.getElementById("RHCNoiseR_iMenu").style.display = "none";
+        document.getElementById("RHCNoiseY_iMenu").style.display = "none";
+    } 
+}
+
+
+
+function RHCNoiseR_iIntervalChanged(){
+    RHCNoiseEnable();
+    //need to update the event time arrays
+
+    for(var i=0;i<targets.length;i++){
+        targets[i].RHCNoiseR_iEventTimes = [];
+        var dummyTime = simulationTime;
+        while(dummyTime<periodT){
+            var timeInterval = -1*Math.log(1-Math.random())*RHCNoiseR_iInterval;
+            dummyTime = dummyTime+timeInterval;
+            if(dummyTime<periodT){
+                dummyTime = Math.round(100*dummyTime)/100;
+                targets[i].RHCNoiseR_iEventTimes.push(dummyTime);
+            }
+        }
+        targets[i].RHCNoiseR_iEventIndex = 0;
+        ////print(targets[i].RHCNoiseR_iEventTimes)
+    }
+
+}
+
+
+
+
+
+
+
+
 
 function initiateForcedModeSwitch(){
     if(boostingMode == 0){
@@ -1108,6 +1189,11 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
     for(var i = 0; i<targets.length; i++){// rest targets
         targets[i].uncertainty = targets[i].initialUncertainty;
         targets[i].meanUncertainty = targets[i].initialUncertainty;
+        
+        //// Randomization 4
+        targets[i].RHCNoiseR_iEventIndex = 0
+        //// end Randomization 4
+
     }
 
     for(var i = 0; i<agents.length; i++){// rest agent positions
@@ -1133,18 +1219,24 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
             }
         }
 
-        // random uncertainty perturbation
-        // var val=Math.round(discreteTimeSteps)%10000
-        // if(val==0){
-        //     print('here :'+simulationTime)
-        //     updateRTUncertaintyValuesRandom();
-        //     if(dataPlotMode){recordSystemState();}
-        // }
-        // random uncertainty perturbation end
-
+        
         simulationTime = simulationTime + deltaT;
         discreteTimeSteps = discreteTimeSteps + 1;
         ////print(simulationTime);
+
+
+        // Randomization 4: random uncertainty perturbation
+        if(RHCNoiseEnabled&&RHCNoiseR_iMagnitude>0){
+            for(var i = 0; i < targets.length; i++){
+                targets[i].updateRHCNoiseR_i(); // update uncertainty levels
+            }
+        }
+        // Randomization 4: random uncertainty perturbation end
+
+
+        ////Randomization
+        if(dataPlotMode&&RHCNoiseEnabled&&Math.round(discreteTimeSteps)%10==0){recordSystemState();}
+        //// end Randomization
     }
 
     var meanUncertainty = 0;
@@ -1658,6 +1750,15 @@ function resetSimulation(){
     for(var i = 0; i<targets.length; i++){// rest targets
         targets[i].uncertainty = targets[i].initialUncertainty;
         targets[i].meanUncertainty = targets[i].initialUncertainty;
+        
+        //// Randomization 4
+        targets[i].RHCNoiseR_iEventIndex = 0
+        //// end Randomization 4
+
+        //// Randomization 3
+        targets[i].position = targets[i].initialPosition
+        targets[i].oldPosition = targets[i].initialPosition
+        //// end Randomization 3
     }
 
     for(var i = 0; i<agents.length; i++){// rest agent positions
@@ -2264,24 +2365,49 @@ function plotCostVsParameter(){
         document.getElementById("RHCbeta").value = minCostPara;
         RHCParametersChanged();
 
+    }else if(paraType==4){// realizations executed
+
+        var sumCost = 0;
+        for(var i=0;i<costArray.length;i++){
+            sumCost = sumCost + costArray[i];
+        }
+        var meanCost = sumCost/endVal;
+
+        var variance = 0;
+        for(var i=0;i<costArray.length;i++){
+            variance = variance + sq(costArray[i]-meanCost);
+        }
+        variance = variance/endVal;
+
     }
     
-    
-
     simulateHybridSystemFast();
 
     document.getElementById("dataPlotModeCheckBox").checked = oldDataPlotMode; 
     dataPlotModeChanged();
     
+    print("Cost Array:")
+    print(costArray)
 
-    consolePrint("Best parameter value = "+minCostPara.toFixed(3)+", which gives J = "+minCost.toFixed(3)+".")
-    print("Best para = "+minCostPara.toFixed(3)+", which gives J = "+minCost.toFixed(3)+".")
+    print("Parameter Array:")
+    print(paraArray)
     
+    if(paraType!=4){
+        consolePrint("Best parameter value = "+minCostPara.toFixed(3)+", which gives J = "+minCost.toFixed(3)+".")
+        print("Best para = "+minCostPara.toFixed(3)+", which gives J = "+minCost.toFixed(3)+".")
+    }else{
+        consolePrint("Cost: Mean= "+meanCost.toFixed(3)+", Variance= "+variance.toFixed(3)+", over "+endVal+" realizations.")
+        print("Mean cost: "+meanCost.toFixed(3)+", Variance: "+variance.toFixed(3)+".");
+    }
+
     plotCostVsParameterData(paraType,paraArray,costArray)
 
 }
 
 
+// function runRandomTests(){
+
+// }
 
 
 function runARandomTest(repeatedRandomTestMode){

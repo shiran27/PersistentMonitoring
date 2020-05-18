@@ -922,8 +922,19 @@ function solveRootsOfAQuartic(aq,bq,cq,dq,eq) {
 
 
 
+function generateExponentialRandom(rate){
 
+    var U = Math.random();
+    return -1*Math.log(1-U)/rate;
 
+    // var dummyTime = 0;
+    // for(var i = 0; i<numberOfArrivals; i++){
+    //     var timeInterval = -1*Math.log(1-Math.random())*meanInterArrivalTime;
+    //     dummyTime = dummyTime+timeInterval;
+    //     newArrivalTimesArray.push(dummyTime);
+    // }
+    
+}
 
 
 
