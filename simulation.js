@@ -112,6 +112,10 @@ var RHCNoiseR_iMagnitude;
 var RHCNoiseY_iBoundary;
 var RHCNoiseY_iMagnitude;
 
+// actual agents:
+var RHCalpha2;
+var RHCvmax; 
+
 
 function startModifyingProbConfig(){
 
@@ -679,6 +683,7 @@ function timeHorizonForRHCChanged(val){
 }
 
 function RHCParametersChanged(){
+    
     RHCParameterOverride = document.getElementById("RHCParamterOverrideCB").checked;
     if(RHCParameterOverride){
         document.getElementById("RHCalpha").disabled = false;
@@ -688,16 +693,26 @@ function RHCParametersChanged(){
         document.getElementById("RHCbeta").disabled = true;        
     }    
 
+    
+    RHCFixalpha = document.getElementById("RHCParamterFixAlphaCB").checked;
+    if(RHCFixalpha){
+        document.getElementById("RHCalpha2").disabled = true;
+    }else{
+        document.getElementById("RHCalpha2").disabled = false;
+    }
+
+
+
     RHCalpha = Number(document.getElementById("RHCalpha").value);
     RHCbeta = Number(document.getElementById("RHCbeta").value);
     
-    consolePrint("RHC parameters: Alpha = "+RHCalpha+", Beta = "+RHCbeta+".");
 
     if(RHCMethod==4){
         document.getElementById("RHCalphaDisplay").innerHTML = RHCalpha;
         if(!RHCParameterOverride){
             document.getElementById("RHCalphaDisplay").innerHTML = "N/A";
         }
+        consolePrint("RHC parameters: Alpha = "+RHCalpha+".");
     }else if(RHCMethod==7){
         document.getElementById("RHCalphaDisplay").innerHTML = RHCalpha;
         document.getElementById("RHCbetaDisplay").innerHTML = RHCbeta;
@@ -705,6 +720,22 @@ function RHCParametersChanged(){
             document.getElementById("RHCalphaDisplay").innerHTML = "N/A";
             document.getElementById("RHCbetaDisplay").innerHTML = "N/A";
         }
+        consolePrint("RHC parameters: Alpha = "+RHCalpha+", Beta = "+RHCbeta+".");
+    }else if(RHCMethod==8||RHCMethod==9){
+        
+        if(RHCFixalpha){
+            RHCvmax = Number(document.getElementById("RHCvmax").value);    
+        }else{
+            var normalizedAlpha = Number(document.getElementById("RHCalpha2").value);
+            RHCvmax = Number(document.getElementById("RHCvmax").value);
+            RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(300/Math.sqrt(targets.length),3)/Math.pow(RHCvmax,5);
+        }
+        
+        document.getElementById("RHCalpha2Display").innerHTML = RHCalpha2.toExponential(2);
+        document.getElementById("RHCvmaxDisplay").innerHTML = RHCvmax;
+        consolePrint("RHC parameters: Scaling Factor: Alpha = "+RHCalpha2.toExponential(2)+", Agent Velocity: v_max = "+RHCvmax+".");
+    }else{
+        consolePrint("RHC parameters: Alpha = "+RHCalpha+", Beta = "+RHCbeta+".");
     }
     
 
@@ -954,8 +985,10 @@ function RHCMethodChanged(){
         consolePrint("Event Driven Receding Horizon Control with Two Steps Ahead.");
     }else if(RHCMethod==7){
         consolePrint("Event Driven Receding Horizon Control with Two Steps Ahead-Alpha,Beta.");
-        
-
+    }else if(RHCMethod==8){
+        consolePrint("Event Driven Optimal Receding Horizon Control with First Order Agents.");
+    }else if(RHCMethod==9){
+        consolePrint("Event Driven Optimal Receding Horizon Control with Second Order Agents.");
     }
 
 
@@ -988,7 +1021,6 @@ function RHCMethodChanged(){
         x.options[1].disabled = false;  
         x.options[2].disabled = false;
         x.options[3].disabled = false;
-
     }else{
         var x = document.getElementById("RHCalphaDiv");
         x.style.display = "none";
@@ -1000,6 +1032,7 @@ function RHCMethodChanged(){
         if(Number(x.value)==3 || Number(x.value)==2){
             x.value = 0;
         }
+
         x.options[2].disabled = true;
         x.options[3].disabled = true;
 
@@ -1012,7 +1045,36 @@ function RHCMethodChanged(){
 
     }
 
-    plotCostVsParameterDropDownChanged();
+    if(RHCMethod==8 || RHCMethod==9){
+        var x = document.getElementById("RHCalpha2Div");
+        x.style.display = "block";
+        
+        var x = document.getElementById("RHCbeta2Div");
+        x.style.display = "block";
+
+        var x = document.getElementById("costDisplayMenu1");
+        x.style.display = "none";
+
+        var x = document.getElementById("costDisplayMenu2");
+        x.style.display = "block";
+
+        RHCParametersChanged();    
+    }else{
+        var x = document.getElementById("RHCalpha2Div");
+        x.style.display = "none";
+        
+        var x = document.getElementById("RHCbeta2Div");
+        x.style.display = "none";
+
+        var x = document.getElementById("costDisplayMenu1");
+        x.style.display = "block";
+
+        var x = document.getElementById("costDisplayMenu2");
+        x.style.display = "none";
+
+        plotCostVsParameterDropDownChanged();    
+    }
+    
 }
 
 
@@ -1214,8 +1276,10 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
                 agents[i].updateFastCT(); // update positions of the agents
             }else if (RHCMethod<3){
                 agents[i].updateRHCCT();
-            }else{
+            }else if (RHCMethod<8){
                 agents[i].updateEDRHCCT();
+            }else{
+                agents[i].updateEDORHCCT();
             }
         }
 
@@ -1247,6 +1311,7 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
 
 
     // resetAgentsAndTargets();
+    var totalEnergySpent = 0;
     for(var i = 0; i<agents.length; i++){// rest agent positions
         if(agents[i].residingTarget.length==1){
             agents[i].position = targets[agents[i].residingTarget[0]].position;    
@@ -1256,16 +1321,27 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
         }else{
 
         }
+        totalEnergySpent = totalEnergySpent + agents[i].energySpent;
         // agents[i].orientation = 0;
         // agents[i].graphicBaseShapeRotated = agents[i].graphicBaseShape; 
 
     }
 
     
-    document.getElementById("simulationTime").innerHTML = simulationTime.toFixed(2).toString();
-    document.getElementById("simulationCost").innerHTML = meanUncertainty.toFixed(3).toString();
-
-    consolePrint('Cost: '+meanUncertainty.toFixed(3).toString());
+    if(RHCMethod<8){
+        document.getElementById("simulationTime").innerHTML = periodT.toFixed(2).toString();
+        document.getElementById("simulationCost").innerHTML = meanUncertainty.toFixed(3).toString();
+        consolePrint('Sensing Cost: '+meanUncertainty.toFixed(3).toString());
+    }else{
+        document.getElementById("simulationTime2").innerHTML = periodT.toFixed(2).toString();
+        document.getElementById("simulationCost2").innerHTML = meanUncertainty.toFixed(1).toString();
+        document.getElementById("agentEnergyCost").innerHTML = totalEnergySpent.toExponential(2).toString();
+        var totalCost = meanUncertainty + RHCalpha2*totalEnergySpent;
+        document.getElementById("totalCost").innerHTML = totalCost.toFixed(1).toString();
+        
+        consolePrint('Energy Cost: '+totalEnergySpent.toFixed(1).toString()+'; Sensing Cost: '+meanUncertainty.toFixed(3).toString()+'; Total Cost: '+totalCost.toFixed(1).toString());    
+    }
+    
 
     terminalMeanSystemUncertainty = meanUncertainty;
     //print("Cost : "+meanUncertainty);
@@ -1766,6 +1842,7 @@ function resetSimulation(){
         agents[i].position = targets[agents[i].residingTarget[0]].position;
         
         agents[i].timeToExitMode = [3,0]; // Event Driven RHC
+        agents[i].energySpent = 0;
     }
 
     document.getElementById("simulationTime").innerHTML = simulationTime.toFixed(2).toString();

@@ -164,10 +164,15 @@ function draw() {
                 cost = cost + targets[i].meanUncertainty;
             }
 
-            
+            var energyCost = 0;
             for(var i = 0; i < agents.length; i++){
                 // the following line is the only difference compared to "SimulationMoode1" given above
-                agents[i].updateEDRHCCT(); // update positions of the agents  
+                if(RHCMethod<8){
+                    agents[i].updateEDRHCCT(); // update positions of the agents  
+                }else{
+                    agents[i].updateEDORHCCT(); // update positions of the agents  
+                    energyCost = energyCost + agents[i].energySpent;
+                }
             }
 
             simulationTime = simulationTime + deltaT;
@@ -185,9 +190,17 @@ function draw() {
 
         }
 
-        document.getElementById("simulationTime").innerHTML = t.toFixed(2).toString();
-        document.getElementById("simulationCost").innerHTML = cost.toFixed(3).toString();
-
+        if(RHCMethod<8){
+            document.getElementById("simulationTime").innerHTML = t.toFixed(2).toString();
+            document.getElementById("simulationCost").innerHTML = cost.toFixed(3).toString();
+        }else{
+            document.getElementById("simulationTime2").innerHTML = t.toFixed(2).toString();
+            document.getElementById("simulationCost2").innerHTML = cost.toFixed(1).toString();
+            
+            document.getElementById("agentEnergyCost").innerHTML = energyCost.toExponential(2).toString();
+            var totalCost = cost + RHCalpha2*energyCost;
+            document.getElementById("totalCost").innerHTML = totalCost.toFixed(1).toString();
+        }
         //consolePrint('Cost: '+cost.toFixed(3).toString());
         ////print("Time: "+Math.round(simulationTime));
         ////print("Cost: "+cost);

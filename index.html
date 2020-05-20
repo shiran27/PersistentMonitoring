@@ -28,6 +28,14 @@
 	<script type="text/javascript" src="libraries/fontawesome.js"></script>
 	<script type="text/javascript" src="libraries/seedrandom.js"></script>
 	<script type="text/javascript" src="libraries/numeric.js"></script>
+
+	<script src="libraries/nerd/nerdamer.core.js"></script> 
+	<script src="libraries/nerd/Algebra.js"></script>
+	<script src="libraries/nerd/Calculus.js"></script>
+	<script src="libraries/nerd/Solve.js"></script>
+	<script src="libraries/nerd/Extra.js"></script>
+	<!-- <script src="libraries/algebra-0.2.5.min.js"></script> -->
+
 	
 
 	
@@ -279,15 +287,39 @@
 	    					</button>
 	    				</h4>
 
-	    				<div class="row">
+	    				<div class="row" id="costDisplayMenu1">
 		    				
-		    				<div class="col col-lg-6">
-		    					<h5> Time (t): <span id="simulationTime"></span></h5>
+		    				<div class="row">
+			    				<div class="col col-lg-6">
+			    					<h5> Time (t): <span id="simulationTime"></span></h5>
+			    				</div>
+			    				<div class="col col-lg-6">
+			    					<h5> Cost (J): <span id="simulationCost"></span></h5>
+			    				</div>
 		    				</div>
-		    				<div class="col col-lg-6">
-		    					<h5> Cost (J): <span id="simulationCost"></span></h5>	
-		    				</div>
+
+	    				</div>
+
+	    				<div class="row" id="costDisplayMenu2">
 		    				
+		    				<div class="row">
+			    				<div class="col col-lg-3">
+			    					<h5>t:<span id="simulationTime2"></span></h5>
+			    				</div>
+
+			    				<div class="col col-lg-3">
+			    					<h5>J<sub>e</sub>:<span id="agentEnergyCost"></span></h5>
+			    				</div>
+
+			    				<div class="col col-lg-3">
+			    					<h5>J<sub>s</sub>:<span id="simulationCost2"></span></h5>
+			    				</div>
+
+			    				<div class="col col-lg-3">
+			    					<h5>J<sub>T</sub>:<span id="totalCost"></span></h5>
+			    				</div>
+		    				</div>
+
 	    				</div>
 
 						<div class="form-group row">
@@ -370,9 +402,11 @@
 				    	<option value="2">Two steps ahead (Greedy RHC)</option>
 				    	<option value="5">Event Driven RHC-Fixed H</option>
 				    	<option value="3">Event Driven RHC</option>
-				    	<option selected value="4">Event Driven RHC-&alpha;</option>
+				    	<option value="4">Event Driven RHC-&alpha;</option>
 				    	<option value="6">Event Driven RHC-Two-Step</option>
 				    	<option value="7">Event Driven RHC-Two-Step-&alpha;-&beta;</option>
+				    	<option value="8">ED-ORHC (First-Order Agents)</option>
+				    	<option selected value="9">ED-ORHC (Second-Order Agents)</option>
 				</select> 
 			</div>
 
@@ -387,6 +421,20 @@
 					<label for="RHCbeta">&beta; =  <span id="RHCbetaDisplay"></span>
 				<input type="range" class="form-control slider" id="RHCbeta" min="0" max="1" value="0.2" step="0.01" onchange="RHCParametersChanged();">
 				</div>
+
+
+				<div id="RHCalpha2Div">
+					<label for="RHCalpha2">&alpha; =  <span id="RHCalpha2Display"></span><span>;(<label for="RHCParamterFixAlphaCB">Fix:</label>
+	            		<input type="checkbox" id="RHCParamterFixAlphaCB" onchange="RHCParametersChanged();">)</span>
+					</label> 
+				<input type="range" class="form-control slider" id="RHCalpha2" min="0" max="0.99" value="0.5" step="0.001" onchange="RHCParametersChanged();">	
+				</div>
+
+				<div id="RHCbeta2Div">
+					<label for="RHCvmax">v<sub>max</sub> =  <span id="RHCvmaxDisplay"></span>
+				<input type="range" class="form-control slider" id="RHCvmax" min="10" max="200" value="50" step="1" onchange="RHCParametersChanged();">
+				</div>
+
 			</div>
 
 			<div class="col col-lg-2">
@@ -394,7 +442,11 @@
 					<span id="timeHorizonForRHCDisplay"></span>
 				</label>
 				<input type="range" class="form-control slider" id="timeHorizonForRHC" min="1" max="250" value="250" onchange="timeHorizonForRHCChanged(Number(this.value));">
-				<button class="btn btn-success" type="button" onclick="generateCostVsHorizonCurve(50);">Auto-Tune</button>
+
+				<div id="RHCHorizonAutoTuneDiv">
+					<button class="btn btn-success" type="button" onclick="generateCostVsHorizonCurve(50);">Auto-Tune</button>
+				</div>
+
 			</div>
 
 			<div class="col col-lg-4 border-left border-success">
