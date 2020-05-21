@@ -752,6 +752,8 @@ function Agent(x, y, r) {
                 this.travleTimeSpent = deltaT;
                 this.orientation = headingAngle;
 
+                // print("Started to go to j !!! ")
+                
                 if(dataPlotMode){recordSystemState();}// agent Started Moving towards a new target
 
                 // trigger an event at neighbor targets of i telling i is now uncovered!
@@ -778,8 +780,11 @@ function Agent(x, y, r) {
                     this.velocity = this.velocity - this.acceleration*deltaT;
                     this.energySpent = this.energySpent + sq(this.acceleration)*deltaT;
                 }
+                
+                this.position = plusP2(this.position, this.headingDirectionStep);
+            
             }else if(RHCMethod==9){
-                var rho_ij = this.controlProfile[0]
+                rho_ij = this.controlProfile[0]
                 var v_1 = this.controlProfile[1]
                 var v_2 = this.controlProfile[2]
                 
@@ -789,18 +794,22 @@ function Agent(x, y, r) {
                 var distTraveled = (-1/(2*RHCalpha2))*((v_2+v_1*rho_ij)*0.5*sq(t) - v_1*sq(t)*t/6);
                 this.headingDirectionStep = rotateP2(new Point2(distTraveled,0),angle);
                 this.energySpent = this.energySpent + sq(this.acceleration)*deltaT; // approximation for now
+                
+                this.position = plusP2(targets[i].position, this.headingDirectionStep);
             }
 
-            this.position = plusP2(this.position, this.headingDirectionStep);
+            
             this.travleTimeSpent = this.travleTimeSpent + deltaT;
 
 
 
-            var conditionTemp = distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)
+            var conditionTemp = Math.abs(distP2(this.position,targets[i].position)-distP2(targets[j].position,targets[i].position)) < 0.1
             ////this.position = plusP2(this.position, this.headingDirectionStep);
             ////if(distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)){
             if(conditionTemp){
-                //print("Stopped at j !!! ")
+                // print("Stopped at j !!! ")
+                
+
                 this.acceleration = 0;
                 this.velocity = 0;
                 this.position = targets[j].position;
@@ -821,6 +830,1106 @@ function Agent(x, y, r) {
 
         }
     }
+
+
+
+
+    //// Second order OP1
+    this.solveORHCP1SO = function(i){
+        
+
+        var t_h2 = Math.min(periodT-simulationTime,timeHorizonForRHC);
+        
+        var jArray = []; // set of candidate targets
+        var yArray = []; // travel times
+        var Abar = targets[i].uncertaintyRate;  
+        var Rbar = targets[i].uncertainty;
+
+        for(var k = 0; k<targets[i].neighbors.length; k++){
+            var j = targets[i].neighbors[k];
+            if( j != i ){
+            
+                // need to find out that no agent is already in or en-route to target j
+                var anotherAgentIsComitted = false;
+                for(var a = 0; a<agents.length; a++){
+                    if(agents[a].residingTarget.length==1){
+                        if(agents[a].residingTarget[0]==j){
+                            anotherAgentIsComitted = true;
+                            break;    
+                        }
+                    }else if(agents[a].residingTarget.length==2){
+                        if(agents[a].residingTarget[1]==j){
+                            anotherAgentIsComitted = true;
+                            break;
+                        }
+                    }
+                }
+
+                if(!anotherAgentIsComitted){
+                    jArray.push(j);
+                    var y_ij = targets[i].distancesToNeighbors[k];
+                    yArray.push(y_ij);
+                    Abar = Abar + targets[j].uncertaintyRate;    
+                    Rbar = Rbar + targets[j].uncertainty;    
+                }
+                
+            }
+        }
+
+
+        var bestDestinationCost = Infinity;
+        var bestDestination = i;
+        var bestDestinationSolution = [Infinity,0,NaN,NaN];
+        var bestDestinationSolutionType;
+
+        for(var k = 0; k < jArray.length; k++){
+            
+            var j = jArray[k];
+            var y_ij = yArray[k]; // This is the distance now
+
+            var sol1_1 = this.solveORHCP1SO_1_1(i,j,t_h2,y_ij,Abar,Rbar);
+            if(sol1_1[0] < bestDestinationCost){
+                bestDestinationCost = sol1_1[0];
+                bestDestinationSolution = [...sol1_1];
+                bestDestination = j;
+                bestDestinationSolutionType = "1_1";
+            }
+
+            var sol1_2 = this.solveORHCP1SO_1_2(i,j,t_h2,y_ij,Abar,Rbar);
+            if(sol1_2[0] < bestDestinationCost){
+                bestDestinationCost = sol1_2[0];
+                bestDestinationSolution = [...sol1_2];
+                bestDestination = j;
+                bestDestinationSolutionType = "1_2";
+            }
+
+
+            var sol1_3 = this.solveORHCP1SO_1_3(i,j,t_h2,y_ij,Abar,Rbar);
+            if(sol1_3[0] < bestDestinationCost){
+                bestDestinationCost = sol1_3[0];
+                bestDestinationSolution = [...sol1_3];
+                bestDestination = j;
+                bestDestinationSolutionType = "1_3";
+            }
+
+
+            // var sol2_1 = this.solveORHCP1SO_2_1(i,j,t_h2,y_ij,Abar,Rbar);
+            // if(sol2_1[0] < bestDestinationCost){
+            //     bestDestinationCost = sol2_1[0];
+            //     bestDestinationSolution = [...sol2_1];
+            //     bestDestination = j;
+            //     bestDestinationSolutionType = "2_1";
+            // }
+
+            var sol2_2 = this.solveORHCP1SO_2_2(i,j,t_h2,y_ij,Abar,Rbar);
+            if(sol2_2[0] < bestDestinationCost){
+                bestDestinationCost = sol2_2[0];
+                bestDestinationSolution = [...sol2_2];
+                bestDestination = j;
+                bestDestinationSolutionType = "2_2";
+            }
+
+
+            var sol2_3 = this.solveORHCP1SO_2_3(i,j,t_h2,y_ij,Abar,Rbar);
+            if(sol2_3[0] < bestDestinationCost){
+                bestDestinationCost = sol2_3[0];
+                bestDestinationSolution = [...sol2_3];
+                bestDestination = j;
+                bestDestinationSolutionType = "2_3";
+            }
+
+            var sol3_1 = this.solveORHCP1SO_3_1(i,j,t_h2,y_ij,Abar,Rbar);
+            if(sol3_1[0] < bestDestinationCost){
+                bestDestinationCost = sol3_1[0];
+                bestDestinationSolution = [...sol3_1];
+                bestDestination = j;
+                bestDestinationSolutionType = "3_1";
+            }
+
+            var sol3_2 = this.solveORHCP1SO_3_2(i,j,t_h2,y_ij,Abar,Rbar);
+            if(sol3_2[0] < bestDestinationCost){
+                bestDestinationCost = sol3_2[0];
+                bestDestinationSolution = [...sol3_2];
+                bestDestination = j;
+                bestDestinationSolutionType = "3_2";
+            }
+
+
+
+        }
+
+        // print(bestDestinationSolution)
+        if(printMode){
+            print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(bestDestination+1))
+            print("Best OP2:Case "+bestDestinationSolutionType+"; J= "+bestDestinationSolution[0].toFixed(3)+", v_i= "+bestDestinationSolution[1].toFixed(3)+"; u_j= "+bestDestinationSolution[2].toFixed(3)+", v_j= "+bestDestinationSolution[3].toFixed(3));
+        }
+
+        return bestDestinationSolution[1];
+    
+    }
+
+
+    //// Second order OP1_sub1_1
+    this.solveORHCP1SO_1_1 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+
+        // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
+
+        // transit times comes from solving:
+        // t_f^4 * Num(DJ) - 36*Den(DJ)*RHCalpha2*y_ij^2==0
+
+        var A_i = targets[i].uncertaintyRate;
+        var A_j = targets[j].uncertaintyRate;
+        var B_i = this.sensingRate;
+        var B_j = B_i;
+        var R_j = targets[j].uncertainty;
+        // var R_i = 0
+
+
+        // numerator coefficients of: t^3,t^2,t,1
+        var sigma_1 = -sq(A_j)*(B_j-A_i) + sq(B_j)*(Abar-A_i)
+        print(sigma_1)
+        var NC1 = sq(A_i*B_j*sigma_1)*B_j
+        var NC2 = 3*R_j*NC1/B_j
+        var NC3 = A_i*B_j*(3*A_i-B_j)*sq(R_j*sigma_1)
+        
+        var sigma_2 = A_i*A_j*Math.pow(sigma_1,1.5) // sigma_2*(NC4)^1.5
+        var NC4_1 = A_i*sq(B_j)
+        var NC4_2 = 2*A_i*B_j*R_j
+        var NC4_3 = (A_i-B_j)*sq(R_j)
+
+        var sigma_3 = Math.pow(R_j,3)*A_i
+        var NC5 = Math.pow(A_j,4)*sq(A_i)*(A_i-2*B_j) + Math.pow(B_j,3)*(-sq(B_j)*(sq(Abar-A_i-A_j)+sq(A_j))+Math.pow(A_j,3)*(2*B_j-A_j)+A_i*B_j*sq(Abar-A_i-A_j));
+        NC5 = NC5 + sq(B_j*A_j)*A_i*( sq(B_j)-4*A_j*B_j+sq(A_j)*(3+2*A_i) ) + (Abar-A_i-A_j)*A_j*sq(B_j)*( A_i*A_j*(-4*B_j+2*A_i)+2*sq(B_j)*(-B_j+A_j+A_i) )
+        NC5 = sigma_3*NC5
+
+
+        // RHS of eqn:
+        var temp1 = 36*RHCalpha2*sq(y_ij);
+
+
+        // denominator coefficients: t^2,t,1
+        var sigma_4 = B_j*Math.pow(sigma_1,1.5) // denom: sigma_4*(NC4)^1.5
+        var sigma_5 = (sigma_2-sigma_4*temp1)
+
+
+
+        //// Newton Raphston
+        function funVal(t){
+            return (NC1*Math.pow(t,3)+NC2*Math.pow(t,2)+NC3*Math.pow(t,1)+NC5) + sigma_5*Math.pow((NC4_1*Math.pow(t,2)+NC4_2*Math.pow(t,1)+NC4_3),1.5)  
+        }
+
+        function funDVal(t){
+            return (3*NC1*Math.pow(t,2)+2*NC2*Math.pow(t,1)+NC3) + 1.5*sigma_5*Math.sqrt(NC4_1*Math.pow(t,2)+NC4_2*Math.pow(t,1)+NC4_3)*(2*NC4_1*Math.pow(t,1)+NC4_2)  
+        }
+
+        var t = 50; // initial guess
+        var h = funVal(t) / funDVal(t) 
+        while(Math.abs(h) >= 0.0001){ 
+            h = funVal(t) / funDVal(t);  
+            t = t - h;
+        } 
+        var rho_ij = t;
+        if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
+        print("t_f1_1 = "+rho_ij)
+        //// End Newton Raphston
+
+
+        // compute rest: energy and sensing costs
+        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        var v_1 = -2*v_o2/rho_ij
+
+        var sigma_5 = Math.sqrt(sigma_1*(NC4_1*sq(rho_ij)+NC4_2*rho_ij+NC4_3)     )
+        var sigma_6 = B_j*sigma_1  
+        var lambda_i = -rho_ij + (B_j-A_j)*sigma_5/sigma_6 - R_j*(sq(A_j)*(A_i-B_j)+sq(B_j)*(Abar-A_i))/sigma_6
+        var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
+        var lambda_j = 0        
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+
+        var t_o = lambda_i;
+        var t_f = lambda_i+rho_ij;
+        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+
+        var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
+        
+        var totalCost = 2*sensingCost + RHCalpha2*energyCost
+        return [totalCost, lambda_i, rho_ij, tau_j, lambda_j]; ; 
+
+    }
+
+
+    //// Second order OP1_sub1_2
+    this.solveORHCP1SO_1_2 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+
+        // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
+
+        // transit times comes from solving:
+        // t_f^4 * Num(DJ) - 36*Den(DJ)*RHCalpha2*y_ij^2==0
+
+        var A_i = targets[i].uncertaintyRate;
+        var A_j = targets[j].uncertaintyRate;
+        var B_i = this.sensingRate;
+        var B_j = B_i;
+        var R_j = targets[j].uncertainty;
+        // var R_i = 0
+
+
+        // numerator coefficients of: t^3,t^2,t,1
+        var sigma_1 = -sq(A_j)*(B_j-A_i) + sq(B_j)*(Abar-A_i)
+        var NC1 = -sq(A_i*B_j*sigma_1)*B_j
+        var NC2 = -3*R_j*NC1/B_j
+        var NC3 = -A_i*B_j*(3*A_i-B_j)*sq(R_j*sigma_1)
+        
+        var sigma_2 = A_i*A_j*Math.pow(sigma_1,1.5) // sigma_2*(NC4)^1.5
+        var NC4_1 = A_i*sq(B_j)
+        var NC4_2 = 2*A_i*B_j*R_j
+        var NC4_3 = (A_i-B_j)*sq(R_j)
+
+
+        var sigma_3 = -Math.pow(R_j,3)*A_i
+        var NC5 = Math.pow(A_j,4) * sq(A_i) * (A_i-2*B_j) + Math.pow(B_j,3)*(-sq(B_j)*( sq(Abar-A_i-A_j)+sq(A_j) ) + Math.pow(A_j,3)*(2*B_j-A_j)+A_i*B_j*sq(Abar-A_i-A_j));
+        NC5 = NC5 + sq(B_j*A_j)*A_i*( sq(B_j)-4*A_j*B_j+sq(A_j)*(3+2*A_i) ) + (Abar-A_i-A_j)*A_j*sq(B_j)*( A_i*A_j*(-4*B_j+2*A_i)+2*sq(B_j)*(-B_j+A_j+A_i) )
+        NC5 = sigma_3*NC5
+
+
+        // RHS of eqn:
+        var temp1 = 36*RHCalpha2*sq(y_ij);
+
+
+        // denominator coefficients: t^2,t,1
+        var sigma_4 = B_j*Math.pow(sigma_1,1.5) // denom: sigma_4*(NC4)^1.5
+        var sigma_5 = (sigma_2-sigma_4*temp1)
+
+
+
+        //// Newton Raphston
+        function funVal(t){
+            return (NC1*Math.pow(t,3)+NC2*Math.pow(t,2)+NC3*Math.pow(t,1)+NC5) + sigma_5*Math.pow((NC4_1*Math.pow(t,2)+NC4_2*Math.pow(t,1)+NC4_3),1.5)  
+        }
+
+        function funDVal(t){
+            return (3*NC1*Math.pow(t,2)+2*NC2*Math.pow(t,1)+NC3) + 1.5*sigma_5*Math.sqrt(NC4_1*Math.pow(t,2)+NC4_2*Math.pow(t,1)+NC4_3)*(2*NC4_1*Math.pow(t,1)+NC4_2)  
+        }
+
+        var t = 50; // initial guess
+        var h = funVal(t) / funDVal(t) 
+        while(Math.abs(h) >= 0.0001){ 
+            h = funVal(t) / funDVal(t);  
+            t = t - h;
+        } 
+        var rho_ij = t;
+        if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
+        print("t_f1_2 = "+rho_ij)
+        //// End Newton Raphston
+
+
+        // compute rest: energy and sensing costs
+        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        var v_1 = -2*v_o2/rho_ij
+
+        var sigma_5 = Math.sqrt(sigma_1*(NC4_1*sq(rho_ij)+NC4_2*rho_ij+NC4_3)     )
+        var sigma_6 = B_j*sigma_1  
+        var lambda_i = -rho_ij - (B_j-A_j)*sigma_5/sigma_6 - R_j*(sq(A_j)*(A_i-B_j)+sq(B_j)*(Abar-A_i))/sigma_6
+        var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
+        var lambda_j = 0        
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+
+        var t_o = lambda_i;
+        var t_f = lambda_i+rho_ij;
+        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+
+        var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
+        
+        var totalCost = 2*sensingCost + RHCalpha2*energyCost
+        return [totalCost, lambda_i, rho_ij, tau_j, lambda_j]; ; 
+
+    }
+
+
+
+    //// Second order OP1_sub1_3
+    this.solveORHCP1SO_1_3 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+
+        // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
+
+        // transit times comes from solving:
+        // t_f^4 * Num(DJ) - 36*Den(DJ)*RHCalpha2*y_ij^2==0
+
+        var A_i = targets[i].uncertaintyRate;
+        var A_j = targets[j].uncertaintyRate;
+        var B_i = this.sensingRate;
+        var B_j = B_i;
+        var R_j = targets[j].uncertainty;
+        // var R_i = 0
+
+        // numerator coefficients of: t,1
+        var NC1 = A_i*B_j
+        var NC2 = A_i*(R_j+A_j*H)
+        
+        // RHS of eqn:
+        var temp1 = 36*RHCalpha2*sq(y_ij);
+
+        // denominator coefficients: t^2,t,1
+        var DC1 = B_j*H
+
+        var rho_ij = (temp1*DC1 - NC2)/NC1;
+        if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
+        print("t_f1_3 = "+rho_ij)
+        
+
+
+        // compute rest: energy and sensing costs
+        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        var v_1 = -2*v_o2/rho_ij
+  
+        var lambda_i = -rho_ij + ((B_j-A_j)*H - R_j)/B_j
+        var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
+        var lambda_j = 0        
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+
+        var t_o = lambda_i;
+        var t_f = lambda_i+rho_ij;
+        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+
+        var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
+        
+        var totalCost = 2*sensingCost + RHCalpha2*energyCost
+        return [totalCost, lambda_i, rho_ij, tau_j, lambda_j]; ; 
+
+    }
+
+
+    //// Second order OP1_sub2_1
+    this.solveORHCP1SO_2_1 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+
+        // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
+
+        // transit times comes from solving:
+        // t_f^4 * Num(DJ) - 36*Den(DJ)*RHCalpha2*y_ij^2==0
+
+        var A_i = targets[i].uncertaintyRate;
+        var A_j = targets[j].uncertaintyRate;
+        var B_i = this.sensingRate;
+        var B_j = B_i;
+        var R_j = targets[j].uncertainty;
+        // var R_i = 0
+
+
+        // numerator coefficients of: t^3,t^2,t,1
+        var sigma_1 = 2*B_j*(A_j-B_j)*Math.sqrt(Abar-A_j)
+        var NC1 = sigma_1*sq(A_j)*B_j
+        var NC2 = sigma_1*3*A_j*B_j*R_j
+        var NC3 = sigma_1*(A_j+2*B_j)*sq(R_j)
+        var NC4 = Math.pow(R_j,3)
+                
+        // RHS of eqn:
+        var temp1 = 36*RHCalpha2*sq(y_ij);
+
+        // denominator coefficients: sigma_2*(DC)^1.5
+        var sigma_2 = 2*Math.pow(B_j-A_j,1.5) 
+        var DC1 = A_j*B_j
+        var DC2 = 2*B_j*R_j
+        var DC3 = sq(R_j)
+        
+
+        //// Newton Raphston
+        function funVal(t){
+            return (NC1*Math.pow(t,3)+NC2*Math.pow(t,2)+NC3*Math.pow(t,1)+NC4) - temp1*sigma_2*Math.pow((DC1*Math.pow(t,2)+DC2*Math.pow(t,1)+DC3),1.5)  
+        }
+
+        function funDVal(t){
+           return (3*NC1*Math.pow(t,2)+2*NC2*Math.pow(t,1)+NC3) - 1.5*temp1*sigma_2*Math.sqrt(DC1*Math.pow(t,2)+DC2*Math.pow(t,1)+DC3)*(2*DC1*Math.pow(t,1)+DC2)   
+        }
+
+        var t = 50; // initial guess
+        var h = funVal(t) / funDVal(t) 
+        while(Math.abs(h) >= 0.0001){ 
+            h = funVal(t) / funDVal(t);  
+            t = t - h;
+        } 
+        var rho_ij = t;
+        if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
+        print("t_f2_1 = "+rho_ij)
+        //// End Newton Raphston
+
+
+        // compute rest: energy and sensing costs
+        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        var v_1 = -2*v_o2/rho_ij
+
+         
+        var lambda_i = 0
+        var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
+        var lambda_j =  -(R_j+B_j*rho_ij)/(B_j-A_j) - Math.sqrt((DC1*sq(rho_ij)+DC2*rho_ij+DC3)/((Abar-A_j)*(B_j-A_j)))       
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+        // this definitely is negative!!!    
+
+        var t_o = lambda_i;
+        var t_f = lambda_i+rho_ij;
+        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+
+        var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
+        
+        var totalCost = 2*sensingCost + RHCalpha2*energyCost
+        return [totalCost, lambda_i, rho_ij, tau_j, lambda_j]; ; 
+
+    }
+
+    //// Second order OP1_sub2_2
+    this.solveORHCP1SO_2_2 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+
+        // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
+
+        // transit times comes from solving:
+        // t_f^4 * Num(DJ) - 36*Den(DJ)*RHCalpha2*y_ij^2==0
+
+        var A_i = targets[i].uncertaintyRate;
+        var A_j = targets[j].uncertaintyRate;
+        var B_i = this.sensingRate;
+        var B_j = B_i;
+        var R_j = targets[j].uncertainty;
+        // var R_i = 0
+
+
+        // numerator coefficients of: t^3,t^2,t,1
+        var sigma_1 = -2*B_j*(A_j-B_j)*Math.sqrt(Abar-A_j)
+        var NC1 = sigma_1*sq(A_j)*B_j
+        var NC2 = sigma_1*3*A_j*B_j*R_j
+        var NC3 = sigma_1*(A_j+2*B_j)*sq(R_j)
+        var NC4 = Math.pow(R_j,3)
+                
+        // RHS of eqn:
+        var temp1 = 36*RHCalpha2*sq(y_ij);
+
+        // denominator coefficients: sigma_2*(DC)^1.5
+        var sigma_2 = 2*Math.pow(B_j-A_j,1.5) 
+        var DC1 = A_j*B_j
+        var DC2 = 2*B_j*R_j
+        var DC3 = sq(R_j)
+        
+
+        //// Newton Raphston
+        function funVal(t){
+            return (NC1*Math.pow(t,3)+NC2*Math.pow(t,2)+NC3*Math.pow(t,1)+NC4) - temp1*sigma_2*Math.pow((DC1*Math.pow(t,2)+DC2*Math.pow(t,1)+DC3),1.5)  
+        }
+
+        function funDVal(t){
+           return (3*NC1*Math.pow(t,2)+2*NC2*Math.pow(t,1)+NC3) - 1.5*temp1*sigma_2*Math.sqrt(DC1*Math.pow(t,2)+DC2*Math.pow(t,1)+DC3)*(2*DC1*Math.pow(t,1)+DC2)   
+        }
+
+        var t = 50; // initial guess
+        var h = funVal(t) / funDVal(t) 
+        while(Math.abs(h) >= 0.0001){ 
+            h = funVal(t) / funDVal(t);  
+            t = t - h;
+        } 
+        var rho_ij = t;
+        if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
+        print("t_f2_2 = "+rho_ij)
+        //// End Newton Raphston
+
+
+        // compute rest: energy and sensing costs
+        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        var v_1 = -2*v_o2/rho_ij
+
+         
+        var lambda_i = 0
+        var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
+        var lambda_j =  (R_j+B_j*rho_ij)/(B_j-A_j) + Math.sqrt((DC1*sq(rho_ij)+DC2*rho_ij+DC3)/((Abar-A_j)*(B_j-A_j)))       
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+        // this definitely is positive!!!    
+
+        var t_o = lambda_i;
+        var t_f = lambda_i+rho_ij;
+        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+
+        var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
+        
+        var totalCost = 2*sensingCost + RHCalpha2*energyCost
+        return [totalCost, lambda_i, rho_ij, tau_j, lambda_j]; ; 
+
+    }
+
+
+    //// Second order OP1_sub2_3
+    this.solveORHCP1SO_2_3 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+
+        // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
+
+        // transit times comes from solving:
+        // t_f^4 * Num(DJ) - 36*Den(DJ)*RHCalpha2*y_ij^2==0
+
+        var A_i = targets[i].uncertaintyRate;
+        var A_j = targets[j].uncertaintyRate;
+        var B_i = this.sensingRate;
+        var B_j = B_i;
+        var R_j = targets[j].uncertainty;
+        // var R_i = 0
+
+        // numerator coefficients of: t,1
+        var NC1 = -A_j*B_j
+        var NC2 = -B_j*R_j
+        
+        // RHS of eqn:
+        var temp1 = 36*RHCalpha2*sq(y_ij);
+
+        // denominator coefficients: t^2,t,1
+        var DC1 = (A_j-B_j)*H
+
+        var rho_ij = (temp1*DC1 - NC2)/NC1;
+        if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
+        print("t_f2_3 = "+rho_ij)
+        
+
+
+        // compute rest: energy and sensing costs
+        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        var v_1 = -2*v_o2/rho_ij
+  
+        var lambda_i = 0
+        var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
+        var lambda_j = H - (R_j+B_j*rho_ij)/(B_j-A_j)        
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+
+        var t_o = lambda_i;
+        var t_f = lambda_i+rho_ij;
+        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+
+        var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
+        
+        var totalCost = 2*sensingCost + RHCalpha2*energyCost
+        return [totalCost, lambda_i, rho_ij, tau_j, lambda_j]; ; 
+
+    }
+
+    //// Second order OP1_sub3_1
+    this.solveORHCP1SO_3_1 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+
+        // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
+
+        // transit times comes from solving:
+        // t_f^4 * Num(DJ) - 36*Den(DJ)*RHCalpha2*y_ij^2==0
+
+        var A_i = targets[i].uncertaintyRate;
+        var A_j = targets[j].uncertaintyRate;
+        var B_i = this.sensingRate;
+        var B_j = B_i;
+        var R_j = targets[j].uncertainty;
+        // var R_i = 0
+
+        // numerator coefficients of: t,1
+        var NC1 = A_i*A_j*B_j
+        var NC2 = A_i*B_j*(R_j+A_j*H)
+        
+        // RHS of eqn:
+        var temp1 = 36*RHCalpha2*sq(y_ij);
+
+        // denominator coefficients: t^2,t,1
+        var DC1 = (A_i*B_j-A_i*A_j+A_j*B_j)*H
+
+        var rho_ij = (temp1*DC1 - NC2)/NC1;
+        if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
+        print("t_f3_1 = "+rho_ij)
+        
+
+
+        // compute rest: energy and sensing costs
+        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        var v_1 = -2*v_o2/rho_ij
+  
+        var lambda_i = -(-A_i*H*(B_j-A_j)+B_j*(R_j+A_j*rho_ij))/(A_i*(B_j-A_j)+A_j*B_j)
+        var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
+        
+        var lambda_j = B_j*(sq(A_j)-A_i*A_j+A_i*B_j)*rho_ij + ( R_j*(A_i*B_j-A_i*A_j-sq(B_j)+2*A_j*B_j) + B_j*A_j*H*(-B_j+A_j) + lambda_i*A_j*(-A_i*A_j+A_j*B_j+A_i*B_j) )
+        lambda_j = lambda_j/((A_j-B_j)*(A_i*B_j-A_i*A_j+A_j*B_j))
+
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+
+        var t_o = lambda_i;
+        var t_f = lambda_i+rho_ij;
+        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+
+        var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
+        
+        var totalCost = 2*sensingCost + RHCalpha2*energyCost
+        return [totalCost, lambda_i, rho_ij, tau_j, lambda_j]; ; 
+
+    }
+
+
+    //// Second order OP1_sub3_2
+    this.solveORHCP1SO_3_2 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+
+        // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
+
+        // transit times comes from solving:
+        // t_f^4 * Num(DJ) - 36*Den(DJ)*RHCalpha2*y_ij^2==0
+
+        var A_i = targets[i].uncertaintyRate;
+        var A_j = targets[j].uncertaintyRate;
+        var B_i = this.sensingRate;
+        var B_j = B_i;
+        var R_j = targets[j].uncertainty;
+        // var R_i = 0
+
+        // numerator coefficients of: t^2,t,1
+        var sigma_1 = -sq(A_j)+B_j*Abar
+        var NC1 = -sq(B_j)*sigma_1
+        var NC2 = -2*B_j*R_j*sigma_1
+        var NC3 = -B_j*sq(R_j)*(Abar-2*A_j+B_j)
+        
+        // RHS of eqn:
+        var temp1 = 36*RHCalpha2*sq(y_ij);
+
+        // denominator coefficients: t^2,t,1
+        var DC1 = 2*sq(B_j)*(A_j-B_j)
+        var DC2 = 4*B_j*R_j*(A_j-B_j)
+        var DC3 = 2*sq(R_j)*(A_j-B_j)
+
+        //// Newton Raphston
+        function funVal(t){
+            return (NC1*Math.pow(t,2)+NC2*Math.pow(t,1)+NC3) - temp1*(DC1*Math.pow(t,2)+DC2*Math.pow(t,1)+DC3)
+        }
+
+        function funDVal(t){
+           return (2*NC1*Math.pow(t,1)+NC2) - temp1*(2*DC1*Math.pow(t,1)+DC2)
+        }
+
+        var t = 50; // initial guess
+        var h = funVal(t) / funDVal(t) 
+        while(Math.abs(h) >= 0.0001){ 
+            h = funVal(t) / funDVal(t);  
+            t = t - h;
+        } 
+        var rho_ij = t;
+        if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
+        print("t_f3_2 = "+rho_ij)
+        //// End Newton Raphston
+
+
+        // compute rest: energy and sensing costs
+        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        var v_1 = -2*v_o2/rho_ij
+  
+        var lambda_i = 0
+        var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
+        var lambda_j = 0
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+
+        var t_o = lambda_i;
+        var t_f = lambda_i+rho_ij;
+        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+
+        var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
+        
+        var totalCost = 2*sensingCost + RHCalpha2*energyCost
+        return [totalCost, lambda_i, rho_ij, tau_j, lambda_j]; ; 
+
+    }
+
+
+
+
+
+    this.evalSensingCostForORHCP1 = function(i,j,y_ij,Abar,Rbar,lambda_i,tau_j,lambda_j){
+        // y_ij is now transit time (i.e., rho_ij)
+        var coefA = (Abar-targets[i].uncertaintyRate)*sq(lambda_i);
+        var coefB = (Abar-this.sensingRate)*sq(tau_j);
+        var coefC = (Abar-targets[j].uncertaintyRate)*sq(lambda_j);
+        var coefD = 2*(Abar-targets[i].uncertaintyRate)*lambda_i*tau_j;
+        var coefE = 2*(Abar-targets[i].uncertaintyRate-targets[j].uncertaintyRate)*lambda_i*lambda_j;
+        var coefF = 2*(Abar-targets[j].uncertaintyRate)*tau_j*lambda_j;
+        var coefG = 2*((Rbar-targets[i].uncertainty)+(Abar-targets[i].uncertaintyRate)*y_ij)*lambda_i;
+        var coefH = 2*((Rbar-targets[i].uncertainty)+Abar*y_ij)*tau_j;
+        var coefK = 2*((Rbar-targets[i].uncertainty-targets[j].uncertainty)+(Abar-targets[j].uncertaintyRate)*y_ij)*lambda_j;
+        var coefL = y_ij*(2*(Rbar-targets[i].uncertainty)+Abar*y_ij);
+
+        var denJ_s = lambda_i+y_ij+tau_j+lambda_j;
+        var numJ_s = coefA + coefB + coefC + coefD + coefE + coefF + coefG + coefH + coefK + coefL;
+
+        return numJ_s/denJ_s;
+
+    }
+
+
+
+    //// Second order OP3
+    this.solveORHCP3SO = function(i){
+
+        var t_h3 = Math.min(periodT-simulationTime,timeHorizonForRHC);
+        
+        var jArray = []; // set of candidate targets
+        var yArray = []; // distances
+        var Abar = targets[i].uncertaintyRate;  
+        var Rbar = targets[i].uncertainty;
+
+        for(var k = 0; k<targets[i].neighbors.length; k++){
+            var j = targets[i].neighbors[k];
+            if( j != i ){
+            
+                // need to find out that no agent is already in or en-route to target j
+                var anotherAgentIsComitted = false;
+                for(var a = 0; a<agents.length; a++){
+                    if(agents[a].residingTarget.length==1){
+                        if(agents[a].residingTarget[0]==j){
+                            anotherAgentIsComitted = true;
+                            break;    
+                        }
+                    }else if(agents[a].residingTarget.length==2){
+                        if(agents[a].residingTarget[1]==j){
+                            anotherAgentIsComitted = true;
+                            break;
+                        }
+                    }
+                }
+
+                if(!anotherAgentIsComitted){
+                    jArray.push(j);
+                    var y_ij = targets[i].distancesToNeighbors[k];
+                    yArray.push(y_ij);
+                    Abar = Abar + targets[j].uncertaintyRate;    
+                    Rbar = Rbar + targets[j].uncertainty;    
+                }
+                
+            }
+        }
+
+
+        var bestDestinationCost = Infinity;
+        var bestDestination = i;
+        var bestDestinationTime = 0;
+        var bestDestinationSolutionType;
+        var bestDestinationSolution = [Infinity,NaN,NaN,NaN];
+
+        for(var k = 0; k < jArray.length; k++){
+            
+            var j = jArray[k];
+            var y_ij = yArray[k];// now this is distance 
+            
+            // alpha can be a function of the degree at target i (currently residing)
+            var alpha;
+            alpha = 1/sq(targets[i].neighbors.length); 
+            ////alpha = 0.5;
+            //print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(j+1))
+
+            
+            var sol1 = this.solveORHCP3SO_1(i,j,t_h3,y_ij,alpha,Abar,Rbar);
+            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2]
+            if(sol1[0]<bestDestinationCost){
+                bestDestinationCost = sol1[0];
+                bestDestination = j;
+                bestDestinationTime = sol1[3];
+                bestDestinationSolution = [...sol1];
+                bestDestinationSolutionType = 1; 
+            }
+
+
+            var sol2 = this.solveORHCP3SO_2(i,j,t_h3,y_ij,alpha,Abar,Rbar);
+            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2]
+            if(sol2[0]<bestDestinationCost){
+                bestDestinationCost = sol2[0];
+                bestDestination = j;
+                bestDestinationTime = sol2[3];
+                bestDestinationSolution = [...sol2];
+                bestDestinationSolutionType = 2; 
+            }
+
+
+            var sol3 = this.solveORHCP3SO_3(i,j,t_h3,y_ij,alpha,Abar,Rbar);
+            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2]
+            if(sol3[0]<bestDestinationCost){
+                bestDestinationCost = sol3[0];
+                bestDestination = j;
+                bestDestinationTime = sol3[3];
+                bestDestinationSolution = [...sol3];
+                bestDestinationSolutionType = 3; 
+            }
+            
+        }
+
+        if(bestDestinationCost<100000 && printMode){
+            print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(bestDestination+1))
+            print("Best OP3:Case ("+bestDestinationSolutionType+","+bestDestinationSolution[3]+"); J= "+bestDestinationSolution[0].toFixed(3)+"; u_j= "+bestDestinationSolution[1].toFixed(3)+", v_j= "+bestDestinationSolution[2].toFixed(3));
+        }
+
+        if(bestDestination!=i){
+            if(RHCvmaxObserved<bestDestinationSolution[6]/bestDestinationSolution[3]){
+                RHCvmaxObserved = bestDestinationSolution[6]/bestDestinationSolution[3];
+            }
+            return [bestDestination, bestDestinationTime, bestDestinationSolution[3], bestDestinationSolution[4], bestDestinationSolution[5]];
+        }else{
+            return [bestDestination, bestDestinationTime,0,0,0];
+        }
+        
+    }
+
+
+
+    //// Second order OP3_sub1
+    this.solveORHCP3SO_1 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+
+
+        // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
+
+        // transit times comes from solving:
+        // t_f^4 * Num(DJ) - 36*Den(DJ)*RHCalpha2*y_ij^2==0
+
+
+        var A_i = targets[i].uncertaintyRate;
+        var A_j = targets[j].uncertaintyRate;
+        var B_i = this.sensingRate;
+        var B_j = B_i;
+        var R_j = targets[j].uncertainty;
+
+
+        // numerator coefficients of: t^2,t,1
+        var sigma_1 = -alpha*A_j*(B_j-A_j) - (1-alpha)*B_j*(Abar-A_j);
+        var NC1 = sq(B_j)*sigma_1;
+        var NC2 = 2*B_j*R_j*sigma_1;
+        var NC3 = -B_j*sq(R_j)*((1-alpha)*(Abar-A_j)+alpha*(B_j-A_j));
+
+        // RHS of eqn:
+        var temp1 = 36*RHCalpha2*sq(y_ij);
+
+        // denominator coefficients: t^2,t,1
+        var DC1 = -temp1*2*sq(B_j)*(A_j-B_j);
+        var DC2 = -temp1*4*B_j*R_j*(A_j-B_j);
+        var DC3 = -temp1*2*sq(R_j)*(A_j-B_j);
+
+        //// Newton Raphston
+        function funVal(t){
+            return NC1*Math.pow(t,6)+NC2*Math.pow(t,5)+NC3*Math.pow(t,4)+DC1*Math.pow(t,2)+DC2*Math.pow(t,1)+DC3
+        }
+
+        function funDVal(t){
+            return 6*NC1*Math.pow(t,5)+5*NC2*Math.pow(t,4)+4*NC3*Math.pow(t,3)+2*DC1*Math.pow(t,1)+DC2
+        }
+
+        var t = 50; // initial guess
+        var h = funVal(t) / funDVal(t) 
+        while(Math.abs(h) >= 0.0001){ 
+            h = funVal(t) / funDVal(t);  
+            t = t - h;
+        } 
+        var rho_ij = t;
+        if(rho_ij<0){ return [Infinity, 0, 0, 0, 0, 0]}
+        print("t_f1 = "+rho_ij)
+        //// End Newton Raphston
+
+
+        //// Nerdamer method
+        // var eqnString = '';
+        // eqnString += NC1.toExponential(3).toString()+'*x^6 + '
+        // eqnString += NC2.toExponential(3).toString()+'*x^5 + '
+        // eqnString += NC3.toExponential(3).toString()+'*x^4 + '
+        // eqnString += DC1.toExponential(3).toString()+'*x^2 + '
+        // eqnString += DC2.toExponential(3).toString()+'*x + '
+        // eqnString += DC3.toExponential(3).toString()+' = 0'
+
+        // // print("Equation: ")
+        // // print(eqnString)
+        // var sol = nerdamer.solveEquations(eqnString,'x');
+        // var rho_ij;
+        // for(k = 0;k < sol.length; k++){
+        //     rho_ij = Number(sol[k].text('decimals'))
+        //     if(0<rho_ij && rho_ij<100){
+        //         break;
+        //     }
+        // }
+        // print("t_f = "+rho_ij)
+        //// End Nerdamer method
+
+
+        // compute 
+        var v_2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        var v_1 = -2*v_2/rho_ij
+
+
+        // print("Test: "+(sq(rho_ij)*(3*v_2+2*v_1*rho_ij)+12*RHCalpha2*y_ij))
+        // get u based on v_1,v_2,rho_ij
+        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*RHCalpha2*v_1)
+
+        var tau_j = (R_j+rho_ij*A_j)/(B_j-A_j); 
+        var lambda_j = 0;
+        if(rho_ij+tau_j+lambda_j>H){ return [Infinity, 0, 0, 0, 0, 0]}
+        
+        var sensingCost = this.evalSensingCostForORHCP3(j,rho_ij,alpha,Abar,Rbar,tau_j,lambda_j)
+        
+        var totalCost = 2*sensingCost + RHCalpha2*energyCost;
+        print("J_e = "+energyCost.toFixed(2)+"; J_s = "+sensingCost.toFixed(2)+"; J_T = "+totalCost.toFixed(2));
+
+        return [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2, y_ij]
+
+    }
+
+
+    //// Second order OP3_sub2
+    this.solveORHCP3SO_2 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+        // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
+
+        var A_i = targets[i].uncertaintyRate;
+        var A_j = targets[j].uncertaintyRate;
+        var B_i = this.sensingRate;
+        var B_j = B_i;
+        var R_j = targets[j].uncertainty;
+
+
+        // numerator coefficients of: t^3, t^2, t, 1
+        var sigma_1 = -Math.sqrt(alpha*(Abar-A_j))*B_j*(A_j-B_j) 
+        var NC1 = sq(A_j)*B_j
+        var NC2 = 3*A_j*B_j*R_j
+        var NC3 = sq(R_j)*(A_j+2*B_j)
+        var NC4 = sq(R_j)*R_j
+
+        // RHS of eqn:
+        var temp1 = 36*RHCalpha2*sq(y_ij);
+
+        // denominator coefficients: (t^2,t,1)^(3/2)
+        var sigma_2 = (B_j-A_j)*Math.sqrt((B_j-A_j)/(1-alpha))
+        var sigma_3 = -temp1*sigma_2/sigma_1
+        var DC1 = A_j*B_j
+        var DC2 = 2*B_j*R_j;
+        var DC3 = sq(R_j);
+
+
+        //// Newton Raphston
+        function funVal(t){
+            return (NC1*Math.pow(t,3)+NC2*Math.pow(t,2)+NC3*Math.pow(t,1)+NC4) +  sigma_3*Math.pow((DC1*Math.pow(t,2)+DC2*Math.pow(t,1)+DC3),1.5)
+        }
+
+        function funDVal(t){
+            return (3*NC1*Math.pow(t,2)+2*NC2*Math.pow(t,1)+NC3) +  1.5*sigma_3*Math.sqrt(DC1*Math.pow(t,2)+DC2*Math.pow(t,1)+DC3)*(2*DC1*Math.pow(t,1)+DC2) 
+        }
+
+        var t = 100; // initial guess
+        var h = funVal(t) / funDVal(t) 
+        while(Math.abs(h) >= 0.0001){ 
+            h = funVal(t) / funDVal(t);  
+            t = t - h;
+        } 
+        var rho_ij = t;
+        if(rho_ij<0){ return [Infinity, 0, 0, 0, 0, 0]}
+        print("t_f2 = "+rho_ij)
+        //// End Newton Raphston
+
+
+        //// Nerdamer method
+        // var eqnString = '';
+        // eqnString += NC1.toExponential(3).toString()+'*x^3 + '
+        // eqnString += NC2.toExponential(3).toString()+'*x^2 + '
+        // eqnString += NC3.toExponential(3).toString()+'*x^1 + '
+        // eqnString += NC3.toExponential(3).toString()+' + '
+        // eqnString += sigma_3.toExponential(3).toString()+' *('
+        // eqnString += DC1.toExponential(3).toString()+'*x^2 + '
+        // eqnString += DC2.toExponential(3).toString()+'*x + '
+        // eqnString += DC3.toExponential(3).toString()+')^1.5 = 0'
+
+        // // print("Equation: ")
+        // // print(eqnString)
+        // var sol = nerdamer.solveEquations(eqnString,'x');
+        // var rho_ij;
+        // for(k = 0;k < sol.length; k++){
+        //     rho_ij = Number(sol[k].text('decimals'))
+        //     if(0<rho_ij && rho_ij<100){
+        //         break;
+        //     }
+        // }
+        // print("t_f = "+rho_ij)
+        //// End Nerdamer method
+
+
+        // compute 
+        var v_2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        var v_1 = -2*v_2/rho_ij
+
+
+        // print("Test: "+(sq(rho_ij)*(3*v_2+2*v_1*rho_ij)+12*RHCalpha2*y_ij))
+        // get u based on v_1,v_2,rho_ij
+        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*RHCalpha2*v_1)
+
+        var tau_j = (R_j+rho_ij*A_j)/(B_j-A_j); 
+        var sigma_4 = Math.sqrt((2*R_j*(rho_ij+tau_j)+A_j*sq(rho_ij)+sq(tau_j)*(A_j-B_j)+2*A_j*rho_ij*tau_j)*(alpha/((1-alpha)*(Abar-A_j))));
+        var lambda_j = sigma_4-tau_j-rho_ij;
+        if(lambda_j<0 || rho_ij+tau_j+lambda_j>H){return [Infinity, 0, 0, 0, 0, 0]}
+
+        var sensingCost = this.evalSensingCostForORHCP3(j,rho_ij,alpha,Abar,Rbar,tau_j,lambda_j)
+        
+        var totalCost = 2*sensingCost + RHCalpha2*energyCost;
+        print("J_e = "+energyCost.toFixed(2)+"; J_s = "+sensingCost.toFixed(2)+"; J_T = "+totalCost.toFixed(2));
+
+        return [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2,  y_ij]
+
+    }
+
+    //// Second order OP3_sub3
+    this.solveORHCP3SO_3 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+        // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
+
+        var A_i = targets[i].uncertaintyRate;
+        var A_j = targets[j].uncertaintyRate;
+        var B_i = this.sensingRate;
+        var B_j = B_i;
+        var R_j = targets[j].uncertainty;
+
+
+        // numerator coefficients of: t, 1
+        var NC1 = -A_j*B_j*alpha 
+        var NC2 = -B_j*R_j*alpha
+
+        // RHS of eqn:
+        var temp1 = 36*RHCalpha2*sq(y_ij);
+
+        // denominator coefficients of: 1
+        var DC1 = H*(A_j-B_j)
+        
+
+        var rho_ij = (temp1*DC1-NC2)/NC1;
+        if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0, 0]}
+        print("t_f3 = "+rho_ij)
+        
+        // compute 
+        var v_2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        var v_1 = -2*v_2/rho_ij
+
+
+        // print("Test: "+(sq(rho_ij)*(3*v_2+2*v_1*rho_ij)+12*RHCalpha2*y_ij))
+        // get u based on v_1,v_2,rho_ij
+        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*RHCalpha2*v_1)
+
+        var tau_j = (R_j+rho_ij*A_j)/(B_j-A_j); 
+        var lambda_j = H-rho_ij-tau_j;
+        if(lambda_j<0){return [Infinity, 0, 0, 0, 0, 0]}
+        
+        var sensingCost = this.evalSensingCostForORHCP3(j,rho_ij,alpha,Abar,Rbar,tau_j,lambda_j)
+        
+        
+        var totalCost = 2*sensingCost + RHCalpha2*energyCost;
+        print("J_e = "+energyCost.toFixed(2)+"; J_s = "+sensingCost.toFixed(2)+"; J_T = "+totalCost.toFixed(2));
+
+        return [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2,  y_ij]
+
+    }
+
+
+    this.evalSensingCostForORHCP3 = function(j,y_ij,alpha,Abar,Rbar,tau_j,lambda_j){
+        // y_ij is now transit time (i.e., rho_ij)
+        var Ajbar = (Abar-targets[j].uncertaintyRate);
+        var Rjbar = (Rbar-targets[j].uncertainty);
+
+        var coefA = alpha*(targets[j].uncertaintyRate-this.sensingRate) + Ajbar*(1-alpha);
+        var coefB = (1-alpha)*Ajbar;
+        var coefC = 2*(1-alpha)*Ajbar;
+        var coefD = 2*alpha*(targets[j].uncertainty + targets[j].uncertaintyRate*y_ij) + 2*(1-alpha)*(Rjbar + y_ij*Ajbar);
+        var coefE = 2*(1-alpha)*(Rjbar+Ajbar*y_ij);
+        var coefF = alpha*y_ij*(2*targets[j].uncertainty + targets[j].uncertaintyRate*y_ij) + (1-alpha)*y_ij*(2*Rjbar+Ajbar*y_ij);
+        
+        var denJ_s = y_ij+tau_j+lambda_j;
+        var numJ_s = coefA*sq(tau_j) + coefB*sq(lambda_j) + coefC*tau_j*lambda_j + coefD*tau_j + coefE*lambda_j + coefF;
+
+        return numJ_s/denJ_s;
+
+    }
+
 
 
     //// First order OP1
@@ -1027,290 +2136,6 @@ function Agent(x, y, r) {
         
 
     }
-
-
-    //// Second order OP1
-    this.solveORHCP1SO = function(i){
-        
-        return 0; // temporary
-
-        var t_h2 = Math.min(periodT-simulationTime,timeHorizonForRHC);
-        
-        var jArray = []; // set of candidate targets
-        var yArray = []; // travel times
-        var Abar = targets[i].uncertaintyRate;  
-        var Rbar = targets[i].uncertainty;
-
-        for(var k = 0; k<targets[i].neighbors.length; k++){
-            var j = targets[i].neighbors[k];
-            if( j != i ){
-            
-                // need to find out that no agent is already in or en-route to target j
-                var anotherAgentIsComitted = false;
-                for(var a = 0; a<agents.length; a++){
-                    if(agents[a].residingTarget.length==1){
-                        if(agents[a].residingTarget[0]==j){
-                            anotherAgentIsComitted = true;
-                            break;    
-                        }
-                    }else if(agents[a].residingTarget.length==2){
-                        if(agents[a].residingTarget[1]==j){
-                            anotherAgentIsComitted = true;
-                            break;
-                        }
-                    }
-                }
-
-                if(!anotherAgentIsComitted){
-                    jArray.push(j);
-                    var y_ij = targets[i].distancesToNeighbors[k]/RHCvmax;
-                    yArray.push(y_ij);
-                    Abar = Abar + targets[j].uncertaintyRate;    
-                    Rbar = Rbar + targets[j].uncertainty;    
-                }
-                
-            }
-        }
-
-
-        var bestDestinationCost = Infinity;
-        var bestDestination = i;
-        var bestDestinationSolution = [Infinity,0,NaN,NaN];
-        var bestDestinationSolutionType;
-
-        for(var k = 0; k < jArray.length; k++){
-            
-            var j = jArray[k];
-            var y_ij = yArray[k];
-            var energyCost = 27*sq(RHCvmax)/(2*y_ij);
-
-
-            // Each coef is multiplied by 2T
-            var coefA = (Abar-targets[i].uncertaintyRate);
-            var coefB = (Abar-this.sensingRate);
-            var coefC = (Abar-targets[j].uncertaintyRate);
-            var coefD = 2*(Abar-targets[i].uncertaintyRate);
-            var coefE = 2*(Abar-targets[i].uncertaintyRate-targets[j].uncertaintyRate);
-            var coefF = 2*(Abar-targets[j].uncertaintyRate);
-            var coefG = 2*((Rbar-targets[i].uncertainty)+(Abar-targets[i].uncertaintyRate)*y_ij);
-            var coefH = 2*((Rbar-targets[i].uncertainty)+Abar*y_ij);
-            var coefK = 2*((Rbar-targets[i].uncertainty-targets[j].uncertainty)+(Abar-targets[j].uncertaintyRate)*y_ij);
-            var coefL = y_ij*(2*(Rbar-targets[i].uncertainty)+Abar*y_ij);
-
-            var coefs = [coefA,coefB,coefC,coefD,coefE,coefF,coefG,coefH,coefK,coefL];
-
-
-            var sol1 = this.solveOP2C1(i,j,t_h2,y_ij,coefs);
-            var totalCost = 2*sol1[0]+RHCalpha2*energyCost;
-            if(totalCost < bestDestinationCost){
-                bestDestinationCost = totalCost;
-                bestDestination = j;
-                bestDestinationSolution = [...sol1];
-                bestDestinationSolutionType = 1;
-            }
-
-            var sol2 = this.solveOP2C2(i,j,t_h2,y_ij,coefs);
-            var totalCost = 2*sol2[0]+RHCalpha2*energyCost;
-            if(totalCost < bestDestinationCost){
-                bestDestinationCost = totalCost;
-                bestDestination = j;
-                bestDestinationSolution = [...sol2];
-                bestDestinationSolutionType = 2;
-            }
-
-        }
-
-        // print(bestDestinationSolution)
-        if(printMode){
-            print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(bestDestination+1))
-            print("Best OP2:Case "+bestDestinationSolutionType+"; J= "+bestDestinationSolution[0].toFixed(3)+", v_i= "+bestDestinationSolution[1].toFixed(3)+"; u_j= "+bestDestinationSolution[2].toFixed(3)+", v_j= "+bestDestinationSolution[3].toFixed(3));
-        }
-
-        return bestDestinationSolution[1];
-    
-    }
-
-
-    //// Second order OP3
-    this.solveORHCP3SO = function(i){
-
-        var t_h3 = Math.min(periodT-simulationTime,timeHorizonForRHC);
-        
-        var jArray = []; // set of candidate targets
-        var yArray = []; // travel times
-        var Abar = targets[i].uncertaintyRate;  
-        var Rbar = targets[i].uncertainty;
-
-        for(var k = 0; k<targets[i].neighbors.length; k++){
-            var j = targets[i].neighbors[k];
-            if( j != i ){
-            
-                // need to find out that no agent is already in or en-route to target j
-                var anotherAgentIsComitted = false;
-                for(var a = 0; a<agents.length; a++){
-                    if(agents[a].residingTarget.length==1){
-                        if(agents[a].residingTarget[0]==j){
-                            anotherAgentIsComitted = true;
-                            break;    
-                        }
-                    }else if(agents[a].residingTarget.length==2){
-                        if(agents[a].residingTarget[1]==j){
-                            anotherAgentIsComitted = true;
-                            break;
-                        }
-                    }
-                }
-
-                if(!anotherAgentIsComitted){
-                    jArray.push(j);
-                    var y_ij = targets[i].distancesToNeighbors[k];
-                    yArray.push(y_ij);
-                    Abar = Abar + targets[j].uncertaintyRate;    
-                    Rbar = Rbar + targets[j].uncertainty;    
-                }
-                
-            }
-        }
-
-
-        var bestDestinationCost = Infinity;
-        var bestDestination = i;
-        var bestDestinationTime = 0;
-        var bestDestinationSolutionType;
-        var bestDestinationSolution = [Infinity,NaN,NaN,NaN];
-
-        for(var k = 0; k < jArray.length; k++){
-            
-            var j = jArray[k];
-            var y_ij = yArray[k];// now this is distance 
-            
-            // alpha can be a function of the degree at target i (currently residing)
-            var alpha;
-            alpha = 1/sq(targets[i].neighbors.length); 
-            ////alpha = 0.5;
-            print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(j+1))
-            var sol1 = this.solveORHCP3SO_1(i,j,t_h3,y_ij,alpha,Abar,Rbar);
-            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2]
-
-            if(sol1[0]<bestDestinationCost){
-                bestDestinationCost = sol1[0];
-                bestDestination = j;
-                bestDestinationTime = sol1[3];
-                bestDestinationSolution = [...sol1];
-                bestDestinationSolutionType = 1; 
-            }
-
-            
-        }
-
-        if(bestDestinationCost<100000 && printMode){
-            print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(bestDestination+1))
-            print("Best OP3:Case ("+bestDestinationSolutionType+","+bestDestinationSolution[3]+"); J= "+bestDestinationSolution[0].toFixed(3)+"; u_j= "+bestDestinationSolution[1].toFixed(3)+", v_j= "+bestDestinationSolution[2].toFixed(3));
-        }
-
-        if(bestDestination!=i){
-            return [bestDestination, bestDestinationTime, bestDestinationSolution[3], bestDestinationSolution[4], bestDestinationSolution[5]];
-        }else{
-            return [bestDestination, bestDestinationTime,0,0,0];
-        }
-        
-    }
-
-
-
-    //// Second order OP3_sub1
-    this.solveORHCP3SO_1 = function(i,j,H,y_ij,alpha,Abar,Rbar){
-
-
-        // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
-
-        // transit times comes from solving:
-        // t_f^4 * Num(DJ) - 36*Den(DJ)*RHCalpha2*y_ij^2==0
-
-
-        var A_i = targets[i].uncertaintyRate;
-        var A_j = targets[j].uncertaintyRate;
-        var B_i = this.sensingRate;
-        var B_j = B_i;
-        var R_j = targets[j].uncertainty;
-
-
-        // numerator coefficients of: t^2,t,1
-        var sigma_1 = -alpha*A_j*(B_j-A_j) - (1-alpha)*B_j*(Abar-A_j);
-        var NC1 = sq(B_j)*sigma_1;
-        var NC2 = 2*B_j*R_j*sigma_1;
-        var NC3 = -B_j*sq(R_j)*((1-alpha)*(Abar-A_j)+alpha*(B_j-A_j));
-
-        // RHS of eqn:
-        var temp1 = 36*RHCalpha2*sq(y_ij);
-
-        // denominator coefficients: t^2,t,1
-        var DC1 = -temp1*2*sq(B_j)*(A_j-B_j);
-        var DC2 = -temp1*4*B_j*R_j*(A_j-B_j);
-        var DC3 = -temp1*2*sq(R_j)*(A_j-B_j);
-
-        
-        var eqnString = '';
-        eqnString += NC1.toExponential(3).toString()+'*x^6 + '
-        eqnString += NC2.toExponential(3).toString()+'*x^5 + '
-        eqnString += NC3.toExponential(3).toString()+'*x^4 + '
-        eqnString += DC1.toExponential(3).toString()+'*x^2 + '
-        eqnString += DC2.toExponential(3).toString()+'*x + '
-        eqnString += DC3.toExponential(3).toString()+' = 0'
-
-        print("Equation: ")
-        print(eqnString)
-        var sol = nerdamer.solveEquations(eqnString,'x');
-        var rho_ij;
-        for(k = 0;k < sol.length; k++){
-            rho_ij = Number(sol[k].text('decimals'))
-            if(0<rho_ij && rho_ij<100){
-                break;
-            }
-        }
-        print("t_f = "+rho_ij)
-        
-
-        // compute 
-        var v_2 = 12*RHCalpha2*y_ij/sq(rho_ij)
-        var v_1 = -2*v_2/rho_ij
-        // get u based on v_1,v_2,rho_ij
-        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*RHCalpha2*v_1)
-
-        var tau_j = (R_j+rho_ij*A_j)/(B_j-A_j); 
-        var lambda_j = 0;
-        var sensingCost = this.evalSensingCostForORHCP3(j,rho_ij,alpha,Abar,Rbar,tau_j,lambda_j)
-        
-        
-        var totalCost = 2*sensingCost + RHCalpha2*energyCost;
-        print("J_e = "+energyCost.toFixed(2)+"; J_s = "+sensingCost.toFixed(2)+"; J_T = "+totalCost.toFixed(2));
-
-        return [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2]
-
-    }
-
-
-    this.evalSensingCostForORHCP3 = function(j,y_ij,alpha,Abar,Rbar,tau_j,lambda_j){
-        // y_ij is now transit time (i.e., rho_ij)
-        var Ajbar = (Abar-targets[j].uncertaintyRate);
-        var Rjbar = (Rbar-targets[j].uncertainty);
-
-        var coefA = alpha*(targets[j].uncertaintyRate-this.sensingRate) + Ajbar*(1-alpha);
-        var coefB = (1-alpha)*Ajbar;
-        var coefC = 2*(1-alpha)*Ajbar;
-        var coefD = 2*alpha*(targets[j].uncertainty + targets[j].uncertaintyRate*y_ij) + 2*(1-alpha)*(Rjbar + y_ij*Ajbar);
-        var coefE = 2*(1-alpha)*(Rjbar+Ajbar*y_ij);
-        var coefF = alpha*y_ij*(2*targets[j].uncertainty + targets[j].uncertaintyRate*y_ij) + (1-alpha)*y_ij*(2*Rjbar+Ajbar*y_ij);
-        
-        var denJ_s = y_ij+tau_j+lambda_j;
-        var numJ_s = coefA*sq(tau_j) + coefB*sq(lambda_j) + coefC*tau_j*lambda_j + coefD*tau_j + coefE*lambda_j + coefF;
-
-        return numJ_s/denJ_s;
-
-    }
-
-
-
 
     // Evet driven RHC update for an agent
     this.updateEDRHCCT = function(){

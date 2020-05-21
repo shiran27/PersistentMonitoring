@@ -115,6 +115,7 @@ var RHCNoiseY_iMagnitude;
 // actual agents:
 var RHCalpha2;
 var RHCvmax; 
+var RHCvmaxObserved = 0;
 
 
 function startModifyingProbConfig(){
@@ -1339,6 +1340,7 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
         var totalCost = meanUncertainty + RHCalpha2*totalEnergySpent;
         document.getElementById("totalCost").innerHTML = totalCost.toFixed(1).toString();
         
+        consolePrint('Max agent velocity observed: '+(2*RHCvmaxObserved/3).toFixed(3).toString())
         consolePrint('Energy Cost: '+totalEnergySpent.toFixed(1).toString()+'; Sensing Cost: '+meanUncertainty.toFixed(3).toString()+'; Total Cost: '+totalCost.toFixed(1).toString());    
     }
     
@@ -1845,8 +1847,16 @@ function resetSimulation(){
         agents[i].energySpent = 0;
     }
 
-    document.getElementById("simulationTime").innerHTML = simulationTime.toFixed(2).toString();
-    document.getElementById("simulationCost").innerHTML = 0;
+    if(RHCMethod<8){
+        document.getElementById("simulationTime").innerHTML = simulationTime.toFixed(2).toString();
+        document.getElementById("simulationCost").innerHTML = 0;
+    }else{
+        document.getElementById("simulationTime2").innerHTML = simulationTime.toFixed(2).toString();
+        document.getElementById("simulationCost2").innerHTML = 0;
+        document.getElementById("agentEnergyCost").innerHTML = 0;
+        document.getElementById("totalCost").innerHTML = 0;
+    }
+
     document.getElementById("simulateHybridSystemButton").innerHTML = "<i class='fa fa-play' aria-hidden='true'></i>"; 
     consolePrint("Simulation stopped and reseted to the initial state.");
 }
