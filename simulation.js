@@ -116,6 +116,9 @@ var RHCNoiseY_iMagnitude;
 var RHCalpha2;
 var RHCvmax; 
 var RHCvmaxObserved = 0;
+var terminalEnergySpent;
+var terminalEnergySpentTemp=0;
+var terminalTotalCost;
 
 
 function startModifyingProbConfig(){
@@ -1093,6 +1096,10 @@ function plotCostVsParameterDropDownChanged(){
         document.getElementById("plotCostVsParameterStart").value = 0;
         document.getElementById("plotCostVsParameterRes").value = 0.05;
         document.getElementById("plotCostVsParameterEnd").value = 1;
+    }else if(x==5){
+        document.getElementById("plotCostVsParameterStart").value = 10;
+        document.getElementById("plotCostVsParameterRes").value = 10;
+        document.getElementById("plotCostVsParameterEnd").value = 100;
     }
 
     if(x==4){
@@ -1204,8 +1211,8 @@ function simulateHybridSystem(){ // run the hybrid system indefinitely in real-t
         if(RHCMethod==0){//disabled
             consolePrint("Initiated simulating the system using the threshold based controller.");
             simulationMode = 1;
-            simulationTime = 0;
-            discreteTimeSteps = 0;
+            ////simulationTime = 0;
+            ////discreteTimeSteps = 0;
         }
         else if(RHCMethod<3){
             if(RHCMethod==1){
@@ -1218,8 +1225,8 @@ function simulateHybridSystem(){ // run the hybrid system indefinitely in real-t
             discreteTimeSteps = 0;
         }else{ // RHCMethod =3,4,5,6: ED-RHC, ED-RHC-alpha, ED-RHC-Fixed, ED-RHC-Extended
             simulationMode = 7;
-            simulationTime = 0;
-            discreteTimeSteps = 0;
+            ////simulationTime = 0;
+            ////discreteTimeSteps = 0;
         }
         document.getElementById("simulateHybridSystemButton").innerHTML = "<i class='fa fa-pause' aria-hidden='true'></i>";     
         consolePrint("Hybrid system simulation started.");
@@ -1327,7 +1334,7 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
         // agents[i].graphicBaseShapeRotated = agents[i].graphicBaseShape; 
 
     }
-
+    terminalEnergySpent = totalEnergySpent;
     
     if(RHCMethod<8){
         document.getElementById("simulationTime").innerHTML = periodT.toFixed(2).toString();
@@ -1337,11 +1344,13 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
         document.getElementById("simulationTime2").innerHTML = periodT.toFixed(2).toString();
         document.getElementById("simulationCost2").innerHTML = meanUncertainty.toFixed(1).toString();
         document.getElementById("agentEnergyCost").innerHTML = totalEnergySpent.toExponential(2).toString();
-        var totalCost = meanUncertainty + RHCalpha2*totalEnergySpent;
-        document.getElementById("totalCost").innerHTML = totalCost.toFixed(1).toString();
         
-        consolePrint('Max agent velocity observed: '+(2*RHCvmaxObserved/3).toFixed(3).toString())
-        consolePrint('Energy Cost: '+totalEnergySpent.toFixed(1).toString()+'; Sensing Cost: '+meanUncertainty.toFixed(3).toString()+'; Total Cost: '+totalCost.toFixed(1).toString());    
+        terminalTotalCost = meanUncertainty + RHCalpha2*totalEnergySpent;
+        document.getElementById("totalCost").innerHTML = terminalTotalCost.toFixed(1).toString();
+        
+        if(RHCMethod==9){consolePrint('Max agent velocity observed (Second-Order Model): '+(2*RHCvmaxObserved/3).toFixed(3).toString())}
+        if(RHCMethod==8){consolePrint('Max agent velocity observed (First-Order Model): '+RHCvmax.toFixed(3).toString())}
+        consolePrint('Energy Cost: '+totalEnergySpent.toFixed(1).toString()+'; Sensing Cost: '+meanUncertainty.toFixed(3).toString()+'; Total Cost: '+terminalTotalCost.toFixed(1).toString());    
     }
     
 
@@ -2376,6 +2385,9 @@ function plotCostVsParameter(){
         RHCParametersChanged();
     }else if(paraType==0){
         startingValue = periodT;
+    }else if(paraType==5){
+        document.getElementById("RHCParamterFixAlphaCB").checked = true;
+        RHCParametersChanged();
     }
 
     var startVal = Number(document.getElementById("plotCostVsParameterStart").value);
@@ -2414,16 +2426,31 @@ function plotCostVsParameter(){
             document.getElementById("RHCbeta").value = para;
             RHCParametersChanged();
 
+        }else if(paraType==5){// v_max changed
+
+            document.getElementById("RHCvmax").value = para;
+            RHCParametersChanged();
+
         }
         
         simulateHybridSystemFast();
         
-        costArray.push(terminalMeanSystemUncertainty);
-        paraArray.push(para);
+        if(paraType!=5){
+            costArray.push(terminalMeanSystemUncertainty);
+            paraArray.push(para);
 
-        if(terminalMeanSystemUncertainty<minCost){
-            minCostPara = para;
-            minCost = terminalMeanSystemUncertainty;
+            if(terminalMeanSystemUncertainty<minCost){
+                minCostPara = para;
+                minCost = terminalMeanSystemUncertainty;
+            }
+        }else{
+            costArray.push(terminalTotalCost);
+            paraArray.push(para);
+
+            if(terminalTotalCost<minCost){
+                minCostPara = para;
+                minCost = terminalTotalCost;
+            }
         }
 
     }
@@ -2466,7 +2493,10 @@ function plotCostVsParameter(){
         }
         variance = variance/endVal;
 
-    }
+    }else if(paraType == 5){// v_max changed
+        document.getElementById("RHCvmax").value = minCostPara;
+        RHCParametersChanged();
+    } 
     
     simulateHybridSystemFast();
 

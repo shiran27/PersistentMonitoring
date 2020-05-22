@@ -35,7 +35,7 @@ function Agent(x, y, r) {
     this.controlProfile = [];
     this.travleTimeSpent = 0;
     this.energySpent = 0; 
-
+    this.energySpentOld = 0;
 
 
     this.show = function(){
@@ -677,10 +677,11 @@ function Agent(x, y, r) {
             }else if(this.timeToExitMode[0]==2){// in sleeping mode
                 if(this.timeToExitMode[1]<simulationTime){//and sleeping time elepased
                     // Solve OP-3 to find the next target to visit
+                    ////print("here")
                     var ans;
                     if(RHCMethod==8){
                         ans = this.solveORHCP3FO(i);
-                    }else{
+                    }else if(RHCMethod==9){
                         ans = this.solveORHCP3SO(i);
                     }
 
@@ -689,7 +690,7 @@ function Agent(x, y, r) {
                     
                     if(j!=i){
                         this.timeToExitMode = [3,simulationTime+rho_ij];
-                        this.controlProfile = [ans[2],ans[3],ans[4]]; // [acc,t_1,t_2] or [rho_ij,v_1,v_2] respectively for first and second order 
+                        this.controlProfile = [ans[2],ans[3],ans[4],ans[5]]; // [acc,t_1,t_2,E_ij] or [rho_ij,v_1,v_2,E_ij] respectively for first and second order 
                     };
                 
                 }else{
@@ -734,18 +735,23 @@ function Agent(x, y, r) {
                     if(this.controlProfile[1] < deltaT){print("Max velocity error!")}
                     this.headingDirectionStep = rotateP2(new Point2(0.5*this.acceleration*sq(deltaT),0),headingAngle);
                     this.velocity = this.acceleration*deltaT;
-                    this.energySpent = this.energySpent + sq(this.acceleration)*deltaT;
+                    //this.energySpent = this.energySpent + sq(this.acceleration)*deltaT;
+                    this.energySpentOld = this.energySpent;
+                    this.energySpent = this.energySpent + this.controlProfile[3]*deltaT/(2*this.controlProfile[1]);
                 }else if(RHCMethod==9){
                     // rho_ij is already loaded: anyway
                     rho_ij = this.controlProfile[0]
                     var v_1 = this.controlProfile[1]
                     var v_2 = this.controlProfile[2]
-
+                    var E_ij = this.controlProfile[3]
+                                 
                     this.acceleration = (-1/(2*RHCalpha2))*(v_2+v_1*rho_ij)
                     this.velocity = (-1/(2*RHCalpha2))*((v_2+v_1*rho_ij)*deltaT - 0.5*v_1*sq(deltaT));
                     var distTraveled = (-1/(2*RHCalpha2))*((v_2+v_1*rho_ij)*0.5*sq(deltaT) - v_1*sq(deltaT)*deltaT/6);
                     this.headingDirectionStep = rotateP2(new Point2(distTraveled,0),headingAngle);
-                    this.energySpent = this.energySpent + sq(this.acceleration)*deltaT; // approximation for now
+                    //this.energySpent = this.energySpent + sq(this.acceleration)*deltaT; // approximation for now
+                    this.energySpent = this.energySpent + E_ij*deltaT/rho_ij; 
+                    
                 }
 
                 this.position = plusP2(this.position, this.headingDirectionStep);
@@ -767,18 +773,20 @@ function Agent(x, y, r) {
             ////print("travelling i to j");
             
             if(RHCMethod==8){// FO model
-                if(this.travleTimeSpent < this.controlProfile[1]){
+                if(this.travleTimeSpent <= this.controlProfile[1]){
                     // still accelerating
                     this.headingDirectionStep = rotateP2(new Point2(this.velocity*deltaT+0.5*this.acceleration*sq(deltaT),0),angle);       
                     this.velocity = this.velocity + this.acceleration*deltaT;
-                    this.energySpent = this.energySpent + sq(this.acceleration)*deltaT;
-                }else if(this.travleTimeSpent < this.controlProfile[2]){
+                    //this.energySpent = this.energySpent + sq(this.acceleration)*deltaT;
+                    this.energySpent = this.energySpent + this.controlProfile[3]*deltaT/(2*this.controlProfile[1]);
+                }else if(this.travleTimeSpent <= this.controlProfile[2]){
                     this.headingDirectionStep = rotateP2(new Point2(this.velocity*deltaT,0),angle);       
                     this.velocity = this.velocity;
                 }else{
                     this.headingDirectionStep = rotateP2(new Point2(this.velocity*deltaT-0.5*this.acceleration*sq(deltaT),0),angle);       
                     this.velocity = this.velocity - this.acceleration*deltaT;
-                    this.energySpent = this.energySpent + sq(this.acceleration)*deltaT;
+                    //this.energySpent = this.energySpent + sq(this.acceleration)*deltaT;
+                    this.energySpent = this.energySpent + this.controlProfile[3]*deltaT/(2*this.controlProfile[1]);
                 }
                 
                 this.position = plusP2(this.position, this.headingDirectionStep);
@@ -787,13 +795,15 @@ function Agent(x, y, r) {
                 rho_ij = this.controlProfile[0]
                 var v_1 = this.controlProfile[1]
                 var v_2 = this.controlProfile[2]
-                
+                var E_ij = this.controlProfile[3]
+
                 this.acceleration = (-1/(2*RHCalpha2))*(v_2+v_1*(rho_ij-this.travleTimeSpent));
                 var t = this.travleTimeSpent + deltaT
                 this.velocity = (-1/(2*RHCalpha2))*((v_2+v_1*rho_ij)*t - 0.5*v_1*sq(t));
                 var distTraveled = (-1/(2*RHCalpha2))*((v_2+v_1*rho_ij)*0.5*sq(t) - v_1*sq(t)*t/6);
                 this.headingDirectionStep = rotateP2(new Point2(distTraveled,0),angle);
-                this.energySpent = this.energySpent + sq(this.acceleration)*deltaT; // approximation for now
+                //this.energySpent = this.energySpent + sq(this.acceleration)*deltaT; // approximation for now
+                this.energySpent = this.energySpent + E_ij*deltaT/rho_ij; 
                 
                 this.position = plusP2(targets[i].position, this.headingDirectionStep);
             }
@@ -802,19 +812,39 @@ function Agent(x, y, r) {
             this.travleTimeSpent = this.travleTimeSpent + deltaT;
 
 
-
-            var conditionTemp = Math.abs(distP2(this.position,targets[i].position)-distP2(targets[j].position,targets[i].position)) < 0.1
+            var conditionTemp;
+            if(RHCMethod==8){
+                conditionTemp = Math.abs(distP2(this.position,targets[i].position)-distP2(targets[j].position,targets[i].position)) < 0.2 //0.2
+            }else{
+                conditionTemp = Math.abs(distP2(this.position,targets[i].position)-distP2(targets[j].position,targets[i].position)) < 0.01
+            }
+            
             ////this.position = plusP2(this.position, this.headingDirectionStep);
             ////if(distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)){
             if(conditionTemp){
                 // print("Stopped at j !!! ")
-                
+            
 
+                // Final energy corrections
+                if(RHCMethod==8){
+                    this.energySpent = this.energySpentOld+this.controlProfile[3];
+                }else if(RHCMethod==9){
+                    this.energySpent = this.energySpent+(this.controlProfile[0]-this.travleTimeSpent)*this.controlProfile[3]/this.controlProfile[0]    
+                }
+
+                terminalEnergySpentTemp += this.controlProfile[3]
+
+                // print("Energy:" +this.controlProfile[3])
+                // print("Energy:" +this.energySpent)
+                
+                
                 this.acceleration = 0;
                 this.velocity = 0;
                 this.position = targets[j].position;
                 this.travleTimeSpent = 0;
                 this.residingTarget = [j]; 
+                this.controlProfile = [];
+                
 
                 // event driven decision making
                 if(this.timeToExitMode[0]==3 && this.timeToExitMode[1]<simulationTime){
@@ -964,13 +994,15 @@ function Agent(x, y, r) {
             print("Best OP2:Case "+bestDestinationSolutionType+"; J= "+bestDestinationSolution[0].toFixed(3)+", v_i= "+bestDestinationSolution[1].toFixed(3)+"; u_j= "+bestDestinationSolution[2].toFixed(3)+", v_j= "+bestDestinationSolution[3].toFixed(3));
         }
 
+        //print(bestDestinationSolution[1])
+
         return bestDestinationSolution[1];
     
     }
 
 
     //// Second order OP1_sub1_1
-    this.solveORHCP1SO_1_1 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+    this.solveORHCP1SO_1_1 = function(i,j,H,y_ij,Abar,Rbar){
 
         // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
 
@@ -987,7 +1019,6 @@ function Agent(x, y, r) {
 
         // numerator coefficients of: t^3,t^2,t,1
         var sigma_1 = -sq(A_j)*(B_j-A_i) + sq(B_j)*(Abar-A_i)
-        print(sigma_1)
         var NC1 = sq(A_i*B_j*sigma_1)*B_j
         var NC2 = 3*R_j*NC1/B_j
         var NC3 = A_i*B_j*(3*A_i-B_j)*sq(R_j*sigma_1)
@@ -1024,13 +1055,19 @@ function Agent(x, y, r) {
 
         var t = 50; // initial guess
         var h = funVal(t) / funDVal(t) 
+        var stepCount = 0
         while(Math.abs(h) >= 0.0001){ 
             h = funVal(t) / funDVal(t);  
             t = t - h;
+            stepCount += 1
+            if(stepCount>1000){
+                print('Overflowed 1_1');
+                return [Infinity, 0, 0, 0, 0]
+            }
         } 
         var rho_ij = t;
         if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
-        print("t_f1_1 = "+rho_ij)
+        //print("t_f1_1 = "+rho_ij)
         //// End Newton Raphston
 
 
@@ -1043,7 +1080,7 @@ function Agent(x, y, r) {
         var lambda_i = -rho_ij + (B_j-A_j)*sigma_5/sigma_6 - R_j*(sq(A_j)*(A_i-B_j)+sq(B_j)*(Abar-A_i))/sigma_6
         var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
         var lambda_j = 0        
-        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
 
         var t_o = lambda_i;
         var t_f = lambda_i+rho_ij;
@@ -1052,13 +1089,13 @@ function Agent(x, y, r) {
         var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
         
         var totalCost = 2*sensingCost + RHCalpha2*energyCost
-        return [totalCost, lambda_i, rho_ij, tau_j, lambda_j]; ; 
+        return [totalCost, lambda_i, rho_ij, tau_j, lambda_j]; 
 
     }
 
 
     //// Second order OP1_sub1_2
-    this.solveORHCP1SO_1_2 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+    this.solveORHCP1SO_1_2 = function(i,j,H,y_ij,Abar,Rbar){
 
         // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
 
@@ -1112,13 +1149,19 @@ function Agent(x, y, r) {
 
         var t = 50; // initial guess
         var h = funVal(t) / funDVal(t) 
+        var stepCount = 0
         while(Math.abs(h) >= 0.0001){ 
             h = funVal(t) / funDVal(t);  
             t = t - h;
+            stepCount += 1
+            if(stepCount>1000){
+                print('Overflowed 1_2');
+                return [Infinity, 0, 0, 0, 0]
+            }
         } 
         var rho_ij = t;
         if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
-        print("t_f1_2 = "+rho_ij)
+        //print("t_f1_2 = "+rho_ij)
         //// End Newton Raphston
 
 
@@ -1131,7 +1174,7 @@ function Agent(x, y, r) {
         var lambda_i = -rho_ij - (B_j-A_j)*sigma_5/sigma_6 - R_j*(sq(A_j)*(A_i-B_j)+sq(B_j)*(Abar-A_i))/sigma_6
         var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
         var lambda_j = 0        
-        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
 
         var t_o = lambda_i;
         var t_f = lambda_i+rho_ij;
@@ -1147,7 +1190,7 @@ function Agent(x, y, r) {
 
 
     //// Second order OP1_sub1_3
-    this.solveORHCP1SO_1_3 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+    this.solveORHCP1SO_1_3 = function(i,j,H,y_ij,Abar,Rbar){
 
         // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
 
@@ -1173,7 +1216,7 @@ function Agent(x, y, r) {
 
         var rho_ij = (temp1*DC1 - NC2)/NC1;
         if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
-        print("t_f1_3 = "+rho_ij)
+        //print("t_f1_3 = "+rho_ij)
         
 
 
@@ -1184,7 +1227,7 @@ function Agent(x, y, r) {
         var lambda_i = -rho_ij + ((B_j-A_j)*H - R_j)/B_j
         var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
         var lambda_j = 0        
-        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
 
         var t_o = lambda_i;
         var t_f = lambda_i+rho_ij;
@@ -1199,7 +1242,7 @@ function Agent(x, y, r) {
 
 
     //// Second order OP1_sub2_1
-    this.solveORHCP1SO_2_1 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+    this.solveORHCP1SO_2_1 = function(i,j,H,y_ij,Abar,Rbar){
 
         // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
 
@@ -1242,13 +1285,19 @@ function Agent(x, y, r) {
 
         var t = 50; // initial guess
         var h = funVal(t) / funDVal(t) 
+        var stepCount = 0
         while(Math.abs(h) >= 0.0001){ 
             h = funVal(t) / funDVal(t);  
             t = t - h;
-        } 
+            stepCount += 1
+            if(stepCount>1000){
+                print('Overflowed 2_1');
+                return [Infinity, 0, 0, 0, 0]
+            }
+        }
         var rho_ij = t;
         if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
-        print("t_f2_1 = "+rho_ij)
+        //print("t_f2_1 = "+rho_ij)
         //// End Newton Raphston
 
 
@@ -1260,7 +1309,7 @@ function Agent(x, y, r) {
         var lambda_i = 0
         var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
         var lambda_j =  -(R_j+B_j*rho_ij)/(B_j-A_j) - Math.sqrt((DC1*sq(rho_ij)+DC2*rho_ij+DC3)/((Abar-A_j)*(B_j-A_j)))       
-        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
         // this definitely is negative!!!    
 
         var t_o = lambda_i;
@@ -1275,7 +1324,7 @@ function Agent(x, y, r) {
     }
 
     //// Second order OP1_sub2_2
-    this.solveORHCP1SO_2_2 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+    this.solveORHCP1SO_2_2 = function(i,j,H,y_ij,Abar,Rbar){
 
         // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
 
@@ -1318,13 +1367,19 @@ function Agent(x, y, r) {
 
         var t = 50; // initial guess
         var h = funVal(t) / funDVal(t) 
+        var stepCount = 0
         while(Math.abs(h) >= 0.0001){ 
             h = funVal(t) / funDVal(t);  
             t = t - h;
+            stepCount += 1
+            if(stepCount>1000){
+                print('Overflowed 2_2');
+                return [Infinity, 0, 0, 0, 0]
+            }
         } 
         var rho_ij = t;
         if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
-        print("t_f2_2 = "+rho_ij)
+        //print("t_f2_2 = "+rho_ij)
         //// End Newton Raphston
 
 
@@ -1336,7 +1391,7 @@ function Agent(x, y, r) {
         var lambda_i = 0
         var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
         var lambda_j =  (R_j+B_j*rho_ij)/(B_j-A_j) + Math.sqrt((DC1*sq(rho_ij)+DC2*rho_ij+DC3)/((Abar-A_j)*(B_j-A_j)))       
-        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
         // this definitely is positive!!!    
 
         var t_o = lambda_i;
@@ -1352,7 +1407,7 @@ function Agent(x, y, r) {
 
 
     //// Second order OP1_sub2_3
-    this.solveORHCP1SO_2_3 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+    this.solveORHCP1SO_2_3 = function(i,j,H,y_ij,Abar,Rbar){
 
         // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
 
@@ -1378,7 +1433,7 @@ function Agent(x, y, r) {
 
         var rho_ij = (temp1*DC1 - NC2)/NC1;
         if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
-        print("t_f2_3 = "+rho_ij)
+        //print("t_f2_3 = "+rho_ij)
         
 
 
@@ -1389,7 +1444,7 @@ function Agent(x, y, r) {
         var lambda_i = 0
         var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
         var lambda_j = H - (R_j+B_j*rho_ij)/(B_j-A_j)        
-        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
 
         var t_o = lambda_i;
         var t_f = lambda_i+rho_ij;
@@ -1403,7 +1458,7 @@ function Agent(x, y, r) {
     }
 
     //// Second order OP1_sub3_1
-    this.solveORHCP1SO_3_1 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+    this.solveORHCP1SO_3_1 = function(i,j,H,y_ij,Abar,Rbar){
 
         // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
 
@@ -1429,7 +1484,7 @@ function Agent(x, y, r) {
 
         var rho_ij = (temp1*DC1 - NC2)/NC1;
         if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
-        print("t_f3_1 = "+rho_ij)
+        //print("t_f3_1 = "+rho_ij)
         
 
 
@@ -1443,7 +1498,7 @@ function Agent(x, y, r) {
         var lambda_j = B_j*(sq(A_j)-A_i*A_j+A_i*B_j)*rho_ij + ( R_j*(A_i*B_j-A_i*A_j-sq(B_j)+2*A_j*B_j) + B_j*A_j*H*(-B_j+A_j) + lambda_i*A_j*(-A_i*A_j+A_j*B_j+A_i*B_j) )
         lambda_j = lambda_j/((A_j-B_j)*(A_i*B_j-A_i*A_j+A_j*B_j))
 
-        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
 
         var t_o = lambda_i;
         var t_f = lambda_i+rho_ij;
@@ -1458,7 +1513,7 @@ function Agent(x, y, r) {
 
 
     //// Second order OP1_sub3_2
-    this.solveORHCP1SO_3_2 = function(i,j,H,y_ij,alpha,Abar,Rbar){
+    this.solveORHCP1SO_3_2 = function(i,j,H,y_ij,Abar,Rbar){
 
         // this alpha is from ED_RHC-alpha method's (i.e., not RHCalpha2)
 
@@ -1495,15 +1550,22 @@ function Agent(x, y, r) {
            return (2*NC1*Math.pow(t,1)+NC2) - temp1*(2*DC1*Math.pow(t,1)+DC2)
         }
 
-        var t = 50; // initial guess
+        var t = 10; // initial guess
         var h = funVal(t) / funDVal(t) 
+        var stepCount = 0
         while(Math.abs(h) >= 0.0001){ 
             h = funVal(t) / funDVal(t);  
             t = t - h;
-        } 
+            stepCount += 1
+            if(stepCount>1000){
+                print('Overflowed 3_2');
+                // print(funVal(t))
+                return [Infinity, 0, 0, 0, 0]
+            }
+        }
         var rho_ij = t;
         if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0]}
-        print("t_f3_2 = "+rho_ij)
+        //print("t_f3_2 = "+rho_ij)
         //// End Newton Raphston
 
 
@@ -1514,7 +1576,7 @@ function Agent(x, y, r) {
         var lambda_i = 0
         var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
         var lambda_j = 0
-        if(lambda_i<0 || lambda_j < 0 || (lambda_i+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
+        if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
 
         var t_o = lambda_i;
         var t_f = lambda_i+rho_ij;
@@ -1614,7 +1676,7 @@ function Agent(x, y, r) {
 
             
             var sol1 = this.solveORHCP3SO_1(i,j,t_h3,y_ij,alpha,Abar,Rbar);
-            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2]
+            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2, y_ij]
             if(sol1[0]<bestDestinationCost){
                 bestDestinationCost = sol1[0];
                 bestDestination = j;
@@ -1625,7 +1687,7 @@ function Agent(x, y, r) {
 
 
             var sol2 = this.solveORHCP3SO_2(i,j,t_h3,y_ij,alpha,Abar,Rbar);
-            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2]
+            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2, y_ij]
             if(sol2[0]<bestDestinationCost){
                 bestDestinationCost = sol2[0];
                 bestDestination = j;
@@ -1636,7 +1698,7 @@ function Agent(x, y, r) {
 
 
             var sol3 = this.solveORHCP3SO_3(i,j,t_h3,y_ij,alpha,Abar,Rbar);
-            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2]
+            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2, y_ij]
             if(sol3[0]<bestDestinationCost){
                 bestDestinationCost = sol3[0];
                 bestDestination = j;
@@ -1644,10 +1706,12 @@ function Agent(x, y, r) {
                 bestDestinationSolution = [...sol3];
                 bestDestinationSolutionType = 3; 
             }
+
+            
             
         }
 
-        if(bestDestinationCost<100000 && printMode){
+        if(printMode){
             print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(bestDestination+1))
             print("Best OP3:Case ("+bestDestinationSolutionType+","+bestDestinationSolution[3]+"); J= "+bestDestinationSolution[0].toFixed(3)+"; u_j= "+bestDestinationSolution[1].toFixed(3)+", v_j= "+bestDestinationSolution[2].toFixed(3));
         }
@@ -1656,9 +1720,9 @@ function Agent(x, y, r) {
             if(RHCvmaxObserved<bestDestinationSolution[6]/bestDestinationSolution[3]){
                 RHCvmaxObserved = bestDestinationSolution[6]/bestDestinationSolution[3];
             }
-            return [bestDestination, bestDestinationTime, bestDestinationSolution[3], bestDestinationSolution[4], bestDestinationSolution[5]];
+            return [bestDestination, bestDestinationTime, bestDestinationSolution[3], bestDestinationSolution[4], bestDestinationSolution[5], bestDestinationSolution[1]];
         }else{
-            return [bestDestination, bestDestinationTime,0,0,0];
+            return [bestDestination, bestDestinationTime,0,0,0,0];
         }
         
     }
@@ -1707,13 +1771,19 @@ function Agent(x, y, r) {
 
         var t = 50; // initial guess
         var h = funVal(t) / funDVal(t) 
-        while(Math.abs(h) >= 0.0001){ 
+        var stepCount = 0
+        while(Math.abs(h) >= 0.00001){ 
             h = funVal(t) / funDVal(t);  
             t = t - h;
+            stepCount += 1
+            if(stepCount>1000){
+                print('Overflowed 1');
+                return [Infinity, 0, 0, 0, 0, 0]
+            }
         } 
         var rho_ij = t;
         if(rho_ij<0){ return [Infinity, 0, 0, 0, 0, 0]}
-        print("t_f1 = "+rho_ij)
+        ////print("t_f1 = "+rho_ij)
         //// End Newton Raphston
 
 
@@ -1747,7 +1817,7 @@ function Agent(x, y, r) {
 
         // print("Test: "+(sq(rho_ij)*(3*v_2+2*v_1*rho_ij)+12*RHCalpha2*y_ij))
         // get u based on v_1,v_2,rho_ij
-        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*RHCalpha2*v_1)
+        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*sq(RHCalpha2)*v_1)
 
         var tau_j = (R_j+rho_ij*A_j)/(B_j-A_j); 
         var lambda_j = 0;
@@ -1756,7 +1826,7 @@ function Agent(x, y, r) {
         var sensingCost = this.evalSensingCostForORHCP3(j,rho_ij,alpha,Abar,Rbar,tau_j,lambda_j)
         
         var totalCost = 2*sensingCost + RHCalpha2*energyCost;
-        print("J_e = "+energyCost.toFixed(2)+"; J_s = "+sensingCost.toFixed(2)+"; J_T = "+totalCost.toFixed(2));
+        ///print("J_e = "+energyCost.toFixed(2)+"; J_s = "+sensingCost.toFixed(2)+"; J_T = "+totalCost.toFixed(2));
 
         return [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2, y_ij]
 
@@ -1803,13 +1873,19 @@ function Agent(x, y, r) {
 
         var t = 100; // initial guess
         var h = funVal(t) / funDVal(t) 
-        while(Math.abs(h) >= 0.0001){ 
+        var stepCount = 0
+        while(Math.abs(h) >= 0.00001){ 
             h = funVal(t) / funDVal(t);  
             t = t - h;
-        } 
+            stepCount += 1
+            if(stepCount>1000){
+                print('Overflowed 2');
+                return [Infinity, 0, 0, 0, 0, 0]
+            }
+        }
         var rho_ij = t;
         if(rho_ij<0){ return [Infinity, 0, 0, 0, 0, 0]}
-        print("t_f2 = "+rho_ij)
+        ////print("t_f2 = "+rho_ij)
         //// End Newton Raphston
 
 
@@ -1845,7 +1921,7 @@ function Agent(x, y, r) {
 
         // print("Test: "+(sq(rho_ij)*(3*v_2+2*v_1*rho_ij)+12*RHCalpha2*y_ij))
         // get u based on v_1,v_2,rho_ij
-        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*RHCalpha2*v_1)
+        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*sq(RHCalpha2)*v_1)
 
         var tau_j = (R_j+rho_ij*A_j)/(B_j-A_j); 
         var sigma_4 = Math.sqrt((2*R_j*(rho_ij+tau_j)+A_j*sq(rho_ij)+sq(tau_j)*(A_j-B_j)+2*A_j*rho_ij*tau_j)*(alpha/((1-alpha)*(Abar-A_j))));
@@ -1885,7 +1961,7 @@ function Agent(x, y, r) {
 
         var rho_ij = (temp1*DC1-NC2)/NC1;
         if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0, 0]}
-        print("t_f3 = "+rho_ij)
+        ////print("t_f3 = "+rho_ij)
         
         // compute 
         var v_2 = 12*RHCalpha2*y_ij/sq(rho_ij)
@@ -1894,7 +1970,7 @@ function Agent(x, y, r) {
 
         // print("Test: "+(sq(rho_ij)*(3*v_2+2*v_1*rho_ij)+12*RHCalpha2*y_ij))
         // get u based on v_1,v_2,rho_ij
-        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*RHCalpha2*v_1)
+        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*sq(RHCalpha2)*v_1)
 
         var tau_j = (R_j+rho_ij*A_j)/(B_j-A_j); 
         var lambda_j = H-rho_ij-tau_j;
@@ -2076,6 +2152,7 @@ function Agent(x, y, r) {
 
 
         var bestDestinationCost = Infinity;
+        var bestDestinationEnergy;
         var bestDestination = i;
         var bestDestinationTime = 0;
         var bestDestinationSolutionType;
@@ -2111,6 +2188,7 @@ function Agent(x, y, r) {
 
             if(totalCost<bestDestinationCost){
                 bestDestinationCost = totalCost;
+                bestDestinationEnergy = energyCost;
                 bestDestination = j;
                 bestDestinationTime = y_ij;
                 bestDestinationSolution = [...sol1];
@@ -2129,9 +2207,9 @@ function Agent(x, y, r) {
             var acc = 9*RHCvmax/(2*bestDestinationTime);
             var t_1 = 3*RHCvmax/(2*acc); // end acceleration
             var t_2 = bestDestinationTime-t_1; // start deceleration
-            return [bestDestination, bestDestinationTime, acc, t_1, t_2];
+            return [bestDestination, bestDestinationTime, acc, t_1, t_2, bestDestinationEnergy];
         }else{
-            return [bestDestination, bestDestinationTime,0,0,0];
+            return [bestDestination, bestDestinationTime,0,0,0,0];
         }
         
 
