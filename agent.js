@@ -690,7 +690,12 @@ function Agent(x, y, r) {
                     
                     if(j!=i){
                         this.timeToExitMode = [3,simulationTime+rho_ij];
-                        this.controlProfile = [ans[2],ans[3],ans[4],ans[5]]; // [acc,t_1,t_2,E_ij] or [rho_ij,v_1,v_2,E_ij] respectively for first and second order 
+                        if(RHCMethod==8){
+                            this.controlProfile = [ans[2],ans[3],ans[4],ans[5]]; // [acc,t_1,t_2,E_ij]    
+                        }else if(RHCMethod==9){
+                            this.controlProfile = [ans[1],ans[2],ans[3]]; // [rho_ij,y_ij,E_ij] 
+                        }
+                        
                     };
                 
                 }else{
@@ -729,7 +734,7 @@ function Agent(x, y, r) {
                 }
                 ////print("need to go to j; rotated");
                 
-                this.currentPath = getPathID(i,j)
+                // this.currentPath = getPathID(i,j)
                 if(RHCMethod==8){
                     this.acceleration = this.controlProfile[0];
                     if(this.controlProfile[1] < deltaT){print("Max velocity error!")}
@@ -740,16 +745,16 @@ function Agent(x, y, r) {
                     this.energySpent = this.energySpent + this.controlProfile[3]*deltaT/(2*this.controlProfile[1]);
                 }else if(RHCMethod==9){
                     // rho_ij is already loaded: anyway
-                    rho_ij = this.controlProfile[0]
-                    var v_1 = this.controlProfile[1]
-                    var v_2 = this.controlProfile[2]
-                    var E_ij = this.controlProfile[3]
+                    rho_ij = this.controlProfile[0];
+                    var y_ij = this.controlProfile[1];
+                    var E_ij = this.controlProfile[2];
                                  
-                    this.acceleration = (-1/(2*RHCalpha2))*(v_2+v_1*rho_ij)
-                    this.velocity = (-1/(2*RHCalpha2))*((v_2+v_1*rho_ij)*deltaT - 0.5*v_1*sq(deltaT));
-                    var distTraveled = (-1/(2*RHCalpha2))*((v_2+v_1*rho_ij)*0.5*sq(deltaT) - v_1*sq(deltaT)*deltaT/6);
+                    this.acceleration = 6*y_ij/sq(rho_ij)
+                    
+                    // at t=t+deltaT
+                    this.velocity = 6*y_ij*deltaT*(rho_ij-deltaT)/Math.pow(rho_ij,3)
+                    var distTraveled = y_ij*sq(deltaT)*(3*rho_ij-2*deltaT)/Math.pow(rho_ij,3)
                     this.headingDirectionStep = rotateP2(new Point2(distTraveled,0),headingAngle);
-                    //this.energySpent = this.energySpent + sq(this.acceleration)*deltaT; // approximation for now
                     this.energySpent = this.energySpent + E_ij*deltaT/rho_ij; 
                     
                 }
@@ -792,17 +797,18 @@ function Agent(x, y, r) {
                 this.position = plusP2(this.position, this.headingDirectionStep);
             
             }else if(RHCMethod==9){
-                rho_ij = this.controlProfile[0]
-                var v_1 = this.controlProfile[1]
-                var v_2 = this.controlProfile[2]
-                var E_ij = this.controlProfile[3]
 
-                this.acceleration = (-1/(2*RHCalpha2))*(v_2+v_1*(rho_ij-this.travleTimeSpent));
+                var rho_ij = this.controlProfile[0]
+                var y_ij = this.controlProfile[1]
+                var E_ij = this.controlProfile[2]
+
+                this.acceleration = 12*y_ij*(rho_ij/2 - this.travleTimeSpent)/Math.pow(rho_ij,3)
+                
                 var t = this.travleTimeSpent + deltaT
-                this.velocity = (-1/(2*RHCalpha2))*((v_2+v_1*rho_ij)*t - 0.5*v_1*sq(t));
-                var distTraveled = (-1/(2*RHCalpha2))*((v_2+v_1*rho_ij)*0.5*sq(t) - v_1*sq(t)*t/6);
+                this.velocity = 6*y_ij*t*(rho_ij-t)/Math.pow(rho_ij,3)
+                
+                var distTraveled = y_ij*sq(t)*(3*rho_ij-2*t)/Math.pow(rho_ij,3)
                 this.headingDirectionStep = rotateP2(new Point2(distTraveled,0),angle);
-                //this.energySpent = this.energySpent + sq(this.acceleration)*deltaT; // approximation for now
                 this.energySpent = this.energySpent + E_ij*deltaT/rho_ij; 
                 
                 this.position = plusP2(targets[i].position, this.headingDirectionStep);
@@ -815,7 +821,7 @@ function Agent(x, y, r) {
             var conditionTemp;
             if(RHCMethod==8){
                 conditionTemp = Math.abs(distP2(this.position,targets[i].position)-distP2(targets[j].position,targets[i].position)) < 0.2 //0.2
-            }else{
+            }else if(RHCMethod==9){
                 conditionTemp = Math.abs(distP2(this.position,targets[i].position)-distP2(targets[j].position,targets[i].position)) < 0.01
             }
             
@@ -829,10 +835,10 @@ function Agent(x, y, r) {
                 if(RHCMethod==8){
                     this.energySpent = this.energySpentOld+this.controlProfile[3];
                 }else if(RHCMethod==9){
-                    this.energySpent = this.energySpent+(this.controlProfile[0]-this.travleTimeSpent)*this.controlProfile[3]/this.controlProfile[0]    
+                    this.energySpent = this.energySpent+(this.controlProfile[0]-this.travleTimeSpent)*this.controlProfile[2]/this.controlProfile[0]    
                 }
 
-                terminalEnergySpentTemp += this.controlProfile[3]
+                terminalEnergySpentTemp += this.controlProfile[2]
 
                 // print("Energy:" +this.controlProfile[3])
                 // print("Energy:" +this.energySpent)
@@ -1072,8 +1078,8 @@ function Agent(x, y, r) {
 
 
         // compute rest: energy and sensing costs
-        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
-        var v_1 = -2*v_o2/rho_ij
+        // var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        // var v_1 = -2*v_o2/rho_ij
 
         var sigma_5 = Math.sqrt(sigma_1*(NC4_1*sq(rho_ij)+NC4_2*rho_ij+NC4_3)     )
         var sigma_6 = B_j*sigma_1  
@@ -1082,9 +1088,10 @@ function Agent(x, y, r) {
         var lambda_j = 0        
         if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
 
-        var t_o = lambda_i;
-        var t_f = lambda_i+rho_ij;
-        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        // var t_o = lambda_i;
+        // var t_f = lambda_i+rho_ij;
+        // var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        var energyCost = 12*sq(y_ij)/Math.pow(rho_ij,3)
 
         var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
         
@@ -1166,8 +1173,8 @@ function Agent(x, y, r) {
 
 
         // compute rest: energy and sensing costs
-        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
-        var v_1 = -2*v_o2/rho_ij
+        // var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        // var v_1 = -2*v_o2/rho_ij
 
         var sigma_5 = Math.sqrt(sigma_1*(NC4_1*sq(rho_ij)+NC4_2*rho_ij+NC4_3)     )
         var sigma_6 = B_j*sigma_1  
@@ -1176,9 +1183,10 @@ function Agent(x, y, r) {
         var lambda_j = 0        
         if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
 
-        var t_o = lambda_i;
-        var t_f = lambda_i+rho_ij;
-        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        // var t_o = lambda_i;
+        // var t_f = lambda_i+rho_ij;
+        // var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        var energyCost = 12*sq(y_ij)/Math.pow(rho_ij,3)
 
         var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
         
@@ -1221,17 +1229,18 @@ function Agent(x, y, r) {
 
 
         // compute rest: energy and sensing costs
-        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
-        var v_1 = -2*v_o2/rho_ij
+        // var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        // var v_1 = -2*v_o2/rho_ij
   
         var lambda_i = -rho_ij + ((B_j-A_j)*H - R_j)/B_j
         var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
         var lambda_j = 0        
         if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
 
-        var t_o = lambda_i;
-        var t_f = lambda_i+rho_ij;
-        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        // var t_o = lambda_i;
+        // var t_f = lambda_i+rho_ij;
+        // var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        var energyCost = 12*sq(y_ij)/Math.pow(rho_ij,3)
 
         var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
         
@@ -1302,8 +1311,8 @@ function Agent(x, y, r) {
 
 
         // compute rest: energy and sensing costs
-        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
-        var v_1 = -2*v_o2/rho_ij
+        // var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        // var v_1 = -2*v_o2/rho_ij
 
          
         var lambda_i = 0
@@ -1312,9 +1321,10 @@ function Agent(x, y, r) {
         if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
         // this definitely is negative!!!    
 
-        var t_o = lambda_i;
-        var t_f = lambda_i+rho_ij;
-        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        // var t_o = lambda_i;
+        // var t_f = lambda_i+rho_ij;
+        // var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        var energyCost = 12*sq(y_ij)/Math.pow(rho_ij,3)
 
         var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
         
@@ -1384,8 +1394,8 @@ function Agent(x, y, r) {
 
 
         // compute rest: energy and sensing costs
-        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
-        var v_1 = -2*v_o2/rho_ij
+        // var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        // var v_1 = -2*v_o2/rho_ij
 
          
         var lambda_i = 0
@@ -1394,9 +1404,10 @@ function Agent(x, y, r) {
         if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
         // this definitely is positive!!!    
 
-        var t_o = lambda_i;
-        var t_f = lambda_i+rho_ij;
-        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        // var t_o = lambda_i;
+        // var t_f = lambda_i+rho_ij;
+        // var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        var energyCost = 12*sq(y_ij)/Math.pow(rho_ij,3);
 
         var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
         
@@ -1438,17 +1449,18 @@ function Agent(x, y, r) {
 
 
         // compute rest: energy and sensing costs
-        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
-        var v_1 = -2*v_o2/rho_ij
+        // var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        // var v_1 = -2*v_o2/rho_ij
   
         var lambda_i = 0
         var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
         var lambda_j = H - (R_j+B_j*rho_ij)/(B_j-A_j)        
         if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
 
-        var t_o = lambda_i;
-        var t_f = lambda_i+rho_ij;
-        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        // var t_o = lambda_i;
+        // var t_f = lambda_i+rho_ij;
+        // var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        var energyCost = 12*sq(y_ij)/Math.pow(rho_ij,3)
 
         var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
         
@@ -1489,8 +1501,8 @@ function Agent(x, y, r) {
 
 
         // compute rest: energy and sensing costs
-        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
-        var v_1 = -2*v_o2/rho_ij
+        // var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        // var v_1 = -2*v_o2/rho_ij
   
         var lambda_i = -(-A_i*H*(B_j-A_j)+B_j*(R_j+A_j*rho_ij))/(A_i*(B_j-A_j)+A_j*B_j)
         var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
@@ -1500,9 +1512,10 @@ function Agent(x, y, r) {
 
         if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
 
-        var t_o = lambda_i;
-        var t_f = lambda_i+rho_ij;
-        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        // var t_o = lambda_i;
+        // var t_f = lambda_i+rho_ij;
+        // var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        var energyCost = 12*sq(y_ij)/Math.pow(rho_ij,3)
 
         var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
         
@@ -1570,17 +1583,18 @@ function Agent(x, y, r) {
 
 
         // compute rest: energy and sensing costs
-        var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
-        var v_1 = -2*v_o2/rho_ij
+        // var v_o2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        // var v_1 = -2*v_o2/rho_ij
   
         var lambda_i = 0
         var tau_j = (R_j+A_j*(lambda_i+rho_ij))/(B_j-A_j)
         var lambda_j = 0
         if(lambda_i<0 || lambda_j < 0 || (lambda_i+rho_ij+tau_j+lambda_j) > H){ return [Infinity, 0, 0, 0, 0]}
 
-        var t_o = lambda_i;
-        var t_f = lambda_i+rho_ij;
-        var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        // var t_o = lambda_i;
+        // var t_f = lambda_i+rho_ij;
+        // var energyCost = -(Math.pow((-v_o2+v_1*t_o)-v_1*t_f,3)-Math.pow((-v_o2+v_1*t_o)-v_1*t_o,3))/(12*sq(RHCalpha2)*v_1)
+        var energyCost = 12*sq(y_ij)/Math.pow(rho_ij,3)
 
         var sensingCost = this.evalSensingCostForORHCP1(i,j,rho_ij,Abar,Rbar,lambda_i,tau_j,lambda_j)
         
@@ -1676,7 +1690,7 @@ function Agent(x, y, r) {
 
             
             var sol1 = this.solveORHCP3SO_1(i,j,t_h3,y_ij,alpha,Abar,Rbar);
-            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2, y_ij]
+            // [totalCost, energyCost, sensingCost, rho_ij, y_ij]
             if(sol1[0]<bestDestinationCost){
                 bestDestinationCost = sol1[0];
                 bestDestination = j;
@@ -1687,7 +1701,7 @@ function Agent(x, y, r) {
 
 
             var sol2 = this.solveORHCP3SO_2(i,j,t_h3,y_ij,alpha,Abar,Rbar);
-            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2, y_ij]
+            // [totalCost, energyCost, sensingCost, rho_ij, y_ij]
             if(sol2[0]<bestDestinationCost){
                 bestDestinationCost = sol2[0];
                 bestDestination = j;
@@ -1698,7 +1712,7 @@ function Agent(x, y, r) {
 
 
             var sol3 = this.solveORHCP3SO_3(i,j,t_h3,y_ij,alpha,Abar,Rbar);
-            // [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2, y_ij]
+            // [totalCost, energyCost, sensingCost, rho_ij, y_ij]
             if(sol3[0]<bestDestinationCost){
                 bestDestinationCost = sol3[0];
                 bestDestination = j;
@@ -1706,7 +1720,7 @@ function Agent(x, y, r) {
                 bestDestinationSolution = [...sol3];
                 bestDestinationSolutionType = 3; 
             }
-
+            //print(sol1)
             
             
         }
@@ -1717,12 +1731,13 @@ function Agent(x, y, r) {
         }
 
         if(bestDestination!=i){
-            if(RHCvmaxObserved<bestDestinationSolution[6]/bestDestinationSolution[3]){
-                RHCvmaxObserved = bestDestinationSolution[6]/bestDestinationSolution[3];
+            if(RHCvmaxObserved<bestDestinationSolution[4]/bestDestinationSolution[3]){
+                RHCvmaxObserved = bestDestinationSolution[4]/bestDestinationSolution[3];
             }
-            return [bestDestination, bestDestinationTime, bestDestinationSolution[3], bestDestinationSolution[4], bestDestinationSolution[5], bestDestinationSolution[1]];
+            // j,  rho_ij, y_ij, E_ij
+            return [bestDestination, bestDestinationSolution[3], bestDestinationSolution[4], bestDestinationSolution[1]];
         }else{
-            return [bestDestination, bestDestinationTime,0,0,0,0];
+            return [bestDestination,  0,0,0];
         }
         
     }
@@ -1811,13 +1826,14 @@ function Agent(x, y, r) {
 
 
         // compute 
-        var v_2 = 12*RHCalpha2*y_ij/sq(rho_ij)
-        var v_1 = -2*v_2/rho_ij
+        // var v_2 = 12*RHCalpha2*y_ij/sq(rho_ij)
+        // var v_1 = -2*v_2/rho_ij
 
 
         // print("Test: "+(sq(rho_ij)*(3*v_2+2*v_1*rho_ij)+12*RHCalpha2*y_ij))
         // get u based on v_1,v_2,rho_ij
-        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*sq(RHCalpha2)*v_1)
+        // var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*sq(RHCalpha2)*v_1)
+        var energyCost = 12*sq(y_ij)/Math.pow(rho_ij,3);
 
         var tau_j = (R_j+rho_ij*A_j)/(B_j-A_j); 
         var lambda_j = 0;
@@ -1826,9 +1842,10 @@ function Agent(x, y, r) {
         var sensingCost = this.evalSensingCostForORHCP3(j,rho_ij,alpha,Abar,Rbar,tau_j,lambda_j)
         
         var totalCost = 2*sensingCost + RHCalpha2*energyCost;
-        ///print("J_e = "+energyCost.toFixed(2)+"; J_s = "+sensingCost.toFixed(2)+"; J_T = "+totalCost.toFixed(2));
+        //print("J_e = "+energyCost.toFixed(2)+"; J_s = "+sensingCost.toFixed(2)+"; J_T = "+totalCost.toFixed(2));
 
-        return [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2, y_ij]
+        // return [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2, y_ij]
+        return [totalCost, energyCost, sensingCost, rho_ij, y_ij]
 
     }
 
@@ -1889,39 +1906,8 @@ function Agent(x, y, r) {
         //// End Newton Raphston
 
 
-        //// Nerdamer method
-        // var eqnString = '';
-        // eqnString += NC1.toExponential(3).toString()+'*x^3 + '
-        // eqnString += NC2.toExponential(3).toString()+'*x^2 + '
-        // eqnString += NC3.toExponential(3).toString()+'*x^1 + '
-        // eqnString += NC3.toExponential(3).toString()+' + '
-        // eqnString += sigma_3.toExponential(3).toString()+' *('
-        // eqnString += DC1.toExponential(3).toString()+'*x^2 + '
-        // eqnString += DC2.toExponential(3).toString()+'*x + '
-        // eqnString += DC3.toExponential(3).toString()+')^1.5 = 0'
-
-        // // print("Equation: ")
-        // // print(eqnString)
-        // var sol = nerdamer.solveEquations(eqnString,'x');
-        // var rho_ij;
-        // for(k = 0;k < sol.length; k++){
-        //     rho_ij = Number(sol[k].text('decimals'))
-        //     if(0<rho_ij && rho_ij<100){
-        //         break;
-        //     }
-        // }
-        // print("t_f = "+rho_ij)
-        //// End Nerdamer method
-
-
         // compute 
-        var v_2 = 12*RHCalpha2*y_ij/sq(rho_ij)
-        var v_1 = -2*v_2/rho_ij
-
-
-        // print("Test: "+(sq(rho_ij)*(3*v_2+2*v_1*rho_ij)+12*RHCalpha2*y_ij))
-        // get u based on v_1,v_2,rho_ij
-        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*sq(RHCalpha2)*v_1)
+        var energyCost = 12*sq(y_ij)/Math.pow(rho_ij,3)
 
         var tau_j = (R_j+rho_ij*A_j)/(B_j-A_j); 
         var sigma_4 = Math.sqrt((2*R_j*(rho_ij+tau_j)+A_j*sq(rho_ij)+sq(tau_j)*(A_j-B_j)+2*A_j*rho_ij*tau_j)*(alpha/((1-alpha)*(Abar-A_j))));
@@ -1933,7 +1919,7 @@ function Agent(x, y, r) {
         var totalCost = 2*sensingCost + RHCalpha2*energyCost;
         print("J_e = "+energyCost.toFixed(2)+"; J_s = "+sensingCost.toFixed(2)+"; J_T = "+totalCost.toFixed(2));
 
-        return [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2,  y_ij]
+        return [totalCost, energyCost, sensingCost, rho_ij, y_ij]
 
     }
 
@@ -1963,14 +1949,8 @@ function Agent(x, y, r) {
         if(rho_ij<0 || rho_ij>H){ return [Infinity, 0, 0, 0, 0, 0]}
         ////print("t_f3 = "+rho_ij)
         
-        // compute 
-        var v_2 = 12*RHCalpha2*y_ij/sq(rho_ij)
-        var v_1 = -2*v_2/rho_ij
-
-
-        // print("Test: "+(sq(rho_ij)*(3*v_2+2*v_1*rho_ij)+12*RHCalpha2*y_ij))
-        // get u based on v_1,v_2,rho_ij
-        var energyCost = -(Math.pow(v_2,3)-Math.pow(v_2+v_1*rho_ij,3))/(12*sq(RHCalpha2)*v_1)
+        // compute
+        var energyCost = 12*sq(y_ij)/Math.pow(rho_ij,3)
 
         var tau_j = (R_j+rho_ij*A_j)/(B_j-A_j); 
         var lambda_j = H-rho_ij-tau_j;
@@ -1982,7 +1962,7 @@ function Agent(x, y, r) {
         var totalCost = 2*sensingCost + RHCalpha2*energyCost;
         print("J_e = "+energyCost.toFixed(2)+"; J_s = "+sensingCost.toFixed(2)+"; J_T = "+totalCost.toFixed(2));
 
-        return [totalCost, energyCost, sensingCost, rho_ij, v_1, v_2,  y_ij]
+        return [totalCost, energyCost, sensingCost, rho_ij, y_ij]
 
     }
 
