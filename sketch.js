@@ -239,8 +239,10 @@ function draw() {
 
     }
 
-
-    if(RGCComputingMode==1){
+    if(RGCComputingMode == 1.5){
+        sleepFor(50);
+        RGCComputingMode = 1;
+    }else if(RGCComputingMode==1){
         // extend each cycle!
         var RGCComputingModeCount = 0; 
         

@@ -111,14 +111,17 @@ var RHCNoiseR_iInterval;
 var RHCNoiseR_iMagnitude;
 var RHCNoiseY_iBoundary;
 var RHCNoiseY_iMagnitude;
+var RHCNoiseR_j;
 
 // actual agents:
 var RHCalpha2;
 var RHCvmax; 
 var RHCvmaxObserved = 0;
+var RHCumaxObserved = 0;
 var terminalEnergySpent;
 var terminalEnergySpentTemp=0;
 var terminalTotalCost;
+
 
 
 function startModifyingProbConfig(){
@@ -299,9 +302,7 @@ function finishModifyingProbConfig(){
     }
     document.getElementById('thresholdSensitivities').innerHTML += HTMLTag2; 
 
-
-
-
+    RHCParametersChanged();
 
 }
 
@@ -332,10 +333,7 @@ function resetPerturbation(){// restore the sening/ uncertainty rates
             uncertaintyRateChangedRT(i+1,defaultUncertaintyRates[i]);
             document.getElementById("uncertaintyRate"+(i+1)).value = defaultUncertaintyRates[i];    
             print("Target "+(i+1)+" Urate set to "+defaultUncertaintyRates[i]);
-        }
-        
-        
-        
+        } 
         
     }
     for(var a = 0; a<agents.length; a++){
@@ -523,6 +521,10 @@ function readInitialInterface(){
     RHCMethod = Number(document.getElementById("RHCMethodDropdown").value);
     timeHorizonForRHC = Number(document.getElementById("timeHorizonForRHC").value);
 
+    RHCvmax = Number(document.getElementById("RHCvmax").value);
+    var normalizedAlpha = Number(document.getElementById("RHCalpha2").value);
+    // RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(300/Math.sqrt(targets.length),3)/Math.pow(RHCvmax,5);
+    RHCalpha2 = RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(600/Math.sqrt(targets.length),2)/Math.pow(RHCvmax,4);
     RHCMethodChanged();
     RHCNoiseEnable();
     RHCNoiseR_iIntervalChanged();
@@ -732,7 +734,8 @@ function RHCParametersChanged(){
         }else{
             var normalizedAlpha = Number(document.getElementById("RHCalpha2").value);
             RHCvmax = Number(document.getElementById("RHCvmax").value);
-            RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(300/Math.sqrt(targets.length),3)/Math.pow(RHCvmax,5);
+            //RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(300/Math.sqrt(targets.length),3)/Math.pow(RHCvmax,5);
+            RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(600/Math.sqrt(targets.length),2)/Math.pow(RHCvmax,4);
         }
         
         document.getElementById("RHCalpha2Display").innerHTML = RHCalpha2.toExponential(2);
@@ -1011,6 +1014,8 @@ function RHCMethodChanged(){
         x.options[1].disabled = false;  
         x.options[2].disabled = false;
         x.options[3].disabled = true;
+        x.options[5].disabled = true;
+        x.options[6].disabled = true;
         
 
     }else if(RHCMethod==7){
@@ -1025,6 +1030,8 @@ function RHCMethodChanged(){
         x.options[1].disabled = false;  
         x.options[2].disabled = false;
         x.options[3].disabled = false;
+        x.options[5].disabled = true;
+        x.options[6].disabled = true;
     }else{
         var x = document.getElementById("RHCalphaDiv");
         x.style.display = "none";
@@ -1033,12 +1040,14 @@ function RHCMethodChanged(){
         x.style.display = "none";
 
         var x = document.getElementById("plotCostVsParameterDropDown");
-        if(Number(x.value)==3 || Number(x.value)==2){
+        if(Number(x.value)>=2){
             x.value = 0;
         }
 
         x.options[2].disabled = true;
         x.options[3].disabled = true;
+        x.options[5].disabled = true;
+        x.options[6].disabled = true;
 
         if(RHCMethod==0){
             x.options[1].disabled = true;
@@ -1062,7 +1071,12 @@ function RHCMethodChanged(){
         var x = document.getElementById("costDisplayMenu2");
         x.style.display = "block";
 
-        RHCParametersChanged();    
+        var x = document.getElementById("plotCostVsParameterDropDown");
+        x.options[5].disabled = RHCMethod==9;
+        x.options[6].disabled = false;
+
+        RHCParametersChanged();  
+        plotCostVsParameterDropDownChanged();    
     }else{
         var x = document.getElementById("RHCalpha2Div");
         x.style.display = "none";
@@ -1100,6 +1114,10 @@ function plotCostVsParameterDropDownChanged(){
         document.getElementById("plotCostVsParameterStart").value = 10;
         document.getElementById("plotCostVsParameterRes").value = 10;
         document.getElementById("plotCostVsParameterEnd").value = 100;
+    }else if(x==6){
+        document.getElementById("plotCostVsParameterStart").value = 0.05;
+        document.getElementById("plotCostVsParameterRes").value = 0.05;
+        document.getElementById("plotCostVsParameterEnd").value = 0.95;
     }
 
     if(x==4){
@@ -1141,11 +1159,17 @@ function RHCNoiseEnable(){
         document.getElementById("RHCNoiseY_iBoundaryDisplay").innerHTML = RHCNoiseY_iBoundary;
         RHCNoiseY_iMagnitude = Number(document.getElementById("RHCNoiseY_iMagnitude").value);
         document.getElementById("RHCNoiseY_iMagnitudeDisplay").innerHTML = RHCNoiseY_iMagnitude;
+
+        document.getElementById("RHCNoiseR_jMenu").style.display = "block";
+        RHCNoiseR_j = Number(document.getElementById("RHCNoiseR_j").value);
+        document.getElementById("RHCNoiseR_jDisplay").innerHTML = RHCNoiseR_j;
+
     }else{
         document.getElementById("RHCNoiseA_iMenu").style.display = "none";
         document.getElementById("RHCNoisev_MaxMenu").style.display = "none";
         document.getElementById("RHCNoiseR_iMenu").style.display = "none";
         document.getElementById("RHCNoiseY_iMenu").style.display = "none";
+        document.getElementById("RHCNoiseR_jMenu").style.display = "none";
     } 
 }
 
@@ -1348,9 +1372,20 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
         terminalTotalCost = meanUncertainty + RHCalpha2*totalEnergySpent;
         document.getElementById("totalCost").innerHTML = terminalTotalCost.toFixed(1).toString();
         
-        if(RHCMethod==9){consolePrint('Max agent velocity observed (Second-Order Model): '+(2*RHCvmaxObserved/3).toFixed(3).toString())}
-        if(RHCMethod==8){consolePrint('Max agent velocity observed (First-Order Model): '+RHCvmax.toFixed(3).toString())}
         consolePrint('Energy Cost: '+totalEnergySpent.toFixed(1).toString()+'; Sensing Cost: '+meanUncertainty.toFixed(3).toString()+'; Total Cost: '+terminalTotalCost.toFixed(1).toString());    
+        if(RHCMethod==9){
+            // consolePrint('Max agent velocity observed (Second-Order Model): '+(2*RHCvmaxObserved/3).toFixed(3).toString())
+            consolePrint('Max agent velocity observed (Second-Order Model): '+(RHCvmaxObserved).toFixed(3).toString())
+            consolePrint('Max agent acceleration observed (Second-Order Model): '+(RHCumaxObserved).toFixed(3).toString())
+            print([terminalEnergySpent, meanUncertainty, terminalTotalCost, RHCvmaxObserved, RHCumaxObserved])
+        
+        }else if(RHCMethod==8){
+            consolePrint('Max agent velocity used (First-Order Model): '+(RHCvmaxObserved).toFixed(3).toString())
+            consolePrint('Max agent acceleration observed (First-Order Model): '+(RHCumaxObserved).toFixed(3).toString())
+            print([terminalEnergySpent, meanUncertainty, terminalTotalCost, RHCvmaxObserved, RHCumaxObserved]);
+        }
+        
+
     }
     
 
@@ -1860,6 +1895,9 @@ function resetSimulation(){
         document.getElementById("simulationTime").innerHTML = simulationTime.toFixed(2).toString();
         document.getElementById("simulationCost").innerHTML = 0;
     }else{
+        RHCumaxObserved = 0;
+        RHCvmaxObserved = 0;
+
         document.getElementById("simulationTime2").innerHTML = simulationTime.toFixed(2).toString();
         document.getElementById("simulationCost2").innerHTML = 0;
         document.getElementById("agentEnergyCost").innerHTML = 0;
@@ -2385,8 +2423,11 @@ function plotCostVsParameter(){
         RHCParametersChanged();
     }else if(paraType==0){
         startingValue = periodT;
-    }else if(paraType==5){
+    }else if(paraType==5){// v_max
         document.getElementById("RHCParamterFixAlphaCB").checked = true;
+        RHCParametersChanged();
+    }else if(paraType==6){// alpha
+        document.getElementById("RHCParamterFixAlphaCB").checked = false;
         RHCParametersChanged();
     }
 
@@ -2396,11 +2437,18 @@ function plotCostVsParameter(){
 
     var minCostPara = startVal;
     var minCost = Infinity;
-    var costArray = [];
-    var paraArray = [];
+    var costArray;
+    var paraArray;
+    if(paraType==5 || paraType==6){
+        costArray = [[],[],[],[],[]] // alpha*J_e, J_s, J_T, v_max, u_max
+        paraArray = [[],[]]; //beta, alpha
+    }else{
+        costArray = [];
+        paraArray = [];
+    }
 
     var oldDataPlotMode = document.getElementById("dataPlotModeCheckBox").checked;
-    document.getElementById("dataPlotModeCheckBox").checked = false; 
+    document.getElementById("dataPlotModeCheckBox").checked = false; // to speed up 
     dataPlotModeChanged();
     
     for(var para=startVal; para<=endVal; para=para+resVal){
@@ -2431,11 +2479,16 @@ function plotCostVsParameter(){
             document.getElementById("RHCvmax").value = para;
             RHCParametersChanged();
 
+        }else if(paraType==6){// \beta in alpha_u 
+
+            document.getElementById("RHCalpha2").value = para;
+            RHCParametersChanged();
+
         }
         
         simulateHybridSystemFast();
         
-        if(paraType!=5){
+        if(paraType<5){
             costArray.push(terminalMeanSystemUncertainty);
             paraArray.push(para);
 
@@ -2443,14 +2496,22 @@ function plotCostVsParameter(){
                 minCostPara = para;
                 minCost = terminalMeanSystemUncertainty;
             }
-        }else{
-            costArray.push(terminalTotalCost);
-            paraArray.push(para);
+        }else if(paraType==5||paraType==6){
+            costArray[0].push(terminalEnergySpent*RHCalpha2)
+            costArray[1].push(terminalMeanSystemUncertainty)
+            costArray[2].push(terminalTotalCost)
+            costArray[3].push(RHCvmaxObserved)
+            costArray[4].push(RHCumaxObserved)
+
+
+            paraArray[0].push(para);// v_max or beta
+            paraArray[1].push(RHCalpha2);// alpha2
 
             if(terminalTotalCost<minCost){
                 minCostPara = para;
                 minCost = terminalTotalCost;
             }
+
         }
 
     }
@@ -2496,6 +2557,9 @@ function plotCostVsParameter(){
     }else if(paraType == 5){// v_max changed
         document.getElementById("RHCvmax").value = minCostPara;
         RHCParametersChanged();
+    }else if(paraType == 6){// alpha_u changed
+        document.getElementById("RHCalpha2").value = minCostPara;
+        RHCParametersChanged();
     } 
     
     simulateHybridSystemFast();
@@ -2515,6 +2579,7 @@ function plotCostVsParameter(){
     }else{
         consolePrint("Cost: Mean= "+meanCost.toFixed(3)+", Variance= "+variance.toFixed(3)+", over "+endVal+" realizations.")
         print("Mean cost: "+meanCost.toFixed(3)+", Variance: "+variance.toFixed(3)+".");
+        print(meanCost.toFixed(3)+", "+variance.toFixed(3));
     }
 
     plotCostVsParameterData(paraType,paraArray,costArray)

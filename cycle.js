@@ -1548,7 +1548,9 @@ function Cycle(agentID,targetSet){
 				sleepFor(delay);
 			}
 			
-		}else if(this.RGCComputingMode==2){//2-opt
+		}
+		//// P3 presentation
+		else if(this.RGCComputingMode==2){//2-opt
 			var i = this.cycleRefiningParameters[0][0];
 			var k = this.cycleRefiningParameters[0][1];
 			sleepFor(10);
@@ -2268,8 +2270,8 @@ function initiateComputingRefinedGreedyCycles(){
 		cycles[j].RGCComputingMode = 1;  //start iteratively evolving the cycles
 	}
 
-	////RGCComputingMode = 1.5; // global variable
-	RGCComputingMode = 1; // global variable
+	RGCComputingMode = 1.5; // global variable
+	//RGCComputingMode = 1; // global variable
 	
 }
 

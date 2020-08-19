@@ -63,6 +63,10 @@ function plotCostVsParameterData(paraType,dataX,dataY){
 
    	//constructSpaceForPlots();
 	var xLabel;
+	var yLabel = 'Objective - J_T';
+	var yLabel2;
+	var trace1 = {x:dataX, y:dataY,type: 'scatter', name:'Normal'};
+	var trace2;
 	if(paraType==0){
 		xLabel = 'Simulation Period: T'
 	}else if(paraType==1){
@@ -73,24 +77,33 @@ function plotCostVsParameterData(paraType,dataX,dataY){
 		xLabel = 'RHC Parameter: Beta'
 	}else if(paraType==4){
 		xLabel = 'Realization No.'
+	}else if(paraType==5){
+		xLabel = 'Maximum Velocity: v_max.'
+		yLabel = 'Objectives'
+		yLabel2 = 'u, v'
+
+		trace1 = {x:dataX[0], y:dataY[0], type: 'scatter', yaxis: 'y1', name:'alpha * J_e'};
+		trace2 = {x:dataX[0], y:dataY[1], type: 'scatter', yaxis: 'y1', name:'J_s'};
+		trace3 = {x:dataX[0], y:dataY[2], type: 'scatter', yaxis: 'y1', name:'J_T'};		
+		trace4 = {x:dataX[0], y:dataY[3], type: 'scatter', yaxis: 'y2', name:'v_max'};
+		trace5 = {x:dataX[0], y:dataY[4], type: 'scatter', yaxis: 'y2', name:'u_max'};
+	}else if(paraType==6){
+		xLabel = 'Scaling Factor: alpha.'
+		yLabel = 'Objectives'
+		yLabel2 = 'u, v'
+
+		trace1 = {x:dataX[0], y:dataY[0], type: 'scatter', yaxis: 'y1', name:'alpha * J_e'};
+		trace2 = {x:dataX[0], y:dataY[1], type: 'scatter', yaxis: 'y1', name:'J_s'};
+		trace3 = {x:dataX[0], y:dataY[2], type: 'scatter', yaxis: 'y1', name:'J_T'};		
+		trace4 = {x:dataX[0], y:dataY[3], type: 'scatter', yaxis: 'y2', name:'v_max'};
+		trace5 = {x:dataX[0], y:dataY[4], type: 'scatter', yaxis: 'y2', name:'u_max'};
+		
 	}
 
-	var trace1 = {x:dataX, y:dataY,type: 'scatter', name:'Normal'};
-	   	
 	var plotLayout1 = 
 	{
 		title: 'Objective Function Value Vs Paramter Value', 
-		////autosize: true,
-	    //width: 100,
-	    //height: 400,
 	    automargin: true,
-	    // margin: {
-	    // 	l:10,
-	    // 	r:10,
-	    // 	t:10,
-	    // 	b:10,
-	    // 	pad:10,
-	    // },
 	    xaxis: {
 			title: xLabel, 
 			showline: true,
@@ -99,17 +112,54 @@ function plotCostVsParameterData(paraType,dataX,dataY){
 			////automargin: true,
 		}, 
 		yaxis: {
-			title: 'Objective - J', 
+			title: yLabel, 
 		    showline: true,
 		    showgrid: true,
 		    zeroline: true,
 		    ////automargin: true,
 		},
 	}
-	
+
+
+	var plotLayout2 = 
+	{
+		title: 'Objective Function Value Vs Paramter Value', 
+		
+	    automargin: true,
+	    xaxis: {
+			title: xLabel, 
+			showline: true,
+			showgrid: true, 
+			zeroline: true,
+			////automargin: true,
+		}, 
+		yaxis: {
+			title: yLabel, 
+		    showline: true,
+		    showgrid: true,
+		    zeroline: true,
+		    ////automargin: true,
+		},
+		yaxis2: {
+			title: yLabel2, 
+		    showline: true,
+		    showgrid: true,
+		    zeroline: true,	
+		 //    titlefont: {color: '#ff7f0e'},
+			// tickfont: {color: '#ff7f0e'},
+			overlaying: 'y',
+			side: 'right'
+		},
+		
+	};
+
 	var myPlot1 = document.getElementById('myPlot1');
 				
-	Plotly.newPlot(myPlot1, [trace1], plotLayout1);
+	if(paraType<5){				
+		Plotly.newPlot(myPlot1, [trace1], plotLayout1);
+	}else{
+		Plotly.newPlot(myPlot1, [trace1,trace2,trace3,trace4,trace5], plotLayout2);
+	}
 	
 }
 

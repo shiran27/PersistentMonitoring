@@ -29,11 +29,11 @@
 	<script type="text/javascript" src="libraries/seedrandom.js"></script>
 	<script type="text/javascript" src="libraries/numeric.js"></script>
 
-	<script src="libraries/nerd/nerdamer.core.js"></script> 
+	<!-- <script src="libraries/nerd/nerdamer.core.js"></script> 
 	<script src="libraries/nerd/Algebra.js"></script>
 	<script src="libraries/nerd/Calculus.js"></script>
 	<script src="libraries/nerd/Solve.js"></script>
-	<script src="libraries/nerd/Extra.js"></script>
+	<script src="libraries/nerd/Extra.js"></script> -->
 	<!-- <script src="libraries/algebra-0.2.5.min.js"></script> -->
 
 	
@@ -402,9 +402,9 @@
 				    	<option value="2">Two steps ahead (Greedy RHC)</option>
 				    	<option value="5">Event Driven RHC-Fixed H</option>
 				    	<option value="3">Event Driven RHC</option>
-				    	<option value="4">Event Driven RHC-&alpha;</option>
+				    	<option selected value="4">Event Driven RHC-&alpha;</option>
 				    	<option value="6">Event Driven RHC-Two-Step</option>
-				    	<option selected value="7">Event Driven RHC-Two-Step-&alpha;-&beta;</option>
+				    	<option value="7">Event Driven RHC-Two-Step-&alpha;-&beta;</option>
 				    	<option value="8">ED-ORHC (First-Order Agents)</option>
 				    	<option value="9">ED-ORHC (Second-Order Agents)</option>
 				</select> 
@@ -425,14 +425,14 @@
 
 				<div id="RHCalpha2Div">
 					<label for="RHCalpha2">&alpha;<sub>u</sub> =  <span id="RHCalpha2Display"></span><span>;(<label for="RHCParamterFixAlphaCB">Fix:</label>
-	            		<input type="checkbox"  id="RHCParamterFixAlphaCB" onchange="RHCParametersChanged();">)</span>
+	            		<input type="checkbox" checked="true"  id="RHCParamterFixAlphaCB" onchange="RHCParametersChanged();">)</span>
 					</label> 
 				<input type="range" class="form-control slider" id="RHCalpha2" min="0.02" max="0.98" value="0.5" step="0.001" onchange="RHCParametersChanged();">	
 				</div>
 
 				<div id="RHCbeta2Div">
 					<label for="RHCvmax">v<sub>max</sub> =  <span id="RHCvmaxDisplay"></span>
-				<input type="range" class="form-control slider" id="RHCvmax" min="10" max="200" value="50" step="1" onchange="RHCParametersChanged();">
+				<input type="range" class="form-control slider" id="RHCvmax" min="10" max="150" value="50" step="1" onchange="RHCParametersChanged();">
 				</div>
 
 			</div>
@@ -470,7 +470,8 @@
 						    	<option value="2">&alpha;</option>
 						    	<option value="3">&beta;</option>
 						    	<option value="4">&zeta;</option>
-						    	<option value="5">v_max</option>
+						    	<option value="5">v<sub>max</sub></option>
+						    	<option value="6">&alpha;<sub>u</sub></option>
 						</select>	
 					</div>
 					 
@@ -512,7 +513,7 @@
 				<input type="range" class="form-control slider" id="RHCNoisev_Max" min="0" max="100" value="0" onchange="RHCNoiseEnable()">
 			</div>
 
-			<div class="col col-lg-4 border-right border-success" id="RHCNoiseY_iMenu">
+			<div class="col col-lg-3 border-right border-success" id="RHCNoiseY_iMenu">
 
 				<h6>Noise in Y_i(t):</h6>
 				<div class="form-row">
@@ -529,11 +530,11 @@
 				</div>
 			</div>
 
-			<div class="col col-lg-4" id="RHCNoiseR_iMenu">
+			<div class="col col-lg-3 border-right border-success" id="RHCNoiseR_iMenu">
 				<h6>Noise in R_i(t_event):</h6>
 				<div class="form-row">
 					<div class="col col-lg-6">
-						<label for="RHCNoiseR_iInterval">Mean Interval: <span id="RHCNoiseR_iIntervalDisplay"></span>
+						<label for="RHCNoiseR_iInterval">Mean Int.: <span id="RHCNoiseR_iIntervalDisplay"></span>
 						</label>
 						<input type="range" class="form-control slider" id="RHCNoiseR_iInterval" min="10" max="250" value="100" onchange="RHCNoiseR_iIntervalChanged()">
 					</div>
@@ -543,6 +544,13 @@
 						<input type="range" class="form-control slider" id="RHCNoiseR_iMagnitude" min="0" max="100" value="0" onchange="RHCNoiseEnable()">
 					</div>
 				</div>
+			</div>
+
+			<div class="col col-lg-2" id="RHCNoiseR_jMenu">
+				<h6>Noise in R_j:</h6>
+				<label for="RHCNoiseR_j">Magnitude: <span id="RHCNoiseR_jDisplay"></span>
+				</label>
+				<input type="range" class="form-control slider" id="RHCNoiseR_j" min="0" max="32" value="0" onchange="RHCNoiseEnable()">
 			</div>
 
 		</div>

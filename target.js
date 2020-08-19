@@ -47,35 +47,51 @@ function Target(x, y, r) {
         textAlign(CENTER,CENTER);
         text((this.id+1).toString(),this.position.x,this.position.y,this.graphicSizeParameter,this.graphicSizeParameter);
       
-        
-        var coordinateString = "("+nf(round(this.position.x))+","+nf(round(this.position.y))+")";
-        fill(0);
-        strokeWeight(1);
-        text(coordinateString, this.position.x+40, this.position.y-15);
+        //// P3 presentation
+        // var coordinateString = "("+nf(round(this.position.x))+","+nf(round(this.position.y))+")";
+        // fill(0);
+        // strokeWeight(1);
+        // text(coordinateString, this.position.x+40, this.position.y-15);
     
            
     
-        stroke(0,128);
-        line(this.position.x,this.position.y-this.graphicSizeParameter/2,this.position.x,this.position.y-50);
+        // stroke(0,128);
+        // line(this.position.x,this.position.y-this.graphicSizeParameter/2,this.position.x,this.position.y-50);
         
         rectMode(CORNER);
-        fill(255,255,0,150);
+        // fill(255,255,0,200);
+        fill(255,255,0,255);
         noStroke();
-        rect(this.position.x-10,this.position.y-this.uncertainty-this.graphicSizeParameter/2,20,this.uncertainty);
+        // rect(this.position.x-10,this.position.y-this.uncertainty-this.graphicSizeParameter/2,20,this.uncertainty);
+        rect(this.position.x-15,this.position.y-this.uncertainty-this.graphicSizeParameter/2,30,this.uncertainty);
 
-        fill(0,0,255);
-        rectMode(CENTER);
-        textAlign(CENTER,CENTER);
-        text("R_"+(this.id+1)+"="+this.uncertainty.toFixed(3).toString(),this.position.x+45,this.position.y-this.graphicSizeParameter,this.graphicSizeParameter,this.graphicSizeParameter);
+        //// P3 presentation
+        // fill(0,0,255);
+        // rectMode(CENTER);
+        // textAlign(CENTER,CENTER);
+        // text("R_"+(this.id+1)+"="+this.uncertainty.toFixed(3).toString(),this.position.x+45,this.position.y-this.graphicSizeParameter,this.graphicSizeParameter,this.graphicSizeParameter);
 
-        fill(0,0,255);
-        rectMode(CENTER);
-        textAlign(CENTER,CENTER);
-        text("J_"+(this.id+1)+"="+this.meanUncertainty.toFixed(3).toString(),this.position.x+45,this.position.y-1.7*this.graphicSizeParameter,this.graphicSizeParameter,this.graphicSizeParameter);
+        // fill(0,0,255);
+        // rectMode(CENTER);
+        // textAlign(CENTER,CENTER);
+        // text("J_"+(this.id+1)+"="+this.meanUncertainty.toFixed(3).toString(),this.position.x+45,this.position.y-1.7*this.graphicSizeParameter,this.graphicSizeParameter,this.graphicSizeParameter);
+
 
     }
 
-    
+    // Randomization 5: random neighbor uncertainty perturbation
+    this.uncertaintyRead = function(){
+        if(RHCNoiseEnabled&&RHCNoiseR_j>0){
+            var R_jNoisy = this.uncertainty + RHCNoiseR_j*2*(Math.random()-0.5);
+            if(R_jNoisy<0){
+                R_jNoisy = 0;
+            }
+            return R_jNoisy;
+        }else{
+            return this.uncertainty;
+        }
+    }
+    // Randomization 5: random neighbor uncertainty perturbation
 
     this.clicked = function(){
 
