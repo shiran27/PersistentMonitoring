@@ -727,7 +727,7 @@ function RHCParametersChanged(){
             document.getElementById("RHCbetaDisplay").innerHTML = "N/A";
         }
         consolePrint("RHC parameters: Alpha = "+RHCalpha+", Beta = "+RHCbeta+".");
-    }else if(RHCMethod==8||RHCMethod==9){
+    }else if(RHCMethod==8||RHCMethod==9||RHCMethod==10||RHCMethod==11){
         
         if(RHCFixalpha){
             RHCvmax = Number(document.getElementById("RHCvmax").value);    
@@ -993,9 +993,13 @@ function RHCMethodChanged(){
     }else if(RHCMethod==7){
         consolePrint("Event Driven Receding Horizon Control with Two Steps Ahead-Alpha,Beta.");
     }else if(RHCMethod==8){
-        consolePrint("Event Driven Optimal Receding Horizon Control with First Order Agents.");
+        consolePrint("Event Driven Optimal Receding Horizon Control with First Order Agents (Old Method).");
     }else if(RHCMethod==9){
         consolePrint("Event Driven Optimal Receding Horizon Control with Second Order Agents.");
+    }else if(RHCMethod==10){
+        consolePrint("Event Driven Optimal Receding Horizon Control with First Order Agents of Type 2.");
+    }else if(RHCMethod==11){
+        consolePrint("Event Driven Optimal Receding Horizon Control with First Order Agents of Type 3.");
     }
 
 
@@ -1058,7 +1062,7 @@ function RHCMethodChanged(){
 
     }
 
-    if(RHCMethod==8 || RHCMethod==9){
+    if(RHCMethod==8 || RHCMethod==9 || RHCMethod==10 || RHCMethod==11){
         var x = document.getElementById("RHCalpha2Div");
         x.style.display = "block";
         
@@ -1373,17 +1377,27 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
         document.getElementById("totalCost").innerHTML = terminalTotalCost.toFixed(1).toString();
         
         consolePrint('Energy Cost: '+totalEnergySpent.toFixed(1).toString()+'; Sensing Cost: '+meanUncertainty.toFixed(3).toString()+'; Total Cost: '+terminalTotalCost.toFixed(1).toString());    
-        if(RHCMethod==9){
-            // consolePrint('Max agent velocity observed (Second-Order Model): '+(2*RHCvmaxObserved/3).toFixed(3).toString())
-            consolePrint('Max agent velocity observed (Second-Order Model): '+(RHCvmaxObserved).toFixed(3).toString())
-            consolePrint('Max agent acceleration observed (Second-Order Model): '+(RHCumaxObserved).toFixed(3).toString())
-            print([terminalEnergySpent, meanUncertainty, terminalTotalCost, RHCvmaxObserved, RHCumaxObserved])
         
-        }else if(RHCMethod==8){
-            consolePrint('Max agent velocity used (First-Order Model): '+(RHCvmaxObserved).toFixed(3).toString())
-            consolePrint('Max agent acceleration observed (First-Order Model): '+(RHCumaxObserved).toFixed(3).toString())
-            print([terminalEnergySpent, meanUncertainty, terminalTotalCost, RHCvmaxObserved, RHCumaxObserved]);
+        
+        if(RHCMethod>=8 && RHCMethod<=11){
+            var stringListTemp = ['(First-Order-0)','(Second Order)','(First-Order-2)','(First-Order-3)'];
+            var stringSelected = stringListTemp[RHCMethod-8];  
+            consolePrint('Max agent velocity observed '+stringSelected+': '+(RHCvmaxObserved).toFixed(3).toString())
+            consolePrint('Max agent acceleration observed '+stringSelected+': '+(RHCumaxObserved).toFixed(3).toString())
+            print([terminalEnergySpent, meanUncertainty, terminalTotalCost, RHCvmaxObserved, RHCumaxObserved])
         }
+        
+        // if(RHCMethod==9){
+        //     // consolePrint('Max agent velocity observed (Second-Order Model): '+(2*RHCvmaxObserved/3).toFixed(3).toString())
+        //     consolePrint('Max agent velocity observed (Second-Order Model): '+(RHCvmaxObserved).toFixed(3).toString())
+        //     consolePrint('Max agent acceleration observed (Second-Order Model): '+(RHCumaxObserved).toFixed(3).toString())
+        //     print([terminalEnergySpent, meanUncertainty, terminalTotalCost, RHCvmaxObserved, RHCumaxObserved])
+        
+        // }else if(RHCMethod==8){
+        //     consolePrint('Max agent velocity used (First-Order Model): '+(RHCvmaxObserved).toFixed(3).toString())
+        //     consolePrint('Max agent acceleration observed (First-Order Model): '+(RHCumaxObserved).toFixed(3).toString())
+        //     print([terminalEnergySpent, meanUncertainty, terminalTotalCost, RHCvmaxObserved, RHCumaxObserved]);
+        // }
         
 
     }
