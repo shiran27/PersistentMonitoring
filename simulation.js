@@ -122,6 +122,18 @@ var terminalEnergySpent;
 var terminalEnergySpentTemp=0;
 var terminalTotalCost;
 
+// RL
+var numOfRLIterations = 0;
+var RLNormalizationFactor = 8;
+var RLDiscountFactor = 0.98;
+var RLStepSizeValue = 0.98;
+var RLStepSizeType = 0;
+var RLRandomPolicyEpsilon = 0;
+var RLNumOfEpisodesPerIteration = 1;
+
+
+
+
 
 
 function startModifyingProbConfig(){
@@ -302,6 +314,7 @@ function finishModifyingProbConfig(){
     }
     document.getElementById('thresholdSensitivities').innerHTML += HTMLTag2; 
 
+    dataPlotModeChanged();
     RHCParametersChanged();
 
 }
@@ -575,6 +588,135 @@ function updateRTThresholdValuesRandom(){
 }
 
 
+function updateRTThresholdValuesUsingRHC(){
+    resetSimulation();
+    simulateHybridSystemFast();
+    var sumError = 0
+    if(agents.length==1){
+        for(var a = 0; a<agents.length; a++){
+            var sumVal = agents[a].learnThresholdControlPolicy();
+            sumError = sumError + sumVal;
+        }
+        displayThresholds();
+    }else{
+        // agents learn cooperatively to prevent merging
+        for(var a = 0; a<agents.length; a++){
+            var sumVal = agents[a].learnThresholdControlPolicyJointly();
+            sumError = sumError + sumVal;
+        }
+        displayThresholds();
+        // displayThresholds();
+    }
+    resetSimulation();
+    sumError = sumError/agents.length;
+    consolePrint("Learning TCPs Finished with Mean Error: "+sumError.toFixed(6));
+    
+}
+
+
+function learnClassifiersUsingRHC(){
+
+    resetSimulation();
+    simulateHybridSystemFast();
+    var sumError = 0;
+    if(agents.length>0){
+
+        for(var a = 0; a<agents.length; a++){
+            var sumVal = agents[a].learnClassifierCoefficients();
+            sumError = sumError + sumVal;
+        }
+    }else{
+        // agents learn cooperatively to prevent merging
+        // for(var a = 0; a<agents.length; a++){
+        //     agents[a].learnThresholdControlPolicyJointly();
+        // }
+        // displayThresholds();
+        // displayThresholds();
+    }
+    resetSimulation();
+    sumError = sumError/agents.length;
+    consolePrint("Learning Classifiers Finished with Mean Error: "+sumError.toFixed(6))
+
+}
+
+
+
+function learnClassifiersUsingSyntheticData(){
+
+    var numOfSamples = Number(document.getElementById("numOfSyntheticDatePoints").value);
+    if(RHCMethod==15||RHCMethod==14){
+        numOfRLIterations=0;
+        tuneRLBasedEDRHC(numOfSamples);
+        return;
+    }
+
+    
+    // remove additional agents keeping only one
+    var agentsBackup = agents.map(a => Object.assign({}, a));
+    //var agentsBackup = [...agents]; // this does not copy the array of objects
+    var targetUncertaintyBackup = [];
+    for(var i=0; i<targets.length; i++){
+        targetUncertaintyBackup.push(targets[i].uncertainty);
+    }
+    agents = [agents[0]];
+
+    // for all the targets,
+        // move the agent to a certain target
+        // adjust the neighbor target uncertainties
+            // record the decition made the RHC
+            // add the data point (as trajectory data?)
+    //learn from data points
+    // var numOfSamples = 100;
+    // var upperbound = 20; // 80 in 1A 9T case
+    var upperbound = 20;
+    for(var i = 0; i<targets.length; i++){
+        agents[0].assignToTheTarget(i);
+        targets[i].uncertainty = 0;
+        
+        for(var k = 0; k<numOfSamples; k++){
+            // set neighbor target uncertainties randomly
+            var dataPacket = [i]; // replace the first element with j^* found using RHC
+            for(var jInd = 0; jInd<targets[i].neighbors.length; jInd++){
+                var j = targets[i].neighbors[jInd];
+                if(j==i){
+                    dataPacket.push(0); 
+                }else{
+                    var u = Math.random();  
+                    var R_j = upperbound*(1-Math.sqrt(1-u)); // pdf of R_j decreases linearly
+                    // var R_j = upperbound*Math.random();  
+                    targets[j].uncertainty = R_j;
+                    dataPacket.push(R_j);
+                }             
+            }
+
+            // solve the RHCP
+            var ans1 = agents[0].solveOP3(i); 
+            var jStar = ans1[0];
+
+            dataPacket[0] = jStar;
+            agents[0].trajectoryData[i].push(dataPacket);
+        }
+    }
+
+    // learn
+    agents[0].learnClassifierCoefficients();
+
+    // exchange the coefficients to all the agents
+    var classifierCoefficients = [...agents[0].classifierCoefficients];
+    for(var a = 0; a<agentsBackup.length; a++){
+        agentsBackup[a].classifierCoefficients = [...classifierCoefficients];
+    }
+    
+    // reset
+    agents = agentsBackup.map(a => Object.assign({}, a));
+    for(var i = 0; i<targets.length; i++){
+        targets[i].uncertainty = targetUncertaintyBackup[i];
+    }
+
+}
+
+
+
 function rollbackToBestPerformingThresholdsFoundSoFar(){
     print("Best thresholds: ");
     print(bestThresholdsFoundSoFar);
@@ -744,8 +886,33 @@ function RHCParametersChanged(){
     }else{
         consolePrint("RHC parameters: Alpha = "+RHCalpha+", Beta = "+RHCbeta+".");
     }
-    
 
+
+    RLParametersChanged()
+    
+}
+
+
+
+function RLParametersChanged(){
+    if(RHCMethod==15){
+        numOfRLIterations = 0;
+        document.getElementById("RLParametersNorm").disabled = false;
+        RLNormalizationFactor = Number(document.getElementById("RLParametersNorm").value);
+        RLDiscountFactor = Number(document.getElementById("RLParametersDisc").value);
+        RLStepSizeValue = Number(document.getElementById("RLParametersStepVal").value);
+        RLStepSizeType = Number(document.getElementById("RLParametersStepType").value);
+        RLRandomPolicyEpsilon = Number(document.getElementById("RLParametersRand").value);
+        RLNumOfEpisodesPerIteration = Number(document.getElementById("RLParametersReal").value);
+    }else if(RHCMethod==14){ // same as before
+        numOfRLIterations = 0;
+        document.getElementById("RLParametersNorm").disabled = true;
+        RLDiscountFactor = Number(document.getElementById("RLParametersDisc").value);
+        RLStepSizeValue = Number(document.getElementById("RLParametersStepVal").value);
+        RLStepSizeType = Number(document.getElementById("RLParametersStepType").value);
+        RLRandomPolicyEpsilon = Number(document.getElementById("RLParametersRand").value);
+        RLNumOfEpisodesPerIteration = Number(document.getElementById("RLParametersReal").value);
+    }
 }
 
 
@@ -865,6 +1032,33 @@ function  dataPlotModeChanged(){
 
         eventTimeData = [];
         //consolePrint("Enabled generation of additional data plots.");
+
+        // clearing individual agent data : for TCP learning and classifier based learning
+        for(var a = 0; a<agents.length; a++){
+            agents[a].trajectoryData = [];
+            //agents[a].classifierCoefficients = [];
+            agents[a].rewardSequence = [];
+            agents[a].rewardDataTemp = [];
+            if(numOfRLIterations==0){
+                agents[a].actionValueData = [];
+            }
+            
+            for(var i = 0; i<targets.length; i++){
+                agents[a].trajectoryData.push([]);
+                //agents[a].classifierCoefficients.push([]);
+                
+                if(numOfRLIterations==0){
+                    agents[a].actionValueData.push([]);
+                    for(var j = 0; j<targets.length; j++){
+                        // [overall mean, episode mean, requence of action values obseved]
+                        agents[a].actionValueData[i].push([0,0]); 
+                    }
+                }
+            }
+        }
+        // end clearing individual agent date : for TCP learning        
+
+
     }else{
         //consolePrint("Disabled generation of additional data plots.");        
     }
@@ -977,7 +1171,7 @@ function boostingMethodChanged(){
 function RHCMethodChanged(){
     RHCMethod = Number(document.getElementById("RHCMethodDropdown").value);
     if(RHCMethod==0){
-        consolePrint("Receding horizon control: Disabled.")
+        consolePrint("Receding horizon control: Disabled. Agent Control via Thresholds.")
     }else if(RHCMethod==1){
         consolePrint("Receding horizon control: One Steap Ahead Method Enabled.");
     }else if(RHCMethod==2){
@@ -1000,6 +1194,14 @@ function RHCMethodChanged(){
         consolePrint("Event Driven Optimal Receding Horizon Control with First Order Agents of Type 2.");
     }else if(RHCMethod==11){
         consolePrint("Event Driven Optimal Receding Horizon Control with First Order Agents of Type 3.");
+    }else if(RHCMethod==12){
+        consolePrint("Agent Control Through Classifiers.");
+    }else if(RHCMethod==13){
+        consolePrint("Random Agent Control.");
+    }else if(RHCMethod==14){
+        consolePrint("Random Agent Control with Reinforcement Learning.");
+    }else if(RHCMethod==15){
+        consolePrint("Event Driven Receding Horizon Control with Reinforcement Learning.");
     }
 
 
@@ -1095,6 +1297,16 @@ function RHCMethodChanged(){
         x.style.display = "none";
 
         plotCostVsParameterDropDownChanged();    
+    }
+
+
+    if(RHCMethod==15||RHCMethod==14){
+        var x = document.getElementById("RLParametersMenu");
+        x.style.display = "block";
+        RLParametersChanged();
+    }else{
+        var x = document.getElementById("RLParametersMenu");
+        x.style.display = "none";
     }
     
 }
@@ -1314,8 +1526,14 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
                 agents[i].updateRHCCT();
             }else if (RHCMethod<8){
                 agents[i].updateEDRHCCT();
-            }else{
+            }else if(RHCMethod<12){
                 agents[i].updateEDORHCCT();
+            }else if(RHCMethod<13){
+                agents[i].updateClassifierCT();
+            }else if(RHCMethod<15){
+                agents[i].updateRandomCT();
+            }else if(RHCMethod==15){
+                agents[i].updateEDRHCCT();
             }
         }
 
@@ -1364,7 +1582,7 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
     }
     terminalEnergySpent = totalEnergySpent;
     
-    if(RHCMethod<8){
+    if(RHCMethod<8 | RHCMethod>=12){
         document.getElementById("simulationTime").innerHTML = periodT.toFixed(2).toString();
         document.getElementById("simulationCost").innerHTML = meanUncertainty.toFixed(3).toString();
         consolePrint('Sensing Cost: '+meanUncertainty.toFixed(3).toString());
@@ -1375,10 +1593,7 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
         
         terminalTotalCost = meanUncertainty + RHCalpha2*totalEnergySpent;
         document.getElementById("totalCost").innerHTML = terminalTotalCost.toFixed(1).toString();
-        
         consolePrint('Energy Cost: '+totalEnergySpent.toFixed(1).toString()+'; Sensing Cost: '+meanUncertainty.toFixed(3).toString()+'; Total Cost: '+terminalTotalCost.toFixed(1).toString());    
-        
-        
         if(RHCMethod>=8 && RHCMethod<=11){
             var stringListTemp = ['(First-Order-0)','(Second Order)','(First-Order-2)','(First-Order-3)'];
             var stringSelected = stringListTemp[RHCMethod-8];  
@@ -1905,7 +2120,7 @@ function resetSimulation(){
         agents[i].energySpent = 0;
     }
 
-    if(RHCMethod<8){
+    if(RHCMethod<8 | RHCMethod>=12){
         document.getElementById("simulationTime").innerHTML = simulationTime.toFixed(2).toString();
         document.getElementById("simulationCost").innerHTML = 0;
     }else{
@@ -2344,6 +2559,8 @@ function problemConfigurationChanged(){
         document.getElementById("runSimulationWizard").style.display = "none";
 
     }
+    // print("Num of targets: "+targets.length)
+    dataPlotModeChanged();
 
     
 }
@@ -2673,5 +2890,260 @@ function doSave(value, type, name) {
 
 
 
+function plotDecisionBoundary(){
+    var a = 0; // agent
+    var i = 0; // current target
+    targets[i].uncertainty = 0;
+    var X = 1; // neighbor targets
+    var Y = 2; // neighbor targets
+    var res = 0.1;
+    var lim = 10;
+    var stringVal = "[";
+    for(var x = 0; x<=lim; x=x+res){
+        for(var y = 0; y<=lim; y=y+res){
+            targets[X].uncertainty = x;
+            targets[Y].uncertainty = y;
+            var ans1 = agents[a].solveOP3(i); 
+            var ans2 = agents[a].solveForTheNextVisit(i);
+
+            // print("x = "+x+"; y="+y+"; j="+ans[0]);        
+            stringVal = stringVal + x+","+y+","+ans1[0]+","+ans2[0]+";"
+        }
+    }
+    stringVal = stringVal.slice(0, -1);
+    stringVal = stringVal+"]";
+    return stringVal;
+}
 
 
+
+
+
+
+
+function tuneRLBasedEDRHC(numOfIterations){
+    // var numOfIterations = 100;
+    RLParametersChanged();
+    var numOfEpisodesPerIteration = RLNumOfEpisodesPerIteration;
+
+    var costArray = [];
+    var paraArray = [];
+    var bestCost = Infinity;
+    var bestPolicy = storeRestoreActionValueDataMeans(0,0);
+    var meanVals = [...bestPolicy];
+    for(k = 0; k<numOfIterations; k++){
+
+        // run several episodes and collect data
+        var meanEpisodeCost = 0;
+        for(l = 0; l<numOfEpisodesPerIteration; l++){
+            simulateHybridSystemFast();
+            meanEpisodeCost = meanEpisodeCost + (terminalMeanSystemUncertainty - meanEpisodeCost)/(l+1);        
+            updateActionValueData(0); // do not update the policy, just update the means
+            resetSimulation();
+            numOfRLIterations++;
+        }
+        numOfRLIterations = numOfRLIterations-numOfEpisodesPerIteration;//rollback
+
+        print("Cost at k="+k+", is :"+meanEpisodeCost.toFixed(3));
+        costArray.push(meanEpisodeCost);
+        paraArray.push(k);
+        if(meanEpisodeCost<bestCost){
+            bestCost = meanEpisodeCost;
+            bestPolicy = [...meanVals];
+            //print(bestPolicy[0][0][1])
+        }
+
+        updateActionValueData(1);
+        meanVals = storeRestoreActionValueDataMeans(0,0);  //stremode,dummy  
+        storeRestoreActionValueDataMeans(1,meanVals); // removes all the reward data and episode mean data, keeping the action values
+        
+        resetSimulation();
+        // print(agents[0].actionValueData[0][1])
+        numOfRLIterations++;    
+    }
+    
+    plotCostVsParameterData(7,paraArray,costArray)
+    
+    if(bestCost<10000000000){
+        print("Best Cost = "+bestCost.toFixed(3));
+        var improvement = 100*(costArray[0]-bestCost)/costArray[0];
+        consolePrint("A control policy with a cost "+bestCost.toFixed(3)+" found! (Improvement: "+improvement.toFixed(3)+"%)")
+        storeRestoreActionValueDataMeans(1,bestPolicy);
+    }
+
+    
+    // numOfRLIterations = 0;
+}
+
+function updateActionValueData(mode){
+    // update the actionValueData based on the reward sequence recorded at each agent for the episode
+
+    var discountFactor = RLDiscountFactor; //1
+
+    for(var a = 0; a<agents.length; a++){
+        var returnVal = 0;
+        for(var k = agents[a].rewardSequence.length-1; k>=0; k--){
+            var i = agents[a].rewardSequence[k][0];
+            var j = agents[a].rewardSequence[k][1];
+            var R = agents[a].rewardSequence[k][2];
+            returnVal = discountFactor*returnVal + R; // discounted return (i.e., future sum of (discounted) rewards)
+            agents[a].actionValueData[i][j].push(returnVal); // i is the state, j is the action
+            
+            var N_new = agents[a].actionValueData[i][j].length - 2;
+            var mean_Old = agents[a].actionValueData[i][j][1]; // episode mean
+            var x_new = returnVal;
+            var mean_New = mean_Old + (x_new-mean_Old)/N_new;
+            agents[a].actionValueData[i][j][1] = mean_New;
+        }
+
+        if(mode==1){
+            // update overal control policy (baseed on episodic means)
+            var updateStepSize;
+            if(RLStepSizeType==0){
+                updateStepSize = RLStepSizeValue//1/(1+numOfRLIterations); //should be between 0 and 1 (slow vs fast, respectively)
+            }else if(RLStepSizeType==1){
+                updateStepSize = RLStepSizeValue/Math.sqrt(numOfRLIterations+1);
+            }else{
+                updateStepSize = RLStepSizeValue/(RLStepSizeValue+numOfRLIterations);
+            }
+            
+
+            for(var i=0; i<targets.length; i++){
+                for(var j=0; j<targets.length; j++){
+                    if(agents[a].actionValueData[i][j].length>2){
+                        var C_ijOld = agents[a].actionValueData[i][j][0];
+                        var C_ijNew = agents[a].actionValueData[i][j][1];
+                        C_ijNew = C_ijOld + updateStepSize*(C_ijNew - C_ijOld);
+                        agents[a].actionValueData[i][j][0] = C_ijNew;
+                    }
+                }
+            }
+        }
+
+
+    }
+
+}
+
+function storeRestoreActionValueDataMeans(mode,means){
+    var matVal = [];
+    for(var a=0; a<agents.length; a++){
+        if(mode==0){matVal.push([])}
+        
+        for(var i=0; i<targets.length; i++){
+            if(mode==0){matVal[a].push([])}
+            
+            for(var j=0; j<targets.length; j++){
+                if(mode==0){//store: retuen the current means
+                    matVal[a][i].push([]);
+                    matVal[a][i][j] = agents[a].actionValueData[i][j][0];
+                }else{// restore using 
+                    agents[a].actionValueData[i][j] = [means[a][i][j],0]; 
+                }
+
+            }
+        }
+    }
+    if(mode==0){return matVal;}
+
+}
+
+
+// function updateActionValueData(){
+//     // update the actionValueData based on the reward sequence recorded at each agent for the episode
+
+//     var discountFactor = 1; //1
+
+//     for(var a = 0; a<agents.length; a++){
+//         var returnVal = 0;
+//         for(var k = agents[a].rewardSequence.length-1; k>=0; k--){
+//             var i = agents[a].rewardSequence[k][0];
+//             var j = agents[a].rewardSequence[k][1];
+//             var R = agents[a].rewardSequence[k][2];
+//             returnVal = discountFactor*returnVal + R; // discounted return (i.e., future sum of (discounted) rewards)
+//             agents[a].actionValueData[i][j].push(returnVal); // i is the state, j is the action
+            
+//             var N_new = agents[a].actionValueData[i][j].length - 2;
+//             var mean_Old = agents[a].actionValueData[i][j][1]; // episode mean
+//             var x_new = returnVal;
+//             var mean_New = mean_Old + (x_new-mean_Old)/N_new;
+//             agents[a].actionValueData[i][j][1] = mean_New;
+//         }
+
+//         // update overal control policy (baseed on episodic means)
+//         var updateStepSize = 1; //1/sq(1+numOfRLIterations); //should be between 0 and 1 (slow vs fast, respectively)
+//         for(var i=0; i<targets.length; i++){
+//             for(var j=0; j<targets.length; j++){
+//                 if(agents[a].actionValueData[i][j].length>2){
+//                     var C_ijOld = agents[a].actionValueData[i][j][0];
+//                     var C_ijNew = agents[a].actionValueData[i][j][1];
+//                     C_ijNew = C_ijOld + updateStepSize*(C_ijNew - C_ijOld);
+//                     agents[a].actionValueData[i][j][0] = C_ijNew;
+//                 }
+//             }
+//         }
+
+
+//     }
+
+// }
+// function tuneRLBasedEDRHC(numOfIterations){
+//     // var numOfIterations = 100;
+//     var costArray = [];
+//     var paraArray = [];
+//     var bestCost = Infinity;
+//     var bestPolicy;
+//     var meanVals = [];
+//     for(k = 0; k<numOfIterations; k++){
+//         simulateHybridSystemFast();    
+//         print("Cost at k="+k+", is :"+terminalMeanSystemUncertainty.toFixed(3));
+        
+//         costArray.push(terminalMeanSystemUncertainty);
+//         paraArray.push(k);
+        
+//         if(terminalMeanSystemUncertainty<bestCost){
+//             bestCost = terminalMeanSystemUncertainty;
+//             bestPolicy = [...meanVals];
+//             //print(bestPolicy[0][0][1])
+//         }
+
+//         updateActionValueData();
+//         meanVals = storeRestoreActionValueDataMeans(0,0);  //stremode,dummy  
+//         storeRestoreActionValueDataMeans(1,meanVals);
+        
+//         resetSimulation();
+//         // print(agents[0].actionValueData[0][1])
+//         numOfRLIterations++;    
+//     }
+    
+//     plotCostVsParameterData(7,paraArray,costArray)
+    
+
+//     print("Best Cost = "+bestCost.toFixed(3));
+//     storeRestoreActionValueDataMeans(1,bestPolicy);
+//     // numOfRLIterations = 0;
+// }
+
+
+// function storeRestoreActionValueDataMeans(mode,means){
+//     var matVal = [];
+//     for(var a=0; a<agents.length; a++){
+//         if(mode==0){matVal.push([])}
+        
+//         for(var i=0; i<targets.length; i++){
+//             if(mode==0){matVal[a].push([])}
+            
+//             for(var j=0; j<targets.length; j++){
+//                 if(mode==0){//store: retuen the current means
+//                     matVal[a][i].push([]);
+//                     matVal[a][i][j] = agents[a].actionValueData[i][j][0];
+//                 }else{// restore using 
+//                     agents[a].actionValueData[i][j] = [means[a][i][j],0]; 
+//                 }
+
+//             }
+//         }
+//     }
+//     if(mode==0){return matVal;}
+
+// }

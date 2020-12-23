@@ -155,7 +155,7 @@ function draw() {
         ////print("Time: "+Math.round(simulationTime));
         ////print("Cost: "+cost);
     }else if(simulationMode==7){// Event Driven RHC methods
-
+        
         for(var k=0; k<simulationFrameRate; k++){
             
             var cost = 0;
@@ -169,9 +169,15 @@ function draw() {
                 // the following line is the only difference compared to "SimulationMoode1" given above
                 if(RHCMethod<8){
                     agents[i].updateEDRHCCT(); // update positions of the agents  
-                }else{
+                }else if(RHCMethod<12){
                     agents[i].updateEDORHCCT(); // update positions of the agents  
                     energyCost = energyCost + agents[i].energySpent;
+                }else if(RHCMethod<13){// update using clasifiers
+                    agents[i].updateClassifierCT();
+                }else if(RHCMethod<15){// update randomly
+                    agents[i].updateRandomCT();
+                }else if(RHCMethod==15){// RL method
+                    agents[i].updateEDRHCCT();
                 }
             }
 
@@ -190,7 +196,7 @@ function draw() {
 
         }
 
-        if(RHCMethod<8){
+        if(RHCMethod<8 || RHCMethod>=12){
             document.getElementById("simulationTime").innerHTML = t.toFixed(2).toString();
             document.getElementById("simulationCost").innerHTML = cost.toFixed(3).toString();
         }else{

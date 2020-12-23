@@ -98,6 +98,9 @@ function plotCostVsParameterData(paraType,dataX,dataY){
 		trace4 = {x:dataX[0], y:dataY[3], type: 'scatter', yaxis: 'y2', name:'v_max'};
 		trace5 = {x:dataX[0], y:dataY[4], type: 'scatter', yaxis: 'y2', name:'u_max'};
 		
+	}else if(paraType==7){
+		xLabel = 'Parameter: Iteration No.';
+
 	}
 
 	var plotLayout1 = 
@@ -155,7 +158,7 @@ function plotCostVsParameterData(paraType,dataX,dataY){
 
 	var myPlot1 = document.getElementById('myPlot1');
 				
-	if(paraType<5){				
+	if(paraType<5 || paraType==7){				
 		Plotly.newPlot(myPlot1, [trace1], plotLayout1);
 	}else{
 		Plotly.newPlot(myPlot1, [trace1,trace2,trace3,trace4,trace5], plotLayout2);

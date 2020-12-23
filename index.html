@@ -397,19 +397,45 @@
 				<label for="RHCMethodDropdown">RHC Method: (Add noise: <input type="checkbox" id="RHCNoiseEnableCB" checked onchange="RHCNoiseEnable();">)
 				</label>
 				<select class="form-control custom-select" id="RHCMethodDropdown" onchange="RHCMethodChanged()">
-        				<option value="0">Disabled</option>
+        				<option value="0">TCP Method (RHC disabled)</option>
 				    	<option value="1">One step ahead (Greedy RHC)</option>
 				    	<option value="2">Two steps ahead (Greedy RHC)</option>
-				    	<option value="5">Event Driven RHC-Fixed H</option>
-				    	<option value="3">Event Driven RHC</option>
-				    	<option selected value="4">Event Driven RHC-&alpha;</option>
-				    	<option value="6">Event Driven RHC-Two-Step</option>
-				    	<option value="7">Event Driven RHC-Two-Step-&alpha;-&beta;</option>
+				    	<option value="5">Event-Driven RHC-Fixed H</option>
+				    	<option value="3">Event-Driven RHC</option>
+				    	<option value="4">Event Driven RHC-&alpha;</option>
+				    	<option value="6">Event-Driven RHC-Two-Step</option>
+				    	<option value="7">Event-Driven RHC-Two-Step-&alpha;-&beta;</option>
 				    	<option value="8">ED-ORHC (First-Order Agents (old))</option>
 				    	<option value="9">ED-ORHC (Second-Order Agents (SO))</option>
 				    	<option value="10">ED-ORHC (First-Order Agents (FO2))</option>
 				    	<option value="11">ED-ORHC (First-Order Agents (FO3))</option>
+				    	<option value="12">Learned Classifiers</option>
+				    	<option value="13">Random</option>
+				    	<option value="14">Random-RL</option>
+				    	<option selected value="15">Event Driven RHC with RL</option>
 				</select> 
+
+				<div class="row">
+					<div class="col col-lg-6">
+						<button class="btn btn-danger" type="button" onclick="updateRTThresholdValuesUsingRHC();">Learn TCP via RHC
+						</button>
+					</div>
+					<!-- <div class="col col-lg-6"> -->
+						<button class="btn btn-danger" type="button" onclick="learnClassifiersUsingRHC();">Learn Classifi. via RHC
+						</button>
+					<!-- </div> -->
+				</div>
+
+				<div class="row">
+					<div class="col col-lg-6">
+						<label for="numOfSyntheticDatePoints">Datapoints/Iterations:</label>
+							<input class="form-control" id="numOfSyntheticDatePoints" type="text" value="50">
+					</div>
+					<div class="col col-lg-6">
+						<button class="btn btn-success" type="button" onclick="learnClassifiersUsingSyntheticData();">Learn Classif./RL Offline
+						</button>
+					</div>
+				</div>
 			</div>
 
 			<div class="col col-lg-2" id="RHCParametersPanel">
@@ -437,6 +463,48 @@
 				<input type="range" class="form-control slider" id="RHCvmax" min="10" max="150" value="50" step="1" onchange="RHCParametersChanged();">
 				</div>
 
+
+				<div id="RLParametersMenu">
+					<div class="row">
+						<div class="col col-lg-6">
+								<label for="RLParametersNorm">Normli.:</label>
+								<input class="form-control" id="RLParametersNorm" type="text" value="8" onchange="RLParametersChanged()">
+						</div>
+
+						<div class="col col-lg-6">
+							<label for="RLParametersDisc">Discount:</label>
+							<input class="form-control" id="RLParametersDisc" type="text" value="0.99" onchange="RLParametersChanged()">
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col col-lg-6">
+								<label for="RLParametersStepVal">Step Val.:</label>
+								<input class="form-control" id="RLParametersStepVal" type="text" value="0.99" onchange="RLParametersChanged()">
+						</div>
+
+						<div class="col col-lg-6">
+							<label for="RLParametersStepType">Type:</label>
+							<select class="form-control custom-select" id="RLParametersStepType" onchange="RLParametersChanged()">
+		        				<option selected value="0">Constant</option>
+						    	<option value="1">Diminishing</option>
+						    	<option value="2">Sq. Summable</option>
+						    </select>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col col-lg-6">
+								<label for="RLParametersRand">Ran. Ex.:</label>
+								<input class="form-control" id="RLParametersRand" type="text" value="0" onchange="RLParametersChanged()">
+						</div>
+
+						<div class="col col-lg-6">
+							<label for="RLParametersEpi">Real. Fr.:</label>
+							<input class="form-control" id="RLParametersReal" type="text" value="1" onchange="RLParametersChanged()">
+						</div>
+					</div>
+				</div>
 			</div>
 
 			<div class="col col-lg-2">
@@ -917,6 +985,10 @@
 					<button class="btn btn-success" type="button" onclick="updateRTThresholdValuesRandom();">Rand.</button> 
 					<button class="btn btn-danger" type="button" onclick="updateRTThresholdValues();">Update
 					</button>
+					<!-- <button class="btn btn-danger" type="button" onclick="updateRTThresholdValuesUsingRHC();">Learn TCP Using RHC
+					</button>
+					<button class="btn btn-danger" type="button" onclick="learnClassifiersUsingRHC();">Learn Classifiers Using RHC
+					</button> -->
 				</h5>
 				
 				<div class="row" id="customRTThreshold">

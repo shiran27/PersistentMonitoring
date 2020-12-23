@@ -37,6 +37,13 @@ function Agent(x, y, r) {
     this.energySpent = 0; 
     this.energySpentOld = 0;
 
+    this.trajectoryData = [];
+    this.classifierCoefficients = [];
+
+    // reward history of choosing to visit target j from i; for each targets i,j pair
+    this.actionValueData = [];  
+    this.rewardDataTemp = []; 
+    this.rewardSequence = [];
 
     this.show = function(){
 
@@ -56,7 +63,7 @@ function Agent(x, y, r) {
         text((this.id+1).toString(),this.position.x,this.position.y,this.graphicSizeParameter,this.graphicSizeParameter);
 
 
-        if(RHCMethod>=8){
+        if(RHCMethod>=8 & RHCMethod<12){
             var scalingFac = 5000;
             var barLength = 50; // i.e., 1 000 000 energy
             var numOfBars = Math.floor(this.energySpent/(scalingFac*barLength));
@@ -2603,6 +2610,421 @@ function Agent(x, y, r) {
 
     }
 
+
+    // Random approach to control an agent
+    this.updateRandomCT = function(){
+        // update the agent position s_a(t) of agent a
+
+        if(this.residingTarget.length==1){//residing in some target
+            
+            var i = this.residingTarget[0];
+            var j = i;
+
+            //// Randomization 3:
+            if(RHCNoiseEnabled && RHCNoiseY_iMagnitude>0){
+                this.position = targets[i].position;
+            }
+            //// end Randomization 3
+
+            // only at inital soln
+            if(this.timeToExitMode[0]==3 && this.timeToExitMode[1]<simulationTime){
+                // preliminary dwell time to be spet at target i
+                var u_i =  targets[i].uncertainty/(this.sensingRate-targets[i].uncertaintyRate);
+                ////var dwellTime = 2*u_i*Math.random();
+                var dwellTime = u_i;
+                // print("u_i = "+u_i)
+                this.timeToExitMode = [1,simulationTime+dwellTime];
+
+            }else if(this.timeToExitMode[0]==1){// in sensing mode
+                if(targets[i].uncertainty==0){ // switch to sleeping mode
+                    this.timeToExitMode[0] = 2; // no need to change the dwell time
+                    //// added the following line to make sure RHCP3 is solved straightaway
+                    this.timeToExitMode[1] = simulationTime-0.01; 
+                }else if(this.timeToExitMode[1]<simulationTime){ // leave early
+                    ans = this.solveForTheNextVisitRandom(i);
+                    j = ans[0];
+                    var rho_ij = ans[1]; 
+                    this.timeToExitMode = [3,simulationTime+rho_ij];
+
+                    if(RHCMethod==14){// Reward data
+                        this.updateRewardData(); // compute the reward obtained by visiting target i (using past rewardDataTemp and current simulationTime)
+                        this.rewardDataTemp = [i, simulationTime, targets[j].uncertainty, rho_ij];
+                    }
+
+                }else{
+                    // waiting till the end of the sensing period
+                }
+            }else if(this.timeToExitMode[0]==2){// in sleeping mode
+                if(this.timeToExitMode[1]<simulationTime){//and sleeping time elepased
+                    // Find the next target to visit
+                    var ans = this.solveForTheNextVisitRandom(i);
+                    j = ans[0];
+                    var rho_ij = ans[1]; 
+                    this.timeToExitMode = [3,simulationTime+rho_ij];
+
+                    if(RHCMethod==14){// Reward data
+                        this.updateRewardData(); // compute the reward obtained by visiting target i (using past rewardDataTemp and current simulationTime)
+                        this.rewardDataTemp = [i, simulationTime, targets[j].uncertainty, rho_ij];
+                    }
+                }else{
+                    // waiting till the end of the predetermined sleeping period    
+                }
+            }
+
+            
+            if(j==i){
+                // stay at i to further reduce the uncertainty till 0
+                this.position = this.position;
+            }else{
+                // need to start moving in the direction of target j
+                // rotate
+                this.residingTarget = [i,j];
+                var headingAngle = atan2P2(targets[i].position,targets[j].position);
+                var rotationRequired = headingAngle-this.orientation;
+                for(var k = 0; k<this.graphicBaseShape.length ; k++){
+                    this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
+                }
+                ////print("need to go to j; rotated");
+                
+                ////this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                ////Randomization 2:
+                if(RHCNoiseEnabled&&RHCNoisev_Max>0){
+                    this.headingDirectionStep = rotateP2(new Point2((this.maxLinearVelocity+this.maxLinearVelocity*RHCNoisev_Max*2*(math.random()-0.5)/100)*deltaT,0),headingAngle);    
+                }else{
+                    this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                }
+                //// End Randomization 2
+
+                this.position = plusP2(this.position, this.headingDirectionStep);
+                this.orientation = headingAngle;
+
+                if(dataPlotMode){// agent Started Moving towards a new target
+                    recordSystemState();
+                    //this.recordControlDecision(i,j);
+                }
+            
+            }
+        }else{// going from T_i to T_j (as this.residingTarget = [T_i, T_j]) 
+            var i = this.residingTarget[0];// where we were
+            var j = this.residingTarget[1];// where we are heading
+            var angle = this.orientation;
+            ////print("travelling i to j");
+            
+
+            ////Randomization 3
+            var conditionTemp;
+            if(RHCNoiseEnabled && RHCNoiseY_iMagnitude>0){
+                var headingAngle = atan2P2(this.position,targets[j].position);
+                var rotationRequired = headingAngle-this.orientation;
+                for(var k = 0; k<this.graphicBaseShape.length ; k++){
+                    this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
+                }
+                ////print("need to go to j; rotated");
+                this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                this.orientation = headingAngle;
+                this.position = plusP2(this.position, this.headingDirectionStep);
+                conditionTemp = distP2(this.position,targets[j].position)<1
+                //// end Randomization 3
+            }else{
+                this.position = plusP2(this.position, this.headingDirectionStep);
+                conditionTemp = distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)
+            }
+            ////this.position = plusP2(this.position, this.headingDirectionStep);
+            ////if(distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)){
+            if(conditionTemp){
+                //print("Stopped at j !!! ")
+                this.position = targets[j].position;
+                this.residingTarget = [j]; 
+
+                // event driven decision making
+                if(this.timeToExitMode[0]==3 && this.timeToExitMode[1]<simulationTime){
+                    // solve OP-1 to decide u_i
+                    var u_j = targets[j].uncertainty/(this.sensingRate-targets[j].uncertaintyRate);
+                    var dwellTime = 2*u_i*Math.random();
+                    this.timeToExitMode = [1, simulationTime+dwellTime];
+                }
+
+                if(dataPlotMode){recordSystemState();}// record agent reached destination target event
+            }
+
+
+        }
+    }
+
+    // find the next visit target randomly
+    this.solveForTheNextVisitRandom = function(i){
+        
+        var jStar;
+        var rho_ijStar;
+    
+        var epsilon = RLRandomPolicyEpsilon; // only applies to RHCMethod14
+        var randNum = Math.random();
+        if(RHCMethod==14 && randNum<(1-epsilon)){// epsilon soft policy
+            var minFutureCost = Infinity;
+            for(var jInd = 0; jInd < targets[i].neighbors.length; jInd++){
+                var j = targets[i].neighbors[jInd];
+
+                var futureCost = this.actionValueData[i][j][0];
+                if(futureCost<minFutureCost){
+                    jStar = j;
+                    rho_ijStar = targets[i].distancesToNeighbors[jInd]/this.maxLinearVelocity;
+                }
+            }
+            return [jStar, rho_ijStar];    
+        }
+        // otherwise... select a random neighbor
+
+
+
+
+        // this part runs even when RHCMethod15
+        var numOfNeighbors = targets[i].neighbors.length-1;
+        var randNum = numOfNeighbors*Math.random();
+        var count = 1;
+        for(var jInd = 0; jInd < targets[i].neighbors.length; jInd++){
+            var j = targets[i].neighbors[jInd];
+            if(i==j){
+                continue;
+            }
+
+            if(randNum<count){
+                jStar = j;
+                rho_ijStar = targets[i].distancesToNeighbors[jInd]/this.maxLinearVelocity;
+                break;
+            }
+
+            count = count + 1;
+        }
+
+        // print("Here: at i="+i+"; j="+jStar)
+        return [jStar, rho_ijStar];
+
+    }
+
+
+
+
+    // Classifier (learned based on EDRHC) based update for an agent
+    this.updateClassifierCT = function(){
+        // update the agent position s_a(t) of agent a
+
+        if(this.residingTarget.length==1){//residing in some target
+            
+            var i = this.residingTarget[0];
+            var j = i;
+
+            //// Randomization 3:
+            if(RHCNoiseEnabled && RHCNoiseY_iMagnitude>0){
+                this.position = targets[i].position;
+            }
+            //// end Randomization 3
+
+            // only at inital soln
+            if(this.timeToExitMode[0]==3 && this.timeToExitMode[1]<simulationTime){
+                // preliminary dwell time to be spet at target i
+                var u_i =  targets[i].uncertainty/(this.sensingRate-targets[i].uncertaintyRate);
+                // print("u_i = "+u_i)
+                this.timeToExitMode = [1,simulationTime+u_i];
+
+            }else if(this.timeToExitMode[0]==1){// in sensing mode
+                if(targets[i].uncertainty==0){
+                    // Find the sleeping time v_i
+                    var v_i = 0;
+                    this.timeToExitMode = [2,simulationTime+v_i];
+                    //// if v_i = 0, jump directly to moving: Solving OP-3
+                }
+            }else if(this.timeToExitMode[0]==2){// in sleeping mode
+                if(this.timeToExitMode[1]<simulationTime){//and sleeping time elepased
+                    // Find the next target to visit
+                    var ans = this.solveForTheNextVisit(i);
+                    // print("Here2 = "+ans)
+                    j = ans[0];
+                    var rho_ij = ans[1]; 
+                    if(j!=i){this.timeToExitMode = [3,simulationTime+rho_ij]};
+                
+                }else{
+                    // waiting till the end of the predetermined sleeping period    
+                }
+
+            }
+
+            
+            if(j==i){
+                // stay at i to further reduce the uncertainty till 0
+                this.position = this.position;
+            }else{
+                // need to start moving in the direction of target j
+                // rotate
+                this.residingTarget = [i,j];
+                var headingAngle = atan2P2(targets[i].position,targets[j].position);
+                var rotationRequired = headingAngle-this.orientation;
+                for(var k = 0; k<this.graphicBaseShape.length ; k++){
+                    this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
+                }
+                ////print("need to go to j; rotated");
+                
+                ////this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                ////Randomization 2:
+                if(RHCNoiseEnabled&&RHCNoisev_Max>0){
+                    this.headingDirectionStep = rotateP2(new Point2((this.maxLinearVelocity+this.maxLinearVelocity*RHCNoisev_Max*2*(math.random()-0.5)/100)*deltaT,0),headingAngle);    
+                }else{
+                    this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                }
+                //// End Randomization 2
+
+                this.position = plusP2(this.position, this.headingDirectionStep);
+                this.orientation = headingAngle;
+
+                if(dataPlotMode){// agent Started Moving towards a new target
+                    recordSystemState();
+                    //this.recordControlDecision(i,j);
+                }
+            
+            }
+        }else{// going from T_i to T_j (as this.residingTarget = [T_i, T_j]) 
+            var i = this.residingTarget[0];// where we were
+            var j = this.residingTarget[1];// where we are heading
+            var angle = this.orientation;
+            ////print("travelling i to j");
+            
+
+            ////Randomization 3
+            var conditionTemp;
+            if(RHCNoiseEnabled && RHCNoiseY_iMagnitude>0){
+                var headingAngle = atan2P2(this.position,targets[j].position);
+                var rotationRequired = headingAngle-this.orientation;
+                for(var k = 0; k<this.graphicBaseShape.length ; k++){
+                    this.graphicBaseShapeRotated[k] = rotateP2(this.graphicBaseShapeRotated[k], rotationRequired);
+                }
+                ////print("need to go to j; rotated");
+                this.headingDirectionStep = rotateP2(new Point2(this.maxLinearVelocity*deltaT,0),headingAngle);
+                this.orientation = headingAngle;
+                this.position = plusP2(this.position, this.headingDirectionStep);
+                conditionTemp = distP2(this.position,targets[j].position)<1
+                //// end Randomization 3
+            }else{
+                this.position = plusP2(this.position, this.headingDirectionStep);
+                conditionTemp = distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)
+            }
+            ////this.position = plusP2(this.position, this.headingDirectionStep);
+            ////if(distP2(this.position,targets[i].position)>distP2(targets[j].position,targets[i].position)){
+            if(conditionTemp){
+                //print("Stopped at j !!! ")
+                this.position = targets[j].position;
+                this.residingTarget = [j]; 
+
+                // event driven decision making
+                if(this.timeToExitMode[0]==3 && this.timeToExitMode[1]<simulationTime){
+                    // solve OP-1 to decide u_i
+                    var u_j = targets[j].uncertainty/(this.sensingRate-targets[j].uncertaintyRate);
+                    // print("u_j = "+u_j)
+                    this.timeToExitMode = [1, simulationTime+u_j];
+                    //// if u_i = 0 solve OP-3 to find the next target j
+                }
+
+                if(dataPlotMode){recordSystemState();}// record agent reached destination target event
+            }
+
+
+        }
+    }
+
+
+
+    // find the next visit target based on the learned classifier
+    this.solveForTheNextVisit = function(i){
+        
+        // feature vector construction
+        var feature = [1]; //x_0 = 1 by default
+        //direct features
+        for(var jInd = 0; jInd < targets[i].neighbors.length; jInd++){
+            var j = targets[i].neighbors[jInd];
+            if(i==j){
+                continue
+            }
+            var R_j = targets[j].uncertainty;
+            feature.push(R_j);
+            feature.push(sq(R_j));
+            // feature.push(1/R_j);
+            // feature.push(1/sq(R_j));
+        }
+        //cross features
+        for(var jInd = 0; jInd < targets[i].neighbors.length; jInd++){
+            var j = targets[i].neighbors[jInd];
+            if(i==j){
+                continue
+            }
+            var R_j = targets[j].uncertainty;
+
+            for(var lInd = jInd+1; lInd < targets[i].neighbors.length; lInd++){
+                var l = targets[i].neighbors[lInd];
+                if(i==l){
+                    continue
+                }
+                var R_l = targets[l].uncertainty
+                feature.push(R_j*R_l);
+                // feature.push(1/(R_j*R_l));
+            }
+        }
+        // End feature vector construction
+
+
+        // evaluating different classifiers (one for each neighbor)
+        var maxhVal = 0;
+        var jStar = i;
+        var rho_ijStar = 0;
+        for(var jInd = 0; jInd < targets[i].neighbors.length; jInd++){
+            var j = targets[i].neighbors[jInd];
+            if(i==j){
+                continue;
+            }
+
+            // need to find out that no agent is already in or en-route to target j
+            var anotherAgentIsComitted = false;
+            for(var a = 0; a<agents.length; a++){
+                if(agents[a].residingTarget.length==1){
+                    if(agents[a].residingTarget[0]==j){
+                        anotherAgentIsComitted = true;
+                        break;    
+                    }
+                }else if(agents[a].residingTarget.length==2){
+                    if(agents[a].residingTarget[1]==j){
+                        anotherAgentIsComitted = true;
+                        break;
+                    }
+                }
+            }
+            if(anotherAgentIsComitted){
+                continue;
+            }
+
+
+
+            // parameters
+            var theta = this.classifierCoefficients[i][jInd];
+            // print("feature and theta:")
+            // print(feature)
+            // print(theta)
+            // print(this.classifierCoefficients[i])
+            // print("target,agent,next:"+[i,this.id,j])
+            var hVal = evaluateLogisticFunction(theta,feature,0);
+
+            if(hVal>maxhVal){
+                maxhVal = hVal;
+                jStar = j;
+                rho_ijStar = targets[i].distancesToNeighbors[jInd]/this.maxLinearVelocity;
+            }
+        }
+
+
+
+        // print("Here: at i="+i+"; j="+jStar)
+        return [jStar, rho_ijStar];
+
+    }
+
+
+
     // Evet driven RHC update for an agent
     this.updateEDRHCCT = function(){
         // update the agent position s_a(t) of agent a
@@ -2628,6 +3050,7 @@ function Agent(x, y, r) {
                  if(this.timeToExitMode[1]<simulationTime){//and sensing time elepased
                     if(targets[i].uncertainty>0){// leave early?
                         // solve OP-3 to find the next target j to visit
+
                         var ans;
                         if(RHCMethod==6 || RHCMethod==7){
                             ans = this.solveOP3Extended(i);
@@ -2636,7 +3059,15 @@ function Agent(x, y, r) {
                         }
                         j = ans[0];
                         var rho_ij = ans[1]; 
-                        if(j!=i){this.timeToExitMode = [3,simulationTime+rho_ij]};
+                        if(j!=i){
+                            this.timeToExitMode = [3,simulationTime+rho_ij];
+                            
+                            if(RHCMethod==15){// Reward data
+                                this.updateRewardData(); // compute the reward obtained by visiting target i (using past rewardDataTemp and current simulationTime)
+                                this.rewardDataTemp = [i, simulationTime, targets[j].uncertainty, rho_ij];
+                            }
+                            // print("Early Leave at R_i="+targets[i].uncertainty);
+                        }
                     }else{
                         // solve OP-2 to find the sleeping time v_i
                         var v_i = this.solveOP2(i);
@@ -2670,7 +3101,13 @@ function Agent(x, y, r) {
                     }
                     j = ans[0];
                     var rho_ij = ans[1]; 
-                    if(j!=i){this.timeToExitMode = [3,simulationTime+rho_ij]};
+                    if(j!=i){
+                        this.timeToExitMode = [3,simulationTime+rho_ij];
+                        if(RHCMethod==15){// Reward data
+                            this.updateRewardData(); // compute the reward obtained by visiting target i (using past rewardDataTemp and current simulationTime)
+                            this.rewardDataTemp = [i, simulationTime, targets[j].uncertainty, rho_ij];
+                        }
+                    }
                 
                 }else{
                     // waiting till the end of the predetermined sleeping period    
@@ -2715,7 +3152,10 @@ function Agent(x, y, r) {
                 this.position = plusP2(this.position, this.headingDirectionStep);
                 this.orientation = headingAngle;
 
-                if(dataPlotMode){recordSystemState();}// agent Started Moving towards a new target
+                if(dataPlotMode){// agent Started Moving towards a new target
+                    recordSystemState();
+                    this.recordControlDecision(i,j);
+                }
             
                 // trigger an event at neighbor targets of i telling i is now uncovered!
                 // also trigger an event telling at neighbors of j telling it is now covered!
@@ -2762,10 +3202,44 @@ function Agent(x, y, r) {
                 }
 
                 if(dataPlotMode){recordSystemState();}// record agent reached destination target event
+
             }
 
 
         }
+    }
+
+
+    this.updateRewardData = function(){
+        // agent is ready to leave current target, compute the reward of visiting the current target
+        if(this.rewardDataTemp.length==0){
+            return; // no action to store
+        }
+
+        //rewardDataTemp = [i, simulationTime, targets[j].uncertainty, rho_ij];
+        var i = this.rewardDataTemp[0]; // where agent came from to the current target
+        var j = this.residingTarget[0]; // current target
+        var t_0 = this.rewardDataTemp[1]; // when the agent began travelling to current target (i.e., when agent left i)
+        var R_j0 = this.rewardDataTemp[2]; // uncertainty value of the current target j when left the previous target i
+        var rho_ij = this.rewardDataTemp[3]; // travel time spent to reacch the current target
+        var delta_j0 = simulationTime - (t_0 + rho_ij); // dwell time spent at the current target
+
+
+        var A_j = targets[j].uncertaintyRate;
+        var B_j = this.sensingRate;
+
+        var cost = (R_j0 + 0.5*A_j*rho_ij)*rho_ij; // cost during the travel time
+
+        var u_jB = (R_j0+A_j*rho_ij)/(B_j-A_j); // max sensing time possible at j (i.e., at the current target)
+        if(delta_j0>=u_jB){
+            cost = cost + 0.5*(R_j0+A_j*rho_ij)*u_jB; // sleep time does not add cost
+        }else{// going to leave target j early
+            cost = cost + ((R_j0+A_j*rho_ij) - 0.5*(B_j-A_j)*delta_j0)*delta_j0;
+        } 
+
+        cost = cost/(rho_ij+delta_j0);        
+        this.rewardSequence.push([i,j,cost])
+        //this.actionValueData[i][j].push(cost); 
     }
 
 
@@ -3419,6 +3893,19 @@ function Agent(x, y, r) {
         }
 
 
+        // making RHCMethod15 an epsilon soft policy
+        var epsilonSoftMode = false; 
+        if(RHCMethod==15){
+            var epsilon = RLRandomPolicyEpsilon;    
+            var randNum0 = Math.random();
+            if(randNum0<epsilon){
+                epsilonSoftMode = true; // select an available neighbor randomly
+            }
+        }
+        var randNum = jArray.length*Math.random(); // to select the neighbor
+        // end-making RHCMethod15 an epsilon soft policy
+
+
         var bestDestinationCost = Infinity;
         var bestDestination = i;
         var bestDestinationTime = 0;
@@ -3463,7 +3950,7 @@ function Agent(x, y, r) {
             // revised coeficients 
             // alpha can be a function of the degree at target i (currently residing)
             var alpha;
-            if(RHCMethod==4 || RHCMethod==7){
+            if(RHCMethod==4 || RHCMethod==7 || RHCMethod==15){// use in methods: RHC-alpha, Optimal-RHC, RHC-RL
                 
                 if(RHCParameterOverride){
                     alpha = RHCalpha;
@@ -3491,8 +3978,14 @@ function Agent(x, y, r) {
             var sol1 = this.solveOP3Quick(i,j,R_j,t_h3,y_ij,Abar,coefs);
             // end revise coefs
 
-            if(sol1[0]<bestDestinationCost){
+            if(RHCMethod!=15 && sol1[0]<bestDestinationCost){
                 bestDestinationCost = sol1[0];
+                bestDestination = j;
+                bestDestinationTime = y_ij;
+                bestDestinationSolution = [...sol1];
+                bestDestinationSolutionType = 1; 
+            }else if(RHCMethod==15 && (2*periodT*sol1[0]+RLNormalizationFactor*this.actionValueData[i][j][0])<bestDestinationCost){
+                bestDestinationCost = 2*periodT*sol1[0]+RLNormalizationFactor*this.actionValueData[i][j][0];
                 bestDestination = j;
                 bestDestinationTime = y_ij;
                 bestDestinationSolution = [...sol1];
@@ -3500,7 +3993,19 @@ function Agent(x, y, r) {
             }
 
             
+            // RHCMethod15 epsilon soft mode
+            if(RHCMethod==15 && epsilonSoftMode && randNum>=k && randNum<(k+1)){
+                bestDestination = j;
+                bestDestinationTime = y_ij;
+                break; // no need to check other neighbors in this case
+            }
+            // End-RHCMethod15 epsilon soft mode
+
+            
         }
+
+
+    
 
         if(bestDestinationCost<100000 && printMode){
             print("Agent "+(this.id+1)+" at Target "+(i+1)+" to Target "+(bestDestination+1))
@@ -5190,6 +5695,205 @@ function Agent(x, y, r) {
 
 
 
+    this.recordControlDecision = function(i,j){
+        var dataPacket = [];
+        dataPacket.push(j);
+
+        for(var k = 0; k<targets[i].neighbors.length; k++){
+            var ind = targets[i].neighbors[k];
+            // if an agent is en-route to or residing in the target, it should be omitted
+            // need to find out that no agent is already in or en-route to target j
+            var anotherAgentIsComitted = false;
+            for(var a = 0; a<agents.length; a++){
+                if(agents[a].residingTarget.length==1){
+                    if(agents[a].residingTarget[0]==ind){
+                        anotherAgentIsComitted = true;
+                        break;    
+                    }
+                }else if(agents[a].residingTarget.length==2 & a!=this.id){
+                    if(agents[a].residingTarget[1]==ind){
+                        anotherAgentIsComitted = true;
+                        break;
+                    }
+                }
+            }
+
+            if(anotherAgentIsComitted){
+                dataPacket.push(0);
+            }else{
+                dataPacket.push(targets[ind].uncertainty);
+            }
+            // dataPacket.push(targets[ind].uncertainty);
+        }
+        this.trajectoryData[i].push(dataPacket);
+    }
+
+
+
+    this.learnThresholdControlPolicy = function(){
+        var sumMeanLearningError = 0;
+        for(var i = 0; i<targets.length; i++){
+            var neighborsTemp = [...targets[i].neighbors];
+            neighborsTemp.unshift(i);
+            var targetData = neighborsTemp;
+            var thresholdData = this.threshold[i];
+            var controlData = this.trajectoryData[i];
+            var ans = optimizeAgentThresholds(targetData,thresholdData,controlData);
+            var costVal = ans[1]; 
+            sumMeanLearningError = sumMeanLearningError + costVal;
+            var learnedThresholds = ans[0]; 
+            print("Agent "+(this.id+1)+" at target "+(i+1)+" learned: ")
+            print(learnedThresholds);
+            print("compared to old: ");
+            print(this.threshold[i]);
+            // print("using data:")
+            // print(targetData)
+            // print(controlData)
+            this.threshold[i] = [...learnedThresholds];
+        }
+        return sumMeanLearningError/targets.length;
+        // displayThresholds();
+    }
+
+
+    this.learnThresholdControlPolicyJointly = function(){
+        var sumMeanLearningError = 0;
+        for(var i = 0; i<targets.length; i++){
+            var neighborsTemp = [...targets[i].neighbors];
+            neighborsTemp.unshift(i);
+            var targetData = neighborsTemp;
+
+            var thresholdData = this.threshold[i];
+            
+            var controlDataSelf = this.trajectoryData[i];
+            var controlDataOthers = [];
+            for(var a = 0; a < agents.length; a++){
+                if(a!=this.id){
+                    // need to insert data points in agents[a].trajectoryData[i] to var controlDataOthers
+                    for(var k = 0; k <= agents[a].trajectoryData[i].length; k++){
+                        if(typeof agents[a].trajectoryData[i][k] !== 'undefined'){
+                            controlDataOthers.push(agents[a].trajectoryData[i][k]);
+                        }
+                    }
+                }
+            }
+            
+            var ans = optimizeAgentThresholdsJointly(targetData,thresholdData,controlDataSelf,controlDataOthers);
+            var costVal = ans[1];
+            sumMeanLearningError = sumMeanLearningError + costVal;
+            var learnedThresholds = ans[0];
+            
+            print("Agent "+(this.id+1)+" at target "+(i+1)+" learned: ")
+            print(learnedThresholds);
+            print("compared to old: ");
+            print(this.threshold[i]);
+            // print("using data:")
+            // print(targetData)
+            // print(controlDataSelf)
+            this.threshold[i] = [...learnedThresholds];
+        }
+        return sumMeanLearningError/targets.length;
+        // displayThresholds();
+    }
+
+
+    this.learnClassifierCoefficients = function(){
+        var sumMeanLearningError = 0;
+        for(var i = 0; i<targets.length; i++){
+            var neighborsTemp = [...targets[i].neighbors];
+            neighborsTemp.unshift(i);
+            var targetData = neighborsTemp;
+            var controlData = this.trajectoryData[i];
+            
+            // prepare feature data
+            var featureData = [];
+            var L = targets[i].neighbors.length-1;
+            var numOfFeatures = 1 + 2*L + L*(L-1)/2;
+            for(var k = 0; k<controlData.length; k++){
+                var feature = [1]; //x_0 = 1 by default
+                var controlDataInput = controlData[k];
+                //direct features
+                for(var jInd = 0; jInd < targets[i].neighbors.length; jInd++){
+                    var j = targets[i].neighbors[jInd];
+                    if(i==j){
+                        continue
+                    }
+                    var R_j = controlDataInput[jInd+1];
+                    feature.push(R_j);
+                    feature.push(sq(R_j));
+                    // feature.push(1/R_j);
+                    // feature.push(1/sq(R_j));
+                }
+                //cross features
+                for(var jInd = 0; jInd < targets[i].neighbors.length; jInd++){
+                    var j = targets[i].neighbors[jInd];
+                    if(i==j){
+                        continue
+                    }
+                    var R_j = controlDataInput[jInd+1];
+
+                    for(var lInd = jInd+1; lInd < targets[i].neighbors.length; lInd++){
+                        var l = targets[i].neighbors[lInd];
+                        if(i==l){
+                            continue
+                        }
+                        var R_l = controlDataInput[lInd+1];
+                        feature.push(R_j*R_l);
+                        // feature.push(1/(R_j*R_l));
+                    }
+                }
+                featureData.push(feature);
+            }
+            // end preparing feature data
+
+            // prepare output data : for each classifier (one vs all)
+            var learnedCoefficients = [];
+            var meanLearningError = 0;
+            for(var jInd=0; jInd<targets[i].neighbors.length; jInd++){
+                var j = targets[i].neighbors[jInd];
+                if(j==i){
+                    learnedCoefficients.push([]);
+                    continue;
+                }
+
+                var outputData = [];
+                for(var k = 0; k<controlData.length; k++){
+                    var jStar = controlData[k][0];
+                    if(jStar==j){
+                        outputData.push(1);
+                    }else{
+                        outputData.push(0);
+                    }
+                }
+                ////print(outputData)
+                ////print(featureData)
+
+                var coeffsAndError = learnAgentClassifierCoefficients(outputData,featureData,numOfFeatures);
+                learnedCoefficients.push(coeffsAndError[0]);
+                meanLearningError = meanLearningError + coeffsAndError[1];
+            }
+            meanLearningError = meanLearningError/(targets[i].neighbors.length-1);
+
+            //// print("Agent "+(this.id+1)+" at target "+(i+1)+" learned: ")
+            //// print(learnedCoefficients);
+            // print("with the learning error: ");
+            // print(meanLearningError);
+            // print("using data:");
+            // print(targetData);  
+            // print(controlData);
+            sumMeanLearningError = sumMeanLearningError + meanLearningError;
+            this.classifierCoefficients[i] = [...learnedCoefficients];
+        }
+        sumMeanLearningError = sumMeanLearningError/targets.length;
+        print("Sum mean learning error:")
+        print(sumMeanLearningError)
+        return sumMeanLearningError;
+        // displayThresholds();
+    }
+
+
+
+
 }
 
 
@@ -5256,6 +5960,7 @@ function evalCostOP3(u_j,v_j,rho_ij,coefs){
     var value = (coefs[0]*sq(u_j) + coefs[1]*sq(v_j) + coefs[2]*u_j*v_j + coefs[3]*u_j + coefs[4]*v_j + coefs[5])/(u_j+v_j+rho_ij); 
     return value;
 }
+
 
 
 

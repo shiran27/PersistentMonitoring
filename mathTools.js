@@ -938,6 +938,438 @@ function generateExponentialRandom(rate){
 
 
 
+function optimizeAgentThresholds(targetData,thresholdData,controlData){
+    
+    //var targetData = [i, targets[i].neighbors];
+    //var thresholdData = this.threshold[i];
+    //controlData = this.trajectoryData[i];
+
+    var stepSizeVal = 10;
+    var numOfEpochs = 10000;
+    var numOfDataPoints = controlData.length*(targetData.length-1);
+    
+    // current threshold value: theta
+    var theta = [];
+    var gradTheta = [];
+    var iInd = targetData[0];
+    for(var l = 1; l<targetData.length; l++){
+        var lInd = targetData[l];
+        if(lInd==iInd){
+            theta.push(0);  // no need to keep this to 1  
+        }else{
+            theta.push(thresholdData[lInd]);    
+        }
+        gradTheta.push(0);        
+    }
+
+
+    // running iterations
+    var costValOld = 0;
+    for(var m = 1; m<=numOfEpochs; m++){
+        
+        var costVal = 0;
+        if(numOfDataPoints==0){break;}
+
+        // evaluate gradient using data
+        for(var l = 0; l<(targetData.length-1); l++){
+            gradTheta[l] = 0;
+        }
+
+        for(var k = 0; k<controlData.length; k++){
+
+            var jStarInd = controlData[k][0];
+            var jStar = targetData.indexOf(jStarInd);
+            for(var j = 1; j<targetData.length; j++){
+                
+                // get x_{k,j}
+                var x_kj = [];
+                var R_j = controlData[k][j];
+                var R_jStar = controlData[k][jStar];
+
+                var jInd = targetData[j];
+                for(var l = 1; l<targetData.length; l++){
+                    var lInd = targetData[l];
+                    if(lInd==iInd){
+                        //x_ii
+                        ////x_kj.push(R_jStar-R_j);
+                        x_kj.push(0);
+                    }else if(lInd==jInd & lInd==jStarInd){
+                        //x_ij 
+                        x_kj.push(0);
+                    }else if(lInd==jInd){
+                        //x_ij 
+                        x_kj.push(+1);
+                    }else if(lInd==jStarInd){
+                        //x_{ij_i^k}
+                        x_kj.push(-1);
+                    }else{
+                        //x_il
+                        x_kj.push(0);
+                    }
+                }
+
+                // evaluate h_theta(x_{k,j})
+                //// var hVal = evaluateLogisticFunction(theta,x_kj,0);
+                var hVal = evaluateLogisticFunction(theta,x_kj,R_j-R_jStar);
+                for(var l = 0; l<(targetData.length-1); l++){
+                    gradTheta[l] = gradTheta[l] + (hVal-1)*x_kj[l];     
+                }
+
+                costVal = costVal - Math.log(hVal);
+                
+            }
+
+        }
+        // end evaluting gradiant of theta
+
+        
+        // update theta
+        for(var l = 0; l<(targetData.length-1); l++){
+            var thetaNext = theta[l] - stepSizeVal*gradTheta[l]/numOfDataPoints;
+            if(thetaNext<0){thetaNext = 0;}
+            theta[l] = thetaNext; 
+
+            var lInd = targetData[l+1]; // keeping theta_ii fixed to 1
+            if(lInd==iInd){
+                //// theta[l] = 1;
+            }    
+        }
+        // end update theta
+
+        
+        costVal = costVal/numOfDataPoints; 
+        if(Math.abs(costVal-costValOld)<0.000001){
+            print("Cost in iteration: "+m)
+            print(costVal);
+            break; 
+        }else{
+            if(m==1 | m==numOfEpochs){
+                print("Cost in iteration: "+m)
+                print(costVal);
+            }
+            costValOld = costVal;
+        }
+
+
+    }
+    print("Final Grad: ")
+    print(gradTheta)
+    // end running iterations
+
+    var updatedThresholds = [...thresholdData];
+    for(var l = 1; l<targetData.length; l++){
+        var lInd = targetData[l];
+        if(lInd!=iInd){
+            updatedThresholds[lInd] = theta[l-1];    
+        }else{
+            updatedThresholds[lInd] = 0;
+        }
+    }
+
+    return [updatedThresholds, costVal];
+
+}
+
+
+function optimizeAgentThresholdsJointly(targetData,thresholdData,controlDataSelf,controlDataOthers){
+    
+    //var targetData = [i, targets[i].neighbors];
+    //var thresholdData = this.threshold[i];
+    //controlDataSelf = this.trajectoryData[i];
+    //controlDataOthers = others.trajectoryData[i];
+    
+    var normalizationFactor = 0.1; // 0.1,0.01
+    var stepSizeVal = 0.1; //0.1
+    var numOfEpochs = 10000;
+    var regularization = 0; //0
+    var numOfDataPointsSelf = controlDataSelf.length*(targetData.length-1);
+    var numOfDataPointsOthers = controlDataOthers.length;
+
+    
+    // loading current threshold values to "theta" and initializing gradTheta vectors
+    var theta = [];
+    var gradThetaSelf = [];
+    var gradThetaOthers = [];
+    var iInd = targetData[0]; // current target 
+    for(var l = 1; l<targetData.length; l++){
+        var lInd = targetData[l];
+        if(lInd==iInd){
+            theta.push(0);    
+        }else{
+            theta.push(thresholdData[lInd]);    
+        }
+        gradThetaSelf.push(0);        
+        gradThetaOthers.push(0);        
+    }
+
+
+    // running iterations
+    var costValOld = 0;
+    for(var m = 1; m<=numOfEpochs; m++){
+        
+        var costValSelf = 0;
+        var costValOthers = 0;
+        if(numOfDataPointsSelf + numOfDataPointsOthers == 0){break;}
+
+        //// evaluate gradient using data
+        for(var l = 0; l<(targetData.length-1); l++){
+            gradThetaSelf[l] = 0;
+            gradThetaOthers[l] = 0;
+        }
+
+        // evaluating gradient due to self
+        for(var k = 0; k<controlDataSelf.length; k++){
+
+            var jStarInd = controlDataSelf[k][0];
+            var jStar = targetData.indexOf(jStarInd);
+            for(var j = 1; j<targetData.length; j++){
+                
+                // get x_{k,j}
+                var x_kj = [];// partial derivative of f
+                var R_j = controlDataSelf[k][j];
+                var R_jStar = controlDataSelf[k][jStar];
+
+                var jInd = targetData[j];
+                for(var l = 1; l<targetData.length; l++){
+                    var lInd = targetData[l];
+                    if(lInd==iInd){
+                        //x_ii
+                        ////x_kj.push(R_jStar-R_j);
+                        x_kj.push(0);
+                    }else if(lInd==jInd & lInd==jStarInd){
+                        //x_ij 
+                        x_kj.push(0);
+                    }else if(lInd==jInd){
+                        //x_ij 
+                        x_kj.push(+1);
+                    }else if(lInd==jStarInd){
+                        //x_{ij_i^k}
+                        x_kj.push(-1);
+                    }else{
+                        //x_il
+                        x_kj.push(0);
+                    }
+                }
+
+                // evaluate h_theta(x_{k,j})
+                //// var hVal = evaluateLogisticFunction(theta,x_kj,0);
+                var hVal = evaluateLogisticFunction(theta,x_kj,R_j-R_jStar);
+                for(var l = 0; l<(targetData.length-1); l++){
+                    gradThetaSelf[l] = gradThetaSelf[l] + (hVal-1)*x_kj[l];     
+                }
+
+                costValSelf = costValSelf - Math.log(hVal);
+                
+            }
+
+        }
+        // end evaluating gradient due to self
+
+
+        // evaluating gradient due to others
+        // print(controlDataOthers)
+        for(var k = 0; k<controlDataOthers.length; k++){
+            // print(controlDataOthers[k])
+            var jStarInd = controlDataOthers[k][0];
+            var jStar = targetData.indexOf(jStarInd);
+            var R_jStar = controlDataOthers[k][jStar];
+            var theta_jStar = theta[jStar-1];
+            
+            
+            var maxDiffVal = -Infinity
+            var jHashInd; // max val index
+            for(var j = 1; j<targetData.length; j++){
+                var R_j = controlDataOthers[k][j];
+                var theta_j = theta[j-1];
+                var diffVal = (R_j-theta_j);
+                if(diffVal > maxDiffVal){
+                    maxDiffVal = diffVal; 
+                    jHashInd = targetData[j];
+                }
+            }
+            // evaluate h_theta(x_{k,b})
+            var hVal = evaluateLogisticFunction(maxDiffVal,1,R_jStar-theta_jStar);
+
+
+            // get x_{k,b}
+            var x_kb = []; // partial derivative of fBar
+            for(var l = 1; l<targetData.length; l++){
+                var lInd = targetData[l];
+                if(lInd==jHashInd & lInd==jStarInd){
+                    x_kb.push(0);
+                }else if(lInd==jHashInd){
+                    x_kb.push(-1);
+                }else if(lInd==jStarInd){
+                    x_kb.push(+1);
+                }else{
+                    x_kb.push(0);
+                }
+            }
+
+
+            for(var l = 0; l<(targetData.length-1); l++){
+                gradThetaOthers[l] = gradThetaOthers[l] + (hVal-1)*x_kb[l];     
+            }
+
+            if(hVal==1){
+                hVal = 0.999999;
+            }else if(hVal==0){
+                hVal = 0.000001;
+            }
+            costValOthers = costValOthers - Math.log(hVal);
+            
+        }
+        // end evaluating gradient due to others
+
+        //// end evaluate gradient using data
+
+
+        /// update theta and cost
+        for(var l = 0; l<(targetData.length-1); l++){
+            var gradTheta = normalizationFactor*gradThetaSelf[l]/numOfDataPointsSelf + (1-normalizationFactor)*gradThetaOthers[l]/numOfDataPointsOthers + 2*regularization*theta[l]
+            var thetaNext = theta[l] - stepSizeVal*gradTheta;
+            if(thetaNext<0){thetaNext = 0;}
+            theta[l] = thetaNext;     
+        }
+        
+        var costVal = normalizationFactor*costValSelf/numOfDataPointsSelf + (1-normalizationFactor)*costValOthers/numOfDataPointsOthers;
+        if(Math.abs(costVal-costValOld)<0.000001){
+            print("Cost in iteration: "+m)
+            print(costVal);
+            break; 
+        }else{
+            if(m==1 | m==numOfEpochs){
+                print("Cost in iteration: "+m)
+                print(costVal);
+            }
+            costValOld = costVal;
+        }
+
+
+    }
+    print("Final Grad: ")
+    print(gradTheta)
+    // end running iterations
+
+    var updatedThresholds = [...thresholdData];
+    for(var l = 1; l<targetData.length; l++){
+        var lInd = targetData[l];
+        if(lInd!=iInd){
+            if(isNaN(theta[l-1])){
+                updatedThresholds[lInd] = 0;    
+            }else{
+                updatedThresholds[lInd] = theta[l-1];    
+            }
+        }else{
+            updatedThresholds[lInd] = 0;
+        }
+    }
+
+    return [updatedThresholds,costVal];
+
+}
+
+function evaluateLogisticFunction(theta,x,z_0){
+    var sumVal = 0;
+    for(var i=0; i<theta.length; i++){
+        sumVal = sumVal + theta[i]*x[i];
+    }
+    var result = 1/(1+Math.exp(-1*(sumVal-z_0)));
+    if(isNaN(result)){
+        // print("NaN Error in logistic function!")
+        result = 0.5;
+    }
+    return result
+}
+
+
+function learnAgentClassifierCoefficients(Y,X,dimX){
+    var m = Y.length;// number of data points
+    var n = dimX; //=X[0].length; // number of features+1
+
+    var stepSizeVal = 0.01; 
+    var numOfEpochs = 10000;
+    var regularization = 1; //1
+
+    // random initial coefficients
+    var theta = [];
+    var gradTheta = [];
+    for(var j=0; j<n; j++){
+        theta.push(0.00001*Math.random()-0.000005);
+        gradTheta.push(0);
+    }
+
+    // iterative update of coefficients
+    var costValOld = 0;
+    var costVal = 0;
+    for(var l=1; l<=numOfEpochs; l++){
+
+        if(m==0){break;}
+
+        // evaluate gradient
+        costVal = 0;
+        for(var j=0; j<n; j++){
+            gradTheta[j] = 0;
+        }    
+
+        
+        for(var i=0; i<m; i++){
+            var hVal = evaluateLogisticFunction(theta,X[i],0);
+            var err_i = hVal-Y[i];
+            if(isNaN(err_i)){print("trouble1");print(hVal);print(Y[i])}
+            
+            for(var j=0; j<n; j++){
+                gradTheta[j] = gradTheta[j] + err_i*X[i][j]; 
+                if(isNaN(gradTheta[j])){print("trouble2");print(X[i][j])}   
+            }
+
+            if(hVal==1){
+                hVal = 0.999999;
+            }else if(hVal==0){
+                hVal = 0.000001;
+            }
+            costVal = costVal - Y[i]*Math.log(hVal) - (1-Y[i])*Math.log(1-hVal);
+            
+            if(isNaN(costVal)){print("trouble3");print(hVal);print(Y[i])}
+            
+        }
+
+        // update theta
+        for(var j = 0; j<n; j++){
+            if(j==0){
+                gradTheta[j] = (gradTheta[j])/m;
+                costVal = costVal;
+            }else{
+                gradTheta[j] = (gradTheta[j] + regularization*theta[j])/m;
+                costVal = costVal;// + regularization*sq(theta[j])/2;
+            }
+            //if(isNaN(costVal)){print("trouble4");print(theta[j])}   
+            theta[j] = theta[j] - stepSizeVal*gradTheta[j];
+            //if(isNaN(theta[j])){print("trouble5");print(gradTheta[j])}   
+
+
+        }
+        costVal = costVal/m;
+        
+
+        if(Math.abs(costVal-costValOld)<0.000001){
+            print("Cost converged in iteration: "+l)
+            print(costVal);
+            break; 
+        }else{
+            if(l==1 | l==numOfEpochs){
+                print("Cost in iteration: "+l);
+                print(costVal);
+            }
+            costValOld = costVal;
+        }
+    }
+
+    return [theta,costVal]
+
+}
+
+
 
 
 
