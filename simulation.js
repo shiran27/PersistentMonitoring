@@ -114,13 +114,16 @@ var RHCNoiseY_iMagnitude;
 var RHCNoiseR_j;
 
 // actual agents:
-var RHCalpha2;
+var RHCalpha2; // for the use in the RHCP objective
+var RHCalpha2Main; // for the use in the main objective
 var RHCvmax; 
+var RHCumax; 
 var RHCvmaxObserved = 0;
 var RHCumaxObserved = 0;
 var terminalEnergySpent;
 var terminalEnergySpentTemp=0;
 var terminalTotalCost;
+var RHCActParametersLocked = -1;
 
 // RL
 var numOfRLIterations = 0;
@@ -132,7 +135,9 @@ var RLRandomPolicyEpsilon = 0;
 var RLNumOfEpisodesPerIteration = 1;
 
 
-
+// brute force
+var bruteForceWidth = 10000;
+var bruteForceDepth = 200;
 
 
 
@@ -529,15 +534,16 @@ function readInitialInterface(){
     targetPrioritizationPolicyChanged();
 
     dataPlotMode = document.getElementById("dataPlotModeCheckBox").checked;
-    dataPlotModeChanged();
-
     RHCMethod = Number(document.getElementById("RHCMethodDropdown").value);
     timeHorizonForRHC = Number(document.getElementById("timeHorizonForRHC").value);
+    dataPlotModeChanged();
 
     RHCvmax = Number(document.getElementById("RHCvmax").value);
+    RHCumax = Number(document.getElementById("RHCumax").value);
     var normalizedAlpha = Number(document.getElementById("RHCalpha2").value);
     // RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(300/Math.sqrt(targets.length),3)/Math.pow(RHCvmax,5);
-    RHCalpha2 = RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(600/Math.sqrt(targets.length),2)/Math.pow(RHCvmax,4);
+    RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(600/Math.sqrt(targets.length),2)/Math.pow(RHCvmax,4);
+    RHCalpha2Main = RHCalpha2;
     RHCMethodChanged();
     RHCNoiseEnable();
     RHCNoiseR_iIntervalChanged();
@@ -644,7 +650,7 @@ function learnClassifiersUsingRHC(){
 function learnClassifiersUsingSyntheticData(){
 
     var numOfSamples = Number(document.getElementById("numOfSyntheticDatePoints").value);
-    if(RHCMethod==15||RHCMethod==14){
+    if(RHCMethod==14||RHCMethod==15||RHCMethod==16){
         numOfRLIterations=0;
         tuneRLBasedEDRHC(numOfSamples);
         return;
@@ -869,20 +875,29 @@ function RHCParametersChanged(){
             document.getElementById("RHCbetaDisplay").innerHTML = "N/A";
         }
         consolePrint("RHC parameters: Alpha = "+RHCalpha+", Beta = "+RHCbeta+".");
-    }else if(RHCMethod==8||RHCMethod==9||RHCMethod==10||RHCMethod==11){
-        
-        if(RHCFixalpha){
-            RHCvmax = Number(document.getElementById("RHCvmax").value);    
-        }else{
+    }else if(RHCMethod==8||RHCMethod==9||RHCMethod==9.5||RHCMethod==10||RHCMethod==11){
+        RHCvmax = Number(document.getElementById("RHCvmax").value);  
+        RHCumax = Number(document.getElementById("RHCumax").value); 
+        RHCActParametersChanged(0,[RHCvmax,RHCumax]);
+        // if(RHCActParametersLocked==-1 || !RHCActParametersLocked){
+        //     RHCActParametersChanged(0,[RHCvmax,RHCumax]); // change the actual values accordingly
+        //     RHCActParametersLocked = false;
+        // }else{// if already locked, adjust RHCvmax and RHCumax
+        //     // lockRHCActParameters(true);
+        // }
+
+        if(!RHCFixalpha){//if RHCalpha2 is going to be varied, i.e., to tune the RHC. Not to change the main objective - which is defined using RHCalpha2Main 
             var normalizedAlpha = Number(document.getElementById("RHCalpha2").value);
-            RHCvmax = Number(document.getElementById("RHCvmax").value);
             //RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(300/Math.sqrt(targets.length),3)/Math.pow(RHCvmax,5);
             RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(600/Math.sqrt(targets.length),2)/Math.pow(RHCvmax,4);
+            // I am not going to change RHCalpha2Main due to the previously said reason. 
+            // this will make a difference to only FO-3 and SO methods that have RHCalpha2 in their RHCPs. 
         }
         
         document.getElementById("RHCalpha2Display").innerHTML = RHCalpha2.toExponential(2);
         document.getElementById("RHCvmaxDisplay").innerHTML = RHCvmax;
-        consolePrint("RHC parameters: Scaling Factor: Alpha = "+RHCalpha2.toExponential(2)+", Agent Velocity: v_max = "+RHCvmax+".");
+        document.getElementById("RHCumaxDisplay").innerHTML = RHCumax;
+        consolePrint("RHC parameters: Normlization Factor: Alpha = "+RHCalpha2.toExponential(2)+", Agent Velocity: v_max = "+RHCvmax+", Agent Acceleran: u_max = "+RHCumax+".");
     }else{
         consolePrint("RHC parameters: Alpha = "+RHCalpha+", Beta = "+RHCbeta+".");
     }
@@ -893,9 +908,226 @@ function RHCParametersChanged(){
 }
 
 
+function lockRHCActParameters(val){
+    if(val){
+        document.getElementById("RHCvmaxAct").value = RHCvmaxObserved;
+        RHCActParametersChanged(1,RHCvmaxObserved);
+        document.getElementById("RHCumaxAct").value = RHCumaxObserved;
+        RHCActParametersChanged(2,RHCumaxObserved);
+    }
+    RHCActParametersLocked = val;
+}
 
-function RLParametersChanged(){
-    if(RHCMethod==15){
+
+function RHCActParametersChanged(para,val){
+    // read actual v and u max values
+    var RHCvmaxAct;
+    var RHCumaxAct;
+    if(para==1){// vmaxAct changed
+        RHCvmaxAct = val;
+        RHCumaxAct = Number(document.getElementById("RHCumaxAct").value);
+
+        var vmaxVal;
+        if(RHCMethod==10){// FO2
+            vmaxVal = getvmaxValFO2(RHCvmaxAct,RHCumaxAct); // Note that RHCumaxAct = RHCumax
+        }else if(RHCMethod==9.5){// SO#
+            vmaxVal = getvmaxValSOH(RHCvmaxAct,RHCumaxAct); // Note that RHCumaxAct = RHCumax
+        }else if(RHCMethod==8){// FO1
+            vmaxVal = getvmaxValFO1(RHCvmaxAct,RHCumaxAct); // Note that RHCumaxAct = RHCumax
+        }
+        document.getElementById("RHCvmax").value = vmaxVal;
+
+    }else if(para==2){ // umaxAct changed
+        RHCvmaxAct = Number(document.getElementById("RHCvmaxAct").value);
+        RHCumaxAct = val;
+        document.getElementById("RHCumax").value = RHCumaxAct; // our convention
+
+        //recomputing RHCvmax
+        var vmaxVal;
+        if(RHCMethod==10){// FO2
+            vmaxVal = getvmaxValFO2(RHCvmaxAct,RHCumaxAct);
+        }else if(RHCMethod==9.5){// SO#
+            vmaxVal = getvmaxValSOH(RHCvmaxAct,RHCumaxAct);
+        }else if(RHCMethod==8){// FO1
+            vmaxVal = getvmaxValFO1(RHCvmaxAct,RHCumaxAct); // Note that RHCumaxAct = RHCumax
+        }
+        document.getElementById("RHCvmax").value = vmaxVal;
+
+    }else if(para==0){// v_max, u_max changed 
+
+        var vmaxumaxActVal;
+        if(RHCMethod==10){// FO2
+            vmaxumaxActVal = getvmaxumaxActValFO2(RHCvmax);
+        }else if(RHCMethod==9.5){// SO#
+            vmaxumaxActVal = getvmaxumaxActValSOH(RHCvmax);
+        }else if(RHCMethod==8){// FO1
+            vmaxumaxActVal = getvmaxumaxActValFO1(RHCvmax,RHCumax);
+        }
+        if(RHCMethod!=11 && RHCMethod!=9){
+            document.getElementById("RHCvmaxAct").value = vmaxumaxActVal[0];         
+            document.getElementById("RHCumaxAct").value = vmaxumaxActVal[1];
+        }
+    }
+    // load them into v and u max sliders in the RHCParameters
+
+
+
+
+    // code from RHCparameterschanged()
+    if(para!=0){
+        RHCvmax = Number(document.getElementById("RHCvmax").value);  
+        RHCumax = Number(document.getElementById("RHCumax").value);  
+        
+        if(!RHCFixalpha){//if RHCalpha2 is going to be varied, i.e., to tune the RHC. Not to change the main objective - which is defined using RHCalpha2Main 
+            var normalizedAlpha = Number(document.getElementById("RHCalpha2").value);
+            //RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(300/Math.sqrt(targets.length),3)/Math.pow(RHCvmax,5);
+            RHCalpha2 = (normalizedAlpha/(27*(1-normalizedAlpha)))*Math.pow(600/Math.sqrt(targets.length),2)/Math.pow(RHCvmax,4);
+            // I am not going to change RHCalpha2Main due to the previously said reason. 
+            // this will make a difference to only FO-3 and SO methods that have RHCalpha2 in their RHCPs. 
+        }
+        
+        document.getElementById("RHCalpha2Display").innerHTML = RHCalpha2.toExponential(2);
+        document.getElementById("RHCvmaxDisplay").innerHTML = RHCvmax;
+        document.getElementById("RHCumaxDisplay").innerHTML = RHCumax;
+        consolePrint("RHC parameters re-adjusted: Alpha = "+RHCalpha2.toExponential(2)+", v_max = "+RHCvmax.toFixed(3)+", v_maxAct = "+RHCvmaxAct.toFixed(3)+", u_max = "+RHCumax.toFixed(3)+", u_maxAct = "+RHCumaxAct.toFixed(3)+".");
+    }
+    // End code from RHCparameterschanged
+
+}
+
+
+function getvmaxumaxActValFO2(vmax){
+    // compute vmaxAct value and umaxAct values
+    var vmaxAct = 3*vmax/2;
+
+    var umaxAct = 0;
+    for(var i = 0; i<paths.length; i++){
+        if(paths[i].isPermenent){
+            var y = paths[i].distPath();
+            var uVal = 9*sq(vmax)/(2*y)
+            if(uVal>=umaxAct){
+                umaxAct = uVal;
+            }
+        }
+    }
+    return [vmaxAct,umaxAct];
+}
+
+function getvmaxumaxActValSOH(vmax){
+    // compute vmaxAct value and umaxAct values
+    var vmaxAct = 3*vmax/2;
+
+    var umaxAct = 0;
+    for(var i = 0; i<paths.length; i++){
+        if(paths[i].isPermenent){
+            var y = paths[i].distPath();
+            var uVal = 6*sq(vmax)/(y)
+            if(uVal>=umaxAct){
+                umaxAct = uVal;
+            }
+        }
+    }
+    return [vmaxAct,umaxAct];
+}
+
+
+
+function getvmaxValFO2(vmaxAct,umaxAct){
+    //// compute vmax value
+
+    var minvmax_ij = Infinity;
+    // print("vmaxAct:"+vmaxAct.toFixed(3))
+    for(var i = 0; i<paths.length; i++){
+        if(paths[i].isPermenent){
+            var y = paths[i].distPath();
+            var val1 = Math.sqrt(2*y*umaxAct/9);
+            var val2 = 2*vmaxAct/3;
+            var vmax_ij = Math.min(val1,val2);
+            if(vmax_ij<minvmax_ij){
+                minvmax_ij = vmax_ij;
+            }
+        }
+    }
+    return minvmax_ij;
+}
+
+function getvmaxumaxActValFO1(vmax,umax){
+    // compute vmaxAct value and umaxAct values
+    var maxv_F1 = 0;
+    for(var i = 0; i<paths.length; i++){
+        if(paths[i].isPermenent){
+            var y = paths[i].distPath();
+            var v_F1; 
+            if(vmax<=0.5*Math.sqrt(y*umax)){
+                v_F1 = (y*umax-Math.sqrt(sq(y*umax)-4*sq(vmax)*y*umax))/(2*vmax);
+            }else{
+                v_F1 = Math.sqrt(y*umax);
+            }
+            if(v_F1>=maxv_F1){
+                maxv_F1 = v_F1;
+            }
+        }
+    }
+    return [maxv_F1,RHCumax];
+}
+
+function getvmaxValSOH(vmaxAct,umaxAct){
+    //// compute vmax value
+
+    var minvmax_ij = Infinity;
+    // print("vmaxAct:"+vmaxAct.toFixed(3))
+    for(var i = 0; i<paths.length; i++){
+        if(paths[i].isPermenent){
+            var y = paths[i].distPath();
+            var val1 = Math.sqrt(y*umaxAct/6);
+            var val2 = 2*vmaxAct/3;
+            var vmax_ij = Math.min(val1,val2);
+            if(vmax_ij<minvmax_ij){
+                minvmax_ij = vmax_ij;
+            }
+        }
+    }
+    return minvmax_ij;
+}
+
+
+function getvmaxValFO1(vmaxAct,umax){
+    //// compute vmax value
+
+    var minvmax_ij = Infinity;
+    // print("vmaxAct:"+vmaxAct.toFixed(3))
+    for(var i = 0; i<paths.length; i++){
+        if(paths[i].isPermenent){
+            var y = paths[i].distPath();
+            // print("Path: "+paths[i].targets)
+            // finding the vmax value corresponding to the vmaxAct value on the edge (i,j)
+            var vmax_ij;
+            if(vmaxAct<=Math.sqrt(y*umax)){
+                vmax_ij = y*umax*vmaxAct/(sq(vmaxAct) + y*umax);    
+                // print("vmax_ij1: "+vmax_ij.toFixed(3))
+            }else{
+                // this edge is long enough?
+                vmax_ij = 0.5*Math.sqrt(y*umax); // this will give the maximum vmaxAct value
+                // print("vmax_ij2: "+vmax_ij.toFixed(3))
+            }
+            
+
+            if(vmax_ij<minvmax_ij){
+                minvmax_ij = vmax_ij;
+                // print("maxvmax_ij(update): "+minvmax_ij.toFixed(3))
+            }
+
+        }
+    }
+    
+    //print("maxvmax_ij(Final): "+maxvmax_ij.toFixed(3))
+    // print("minvmax_ij(Final): "+minvmax_ij.toFixed(3));
+    return minvmax_ij;
+}
+
+
+function RLParametersChanged(val){
+    if(RHCMethod==15 || RHCMethod==16){
         numOfRLIterations = 0;
         document.getElementById("RLParametersNorm").disabled = false;
         RLNormalizationFactor = Number(document.getElementById("RLParametersNorm").value);
@@ -912,6 +1144,11 @@ function RLParametersChanged(){
         RLStepSizeType = Number(document.getElementById("RLParametersStepType").value);
         RLRandomPolicyEpsilon = Number(document.getElementById("RLParametersRand").value);
         RLNumOfEpisodesPerIteration = Number(document.getElementById("RLParametersReal").value);
+    }
+
+    if(val==0 && RLRandomPolicyEpsilon==0){
+        print("Here!!!")
+        numOfRLIterations = 1;
     }
 }
 
@@ -1040,6 +1277,7 @@ function  dataPlotModeChanged(){
             agents[a].rewardSequence = [];
             agents[a].rewardDataTemp = [];
             if(numOfRLIterations==0){
+                // print("Here we go!")
                 agents[a].actionValueData = [];
             }
             
@@ -1051,7 +1289,14 @@ function  dataPlotModeChanged(){
                     agents[a].actionValueData.push([]);
                     for(var j = 0; j<targets.length; j++){
                         // [overall mean, episode mean, requence of action values obseved]
-                        agents[a].actionValueData[i].push([0,0]); 
+                        // print("HHHere")
+                        if(RHCMethod==16){
+                            // print("HHere")
+                            var dummyMat = math.matrix(math.zeros(4,1));
+                            agents[a].actionValueData[i].push([dummyMat, 0]); 
+                        }else{
+                            agents[a].actionValueData[i].push([0, 0]); 
+                        }
                     }
                 }
             }
@@ -1190,6 +1435,8 @@ function RHCMethodChanged(){
         consolePrint("Event Driven Optimal Receding Horizon Control with First Order Agents (Old Method).");
     }else if(RHCMethod==9){
         consolePrint("Event Driven Optimal Receding Horizon Control with Second Order Agents.");
+    }else if(RHCMethod==9.5){
+        consolePrint("Event Driven Optimal Receding Horizon Control with Second Order Sub-Optimal Agents.");
     }else if(RHCMethod==10){
         consolePrint("Event Driven Optimal Receding Horizon Control with First Order Agents of Type 2.");
     }else if(RHCMethod==11){
@@ -1202,6 +1449,8 @@ function RHCMethodChanged(){
         consolePrint("Random Agent Control with Reinforcement Learning.");
     }else if(RHCMethod==15){
         consolePrint("Event Driven Receding Horizon Control with Reinforcement Learning.");
+    }else if(RHCMethod==16){
+        consolePrint("Event Driven Receding Horizon Control with Approximate Reinforcement Learning.");
     }
 
 
@@ -1264,12 +1513,37 @@ function RHCMethodChanged(){
 
     }
 
-    if(RHCMethod==8 || RHCMethod==9 || RHCMethod==10 || RHCMethod==11){
+    if(RHCMethod==8 || RHCMethod==9 || RHCMethod==9.5 || RHCMethod==10 || RHCMethod==11){
+        
         var x = document.getElementById("RHCalpha2Div");
         x.style.display = "block";
         
         var x = document.getElementById("RHCbeta2Div");
         x.style.display = "block";
+
+        var x = document.getElementById("RHCbeta22Div");
+        x.style.display = "block";
+        
+
+        // enable disble sliders for v_max and u_max
+        if(RHCMethod==9 || RHCMethod==11){
+            document.getElementById("RHCvmax").disabled = true;
+            document.getElementById("RHCumax").disabled = true;
+            document.getElementById("RHCvmaxAct").disabled = true;
+            document.getElementById("RHCumaxAct").disabled = true;
+        }else if(RHCMethod==10 || RHCMethod==9.5){
+            document.getElementById("RHCvmax").disabled = false;
+            document.getElementById("RHCumax").disabled = true;
+            document.getElementById("RHCvmaxAct").disabled = false;
+            document.getElementById("RHCumaxAct").disabled = false;
+        }else if(RHCMethod==8){
+            document.getElementById("RHCvmax").disabled = false;
+            document.getElementById("RHCumax").disabled = false;
+            document.getElementById("RHCvmaxAct").disabled = false;
+            document.getElementById("RHCumaxAct").disabled = false;
+        }
+        // end enable disble sliders for v_max and u_max
+
 
         var x = document.getElementById("costDisplayMenu1");
         x.style.display = "none";
@@ -1278,16 +1552,30 @@ function RHCMethodChanged(){
         x.style.display = "block";
 
         var x = document.getElementById("plotCostVsParameterDropDown");
-        x.options[5].disabled = RHCMethod==9;
+        x.options[5].disabled = !(RHCMethod==10 || RHCMethod==9.5 || RHCMethod==8);
         x.options[6].disabled = false;
 
+        // if(RHCActParametersLocked){
+        //     // recompute RHCvmax and RHCumax
+            
+        //     var RHCumaxAct = Number(document.getElementById("RHCumaxAct").value);
+        //     RHCActParametersChanged(1,RHCumaxAct);
+        //     var RHCvmaxAct = Number(document.getElementById("RHCvmaxAct").value);
+        //     RHCActParametersChanged(1,RHCvmaxAct);
+        
+        // }
+
         RHCParametersChanged();  
-        plotCostVsParameterDropDownChanged();    
+        plotCostVsParameterDropDownChanged();
+
     }else{
         var x = document.getElementById("RHCalpha2Div");
         x.style.display = "none";
         
         var x = document.getElementById("RHCbeta2Div");
+        x.style.display = "none";
+
+        var x = document.getElementById("RHCbeta22Div");
         x.style.display = "none";
 
         var x = document.getElementById("costDisplayMenu1");
@@ -1300,14 +1588,25 @@ function RHCMethodChanged(){
     }
 
 
-    if(RHCMethod==15||RHCMethod==14){
+    if(RHCMethod==14||RHCMethod==15||RHCMethod==16){
         var x = document.getElementById("RLParametersMenu");
         x.style.display = "block";
-        RLParametersChanged();
+        RLParametersChanged(1);
     }else{
         var x = document.getElementById("RLParametersMenu");
         x.style.display = "none";
     }
+
+    if(RHCMethod==17){
+        var x = document.getElementById("BruteForceParametersMenu");
+        x.style.display = "block";
+        BruteForceParametersChanged();
+    }else{
+        var x = document.getElementById("BruteForceParametersMenu");
+        x.style.display = "none";
+    }
+
+
     
 }
 
@@ -1327,9 +1626,9 @@ function plotCostVsParameterDropDownChanged(){
         document.getElementById("plotCostVsParameterRes").value = 0.05;
         document.getElementById("plotCostVsParameterEnd").value = 1;
     }else if(x==5){
-        document.getElementById("plotCostVsParameterStart").value = 10;
-        document.getElementById("plotCostVsParameterRes").value = 10;
-        document.getElementById("plotCostVsParameterEnd").value = 100;
+        document.getElementById("plotCostVsParameterStart").value = 5;
+        document.getElementById("plotCostVsParameterRes").value = 5;
+        document.getElementById("plotCostVsParameterEnd").value = 50;
     }else if(x==6){
         document.getElementById("plotCostVsParameterStart").value = 0.05;
         document.getElementById("plotCostVsParameterRes").value = 0.05;
@@ -1465,6 +1764,7 @@ function simulateHybridSystem(){ // run the hybrid system indefinitely in real-t
             discreteTimeSteps = 0;
         }else{ // RHCMethod =3,4,5,6: ED-RHC, ED-RHC-alpha, ED-RHC-Fixed, ED-RHC-Extended
             simulationMode = 7;
+            dataPlotModeChanged();
             ////simulationTime = 0;
             ////discreteTimeSteps = 0;
         }
@@ -1532,8 +1832,10 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
                 agents[i].updateClassifierCT();
             }else if(RHCMethod<15){
                 agents[i].updateRandomCT();
-            }else if(RHCMethod==15){
+            }else if(RHCMethod==15||RHCMethod==16){
                 agents[i].updateEDRHCCT();
+            }else if(RHCMethod==17){
+                agents[i].updateFollowSequenceCT();
             }
         }
 
@@ -1591,17 +1893,21 @@ function simulateHybridSystemFast(){ // run the hybrid system for time T period 
         document.getElementById("simulationCost2").innerHTML = meanUncertainty.toFixed(1).toString();
         document.getElementById("agentEnergyCost").innerHTML = totalEnergySpent.toExponential(2).toString();
         
-        terminalTotalCost = meanUncertainty + RHCalpha2*totalEnergySpent;
+        terminalTotalCost = meanUncertainty + RHCalpha2Main*totalEnergySpent;
         document.getElementById("totalCost").innerHTML = terminalTotalCost.toFixed(1).toString();
         consolePrint('Energy Cost: '+totalEnergySpent.toFixed(1).toString()+'; Sensing Cost: '+meanUncertainty.toFixed(3).toString()+'; Total Cost: '+terminalTotalCost.toFixed(1).toString());    
         if(RHCMethod>=8 && RHCMethod<=11){
-            var stringListTemp = ['(First-Order-0)','(Second Order)','(First-Order-2)','(First-Order-3)'];
-            var stringSelected = stringListTemp[RHCMethod-8];  
+            var stringListTemp = ['(First-Order-1)','(Second Order)','(First-Order-2)','(First-Order-3)','(Second-Order-#)'];
+            var stringSelected = stringListTemp[RHCMethod-8];
+            if(RHCMethod==9.5){
+                stringSelected = stringListTemp[stringListTemp.length-1];
+            }  
             consolePrint('Max agent velocity observed '+stringSelected+': '+(RHCvmaxObserved).toFixed(3).toString())
             consolePrint('Max agent acceleration observed '+stringSelected+': '+(RHCumaxObserved).toFixed(3).toString())
             print([terminalEnergySpent, meanUncertainty, terminalTotalCost, RHCvmaxObserved, RHCumaxObserved])
         }
         
+
         // if(RHCMethod==9){
         //     // consolePrint('Max agent velocity observed (Second-Order Model): '+(2*RHCvmaxObserved/3).toFixed(3).toString())
         //     consolePrint('Max agent velocity observed (Second-Order Model): '+(RHCvmaxObserved).toFixed(3).toString())
@@ -2118,6 +2424,7 @@ function resetSimulation(){
         
         agents[i].timeToExitMode = [3,0]; // Event Driven RHC
         agents[i].energySpent = 0;
+        agents[i].targetSequenceState = 1;
     }
 
     if(RHCMethod<8 | RHCMethod>=12){
@@ -2728,7 +3035,7 @@ function plotCostVsParameter(){
                 minCost = terminalMeanSystemUncertainty;
             }
         }else if(paraType==5||paraType==6){
-            costArray[0].push(terminalEnergySpent*RHCalpha2)
+            costArray[0].push(terminalEnergySpent*RHCalpha2Main)
             costArray[1].push(terminalMeanSystemUncertainty)
             costArray[2].push(terminalTotalCost)
             costArray[3].push(RHCvmaxObserved)
@@ -2953,12 +3260,17 @@ function tuneRLBasedEDRHC(numOfIterations){
             //print(bestPolicy[0][0][1])
         }
 
-        updateActionValueData(1);
-        meanVals = storeRestoreActionValueDataMeans(0,0);  //stremode,dummy  
+        if(RHCMethod==16){
+            updateActionValueData(2);
+        }else{
+            updateActionValueData(1);
+        }
+        meanVals = storeRestoreActionValueDataMeans(0,0);  //storemode,dummy  
+        // print(meanVals[0][0][1])
         storeRestoreActionValueDataMeans(1,meanVals); // removes all the reward data and episode mean data, keeping the action values
         
         resetSimulation();
-        // print(agents[0].actionValueData[0][1])
+        // print(agents[0].actionValueData[0][1][0]._data)
         numOfRLIterations++;    
     }
     
@@ -2984,10 +3296,11 @@ function updateActionValueData(mode){
         var returnVal = 0;
         for(var k = agents[a].rewardSequence.length-1; k>=0; k--){
             var i = agents[a].rewardSequence[k][0];
-            var j = agents[a].rewardSequence[k][1];
-            var R = agents[a].rewardSequence[k][2];
+            var t = agents[a].rewardSequence[k][1];// time where agent left i, (i.e., time where the action was taken)
+            var j = agents[a].rewardSequence[k][2];
+            var R = agents[a].rewardSequence[k][3];
             returnVal = discountFactor*returnVal + R; // discounted return (i.e., future sum of (discounted) rewards)
-            agents[a].actionValueData[i][j].push(returnVal); // i is the state, j is the action
+            agents[a].actionValueData[i][j].push([t,returnVal]); // i is the state, j is the action
             
             var N_new = agents[a].actionValueData[i][j].length - 2;
             var mean_Old = agents[a].actionValueData[i][j][1]; // episode mean
@@ -3020,10 +3333,86 @@ function updateActionValueData(mode){
             }
         }
 
+        if(mode==2){
+            // when learning a time dependent action value function 
+            // (i.e., an expencted reward function for i,j,t arguments)
+
+            var updateStepSize; // step size used when updatting weights (Theta)
+            if(RLStepSizeType==0){
+                updateStepSize = RLStepSizeValue//1/(1+numOfRLIterations); //should be between 0 and 1 (slow vs fast, respectively)
+            }else if(RLStepSizeType==1){
+                updateStepSize = RLStepSizeValue/Math.sqrt(numOfRLIterations+1);
+            }else{
+                updateStepSize = RLStepSizeValue/(RLStepSizeValue+numOfRLIterations);
+            }
+
+
+            for(var i=0; i<targets.length; i++){
+                for(var j=0; j<targets.length; j++){
+                    if(agents[a].actionValueData[i][j].length>2){// have data points
+                        // features: 1, t, t^2, t^3, 1/t, 1/t^2
+                        var numOfDataPoints = agents[a].actionValueData[i][j].length-2;
+                        var featureMat = [];
+                        var expectedRewardMat = [];
+                        for(var l = 0; l<numOfDataPoints; l++){
+                            var t = agents[a].actionValueData[i][j][2+l][0];
+                            var g = agents[a].actionValueData[i][j][2+l][1];
+                            featureMat.push([1,1/t,t,sq(t)])
+                            expectedRewardMat.push([g])
+                        }
+                        var X = math.matrix(featureMat);
+                        var Nd = X._data.length;// num of data points
+                        var Nf = X._data[0].length; // num of features
+                        var G = math.matrix(expectedRewardMat);
+                        var lambda = 0.01; // regularization parameter
+                        var XTX = math.add(math.multiply(math.transpose(X),X), math.multiply(lambda,math.identity(Nf)));
+                        var detVal = math.det(XTX);
+                        var Theta;
+                        if(math.abs(detVal)>0.000001){
+                            Theta = math.multiply(math.multiply(math.inv(XTX),math.transpose(X)),G);
+                            // print("pass: "+Nd)
+                        }else{
+                            print("Determinent error in approx RL: "+Nd+"; det: "+detVal);
+                            var C_ijNew = agents[a].actionValueData[i][j][1];
+                            Theta = math.matrix(math.zeros(Nf,1)); 
+                            Theta._data[0][0] = C_ijNew;
+                            // Theta = math.matrix([[C_ijNew], [0], [0], [0]]); 
+                        }
+                        
+                        var errorMat = math.transpose(math.subtract(G,math.multiply(X,Theta)));
+                        var rmsError = math.sqrt(sq(math.norm(errorMat._data[0],2))/Nd);
+                        if(rmsError>100){
+                            print("High RMS error in approx RL: "+rmsError);
+                            // print(rmsError)
+                            // print(a,i,j)
+                            // print(G._data) // G
+                            // print(math.multiply(X,Theta)._data) // G_hat
+                            // print(errorMat._data[0])
+                        }
+                        // print("Updated"+Theta._data[0][0])
+                        // print(updateStepSize)                    
+                        var ThetaOld = agents[a].actionValueData[i][j][0];
+                        var ThetaNew = math.add(ThetaOld, math.multiply(updateStepSize, math.subtract(Theta, ThetaOld)));
+                        
+                        agents[a].actionValueData[i][j][0] = ThetaNew;
+                        // print(agents[a].actionValueData[i][j][0]._data[0][0])
+                        // var C_ijOld = agents[a].actionValueData[i][j][0];
+                        // var C_ijNew = agents[a].actionValueData[i][j][1];
+                        // C_ijNew = C_ijOld + updateStepSize*(C_ijNew - C_ijOld);
+                        // agents[a].actionValueData[i][j][0] = C_ijNew;
+                    }
+                }
+            }
+
+
+        }
+
 
     }
 
 }
+
+
 
 function storeRestoreActionValueDataMeans(mode,means){
     var matVal = [];
@@ -3049,101 +3438,9 @@ function storeRestoreActionValueDataMeans(mode,means){
 }
 
 
-// function updateActionValueData(){
-//     // update the actionValueData based on the reward sequence recorded at each agent for the episode
-
-//     var discountFactor = 1; //1
-
-//     for(var a = 0; a<agents.length; a++){
-//         var returnVal = 0;
-//         for(var k = agents[a].rewardSequence.length-1; k>=0; k--){
-//             var i = agents[a].rewardSequence[k][0];
-//             var j = agents[a].rewardSequence[k][1];
-//             var R = agents[a].rewardSequence[k][2];
-//             returnVal = discountFactor*returnVal + R; // discounted return (i.e., future sum of (discounted) rewards)
-//             agents[a].actionValueData[i][j].push(returnVal); // i is the state, j is the action
-            
-//             var N_new = agents[a].actionValueData[i][j].length - 2;
-//             var mean_Old = agents[a].actionValueData[i][j][1]; // episode mean
-//             var x_new = returnVal;
-//             var mean_New = mean_Old + (x_new-mean_Old)/N_new;
-//             agents[a].actionValueData[i][j][1] = mean_New;
-//         }
-
-//         // update overal control policy (baseed on episodic means)
-//         var updateStepSize = 1; //1/sq(1+numOfRLIterations); //should be between 0 and 1 (slow vs fast, respectively)
-//         for(var i=0; i<targets.length; i++){
-//             for(var j=0; j<targets.length; j++){
-//                 if(agents[a].actionValueData[i][j].length>2){
-//                     var C_ijOld = agents[a].actionValueData[i][j][0];
-//                     var C_ijNew = agents[a].actionValueData[i][j][1];
-//                     C_ijNew = C_ijOld + updateStepSize*(C_ijNew - C_ijOld);
-//                     agents[a].actionValueData[i][j][0] = C_ijNew;
-//                 }
-//             }
-//         }
 
 
-//     }
-
-// }
-// function tuneRLBasedEDRHC(numOfIterations){
-//     // var numOfIterations = 100;
-//     var costArray = [];
-//     var paraArray = [];
-//     var bestCost = Infinity;
-//     var bestPolicy;
-//     var meanVals = [];
-//     for(k = 0; k<numOfIterations; k++){
-//         simulateHybridSystemFast();    
-//         print("Cost at k="+k+", is :"+terminalMeanSystemUncertainty.toFixed(3));
-        
-//         costArray.push(terminalMeanSystemUncertainty);
-//         paraArray.push(k);
-        
-//         if(terminalMeanSystemUncertainty<bestCost){
-//             bestCost = terminalMeanSystemUncertainty;
-//             bestPolicy = [...meanVals];
-//             //print(bestPolicy[0][0][1])
-//         }
-
-//         updateActionValueData();
-//         meanVals = storeRestoreActionValueDataMeans(0,0);  //stremode,dummy  
-//         storeRestoreActionValueDataMeans(1,meanVals);
-        
-//         resetSimulation();
-//         // print(agents[0].actionValueData[0][1])
-//         numOfRLIterations++;    
-//     }
-    
-//     plotCostVsParameterData(7,paraArray,costArray)
-    
-
-//     print("Best Cost = "+bestCost.toFixed(3));
-//     storeRestoreActionValueDataMeans(1,bestPolicy);
-//     // numOfRLIterations = 0;
-// }
 
 
-// function storeRestoreActionValueDataMeans(mode,means){
-//     var matVal = [];
-//     for(var a=0; a<agents.length; a++){
-//         if(mode==0){matVal.push([])}
-        
-//         for(var i=0; i<targets.length; i++){
-//             if(mode==0){matVal[a].push([])}
-            
-//             for(var j=0; j<targets.length; j++){
-//                 if(mode==0){//store: retuen the current means
-//                     matVal[a][i].push([]);
-//                     matVal[a][i][j] = agents[a].actionValueData[i][j][0];
-//                 }else{// restore using 
-//                     agents[a].actionValueData[i][j] = [means[a][i][j],0]; 
-//                 }
 
-//             }
-//         }
-//     }
-//     if(mode==0){return matVal;}
 
-// }

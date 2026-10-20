@@ -176,8 +176,10 @@ function draw() {
                     agents[i].updateClassifierCT();
                 }else if(RHCMethod<15){// update randomly
                     agents[i].updateRandomCT();
-                }else if(RHCMethod==15){// RL method
+                }else if(RHCMethod==15 || RHCMethod==16){// RL method
                     agents[i].updateEDRHCCT();
+                }else if(RHCMethod==17){
+                    agents[i].updateFollowSequenceCT();
                 }
             }
 
@@ -204,7 +206,7 @@ function draw() {
             document.getElementById("simulationCost2").innerHTML = cost.toFixed(1).toString();
             
             document.getElementById("agentEnergyCost").innerHTML = energyCost.toExponential(2).toString();
-            var totalCost = cost + RHCalpha2*energyCost;
+            var totalCost = cost + RHCalpha2Main*energyCost;
             document.getElementById("totalCost").innerHTML = totalCost.toFixed(1).toString();
         }
         //consolePrint('Cost: '+cost.toFixed(3).toString());
